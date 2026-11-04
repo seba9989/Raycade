@@ -4,12 +4,12 @@
  */
 #pragma once
 
-#include "../Shape.hpp"
+#include "../Entity.hpp"
 
 namespace shapes {
 
 /** @brief Prostokąt, którego pozycja oznacza lewy górny róg. */
-class Rect : public Shape<Rect> {
+class Rect : public Entity {
   public:
     /**
      * @brief Ustawia szerokość i wysokość prostokąta.
@@ -21,16 +21,16 @@ class Rect : public Shape<Rect> {
         return *this;
     }
 
-    /** @copydoc Entity::Contains */
+    /** @copydoc Updatable::Contains */
     bool Contains(Vector2 point) const override {
-        const Vector2 corner = WorldPosition();
-        return ::CheckCollisionPointRec(point, {corner.x, corner.y, size_.x, size_.y});
+        const auto local = TryToLocal(point);
+        return local && ::CheckCollisionPointRec(*local, {0.0f, 0.0f, size_.x, size_.y});
     }
 
   protected:
-    /** @copydoc Entity::Draw */
+    /** @copydoc Drawable::Draw */
     void Draw(PrimitiveRenderer& renderer) const override {
-        renderer.Paint(color_).Fill(filled_).Rect(WorldPosition(), size_);
+        renderer.Paint(color_).Fill(filled_).Rect({0.0f, 0.0f}, size_);
     }
 
   private:

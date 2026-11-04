@@ -40,6 +40,14 @@
       | xargs clang-format -i
   '';
 
+  # Hook pre-commit: clang-format na plikach C/C++ dodanych do commita (.clang-format).
+  # Jeśli coś przeformatuje, commit zostaje przerwany - wystarczy `git add` i commit ponownie.
+  # Instaluje się sam przy wejściu do powłoki devenv; ręcznie: `pre-commit run -a`.
+  git-hooks.hooks.clang-format = {
+    enable = true;
+    types_or = [ "c" "c++" ]; # domyślnie także JSON itp. - nie formatujemy .zed/*.json
+  };
+
   # Dokumentacja HTML wg doxygen/Doxyfile -> doxygen/html/index.html
   scripts.docs.exec = ''
     cd "$DEVENV_ROOT"
@@ -58,7 +66,7 @@
     echo "Silnik 2D (raylib ${pkgs.raylib.version})"
     echo "  build  - konfiguracja i kompilacja"
     echo "  run    - kompilacja i uruchomienie"
-    echo "  fmt    - formatowanie kodu (.clang-format)"
+    echo "  fmt    - formatowanie kodu (.clang-format, także hook pre-commit)"
     echo "  docs   - dokumentacja Doxygen"
     echo "  edit   - otwarcie projektu w Zedzie"
     echo "  clean  - usunięcie katalogu build"

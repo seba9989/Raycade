@@ -7,13 +7,13 @@
 #include <utility>
 #include <vector>
 
-#include "../Shape.hpp"
+#include "../Entity.hpp"
 #include "Line.hpp"
 
 namespace shapes {
 
 /** @brief Zbiór niezależnych odcinków tworzonych z kolejnych par wierzchołków. */
-class Lines : public Shape<Lines> {
+class Lines : public Entity {
   public:
     /**
      * @brief Ustawia pary końców odcinków.
@@ -35,7 +35,7 @@ class Lines : public Shape<Lines> {
         return *this;
     }
 
-    /** @copydoc Entity::Contains */
+    /** @copydoc Updatable::Contains */
     bool Contains(Vector2 point) const override {
         for (std::size_t i = 0; i + 1 < vertices_.size(); i += 2)
             if (::CheckCollisionPointLine(point, World(vertices_[i]), World(vertices_[i + 1]),
@@ -45,9 +45,9 @@ class Lines : public Shape<Lines> {
     }
 
   protected:
-    /** @copydoc Entity::Draw */
+    /** @copydoc Drawable::Draw */
     void Draw(PrimitiveRenderer& renderer) const override {
-        renderer.Paint(color_).Incremental(incremental_).Lines(WorldVertices(vertices_));
+        renderer.Paint(color_).Incremental(incremental_).Lines(vertices_);
     }
 
   private:

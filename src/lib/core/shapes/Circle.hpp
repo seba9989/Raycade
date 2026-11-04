@@ -4,12 +4,12 @@
  */
 #pragma once
 
-#include "../Shape.hpp"
+#include "../Entity.hpp"
 
 namespace shapes {
 
 /** @brief Okrąg lub koło; pozycja obiektu oznacza środek. */
-class Circle : public Shape<Circle> {
+class Circle : public Entity {
   public:
     /**
      * @brief Ustawia promień.
@@ -31,15 +31,16 @@ class Circle : public Shape<Circle> {
         return *this;
     }
 
-    /** @copydoc Entity::Contains */
+    /** @copydoc Updatable::Contains */
     bool Contains(Vector2 point) const override {
-        return ::CheckCollisionPointCircle(point, WorldPosition(), radius_);
+        const auto local = TryToLocal(point);
+        return local && ::CheckCollisionPointCircle(*local, {0.0f, 0.0f}, radius_);
     }
 
   protected:
-    /** @copydoc Entity::Draw */
+    /** @copydoc Drawable::Draw */
     void Draw(PrimitiveRenderer& renderer) const override {
-        renderer.Paint(color_).Fill(filled_).Symmetric(symmetric_).Circle(WorldPosition(), radius_);
+        renderer.Paint(color_).Fill(filled_).Symmetric(symmetric_).Circle({0.0f, 0.0f}, radius_);
     }
 
   private:

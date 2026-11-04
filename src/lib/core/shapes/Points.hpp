@@ -7,13 +7,13 @@
 #include <utility>
 #include <vector>
 
-#include "../Shape.hpp"
+#include "../Entity.hpp"
 #include "Line.hpp"
 
 namespace shapes {
 
 /** @brief Zbiór punktów, których pozycje są lokalne względem obiektu. */
-class Points : public Shape<Points> {
+class Points : public Entity {
   public:
     /**
      * @brief Ustawia pozycje punktów.
@@ -25,7 +25,7 @@ class Points : public Shape<Points> {
         return *this;
     }
 
-    /** @copydoc Entity::Contains */
+    /** @copydoc Updatable::Contains */
     bool Contains(Vector2 point) const override {
         for (const Vector2& position : positions_)
             if (::CheckCollisionPointCircle(point, World(position), Line::kHitDistance))
@@ -34,9 +34,9 @@ class Points : public Shape<Points> {
     }
 
   protected:
-    /** @copydoc Entity::Draw */
+    /** @copydoc Drawable::Draw */
     void Draw(PrimitiveRenderer& renderer) const override {
-        renderer.Paint(color_).Points(WorldVertices(positions_));
+        renderer.Paint(color_).Points(positions_);
     }
 
   private:

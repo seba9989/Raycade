@@ -7,9 +7,9 @@
  * @mainpage Silnik 2D
  *
  * @section cel Cel projektu
- * Silnik 2D napisany w C++20 z użyciem raylib. Biblioteka udostępnia sceny,
+ * Silnik 2D napisany w C++23 z użyciem raylib. Biblioteka udostępnia sceny,
  * obiekty z hierarchią dzieci, wejście z klawiatury i myszy oraz renderer
- * prymitywów. Program zawiera demonstrację funkcji z laboratoriów 1-3.
+ * prymitywów. Program zawiera demonstrację funkcji z laboratoriów 1-4.
  *
  * @section uruchomienie Kompilacja i uruchomienie
  * W katalogu głównym projektu należy wykonać:
@@ -23,7 +23,8 @@
  * @section budowa Najważniejsze części
  * - @ref Engine zarządza oknem, pętlą i przełączaniem scen.
  * - @ref Scene przechowuje obiekty aktywnego ekranu.
- * - @ref Entity i @ref Shape opisują hierarchię figur oraz zdarzenia.
+ * - @ref Entity łączy drzewo obiektów z @ref Updatable, @ref Drawable i @ref Transformable;
+ *   ich settery i zdarzenia zwracają konkretny typ figury dzięki deducing this (C++23).
  * - @ref PrimitiveRenderer rysuje na ekranie albo na @ref Bitmap.
  * - @ref shapes::Canvas udostępnia bitmapę do algorytmów wypełniania.
  *
@@ -34,11 +35,14 @@
  * @ref PrimitiveRenderer. W scenie `figury` porównano krzywe z raylib.
  *
  * @section obsluga Sceny demonstracyjne
- * Klawisze 1, 2 i 3 wybierają odpowiednio `menu`, `prymitywy` i `figury`.
+ * Klawisze 1, 2, 3 i 4 wybierają `menu`, `prymitywy`, `figury` i `transformacje`.
  * Na scenie `prymitywy` strzałki przesuwają prostokąt, L zmienia warstwę,
  * PPM przesuwa koniec odcinka, a spacja przełącza jego algorytm.
  * Na scenie `figury` LPM uruchamia flood fill na płótnie, Shift+LPM
  * uruchamia boundary fill, a R przywraca kontury.
+ * Na scenie `transformacje` szary kontur pokazuje stan przed obrotem lub skalowaniem,
+ * a kolorowa figura stan po; grupa obraca się razem z dziećmi. LPM zmienia kolor
+ * obróconego prostokąta.
  *
  * @section dokumentacja Dokumentacja
  * Dokumentację HTML generuje polecenie `docs` (devenv) albo, w katalogu głównym projektu:
@@ -59,7 +63,7 @@
  */
 int main() {
     Engine& engine = Engine::Get()
-                         .Title("Silnik 2D - lab 3")
+                         .Title("Silnik 2D")
                          .VSync(false)      // V-Sync wyłączony; podwójne buforowanie działa zawsze
                          .Window(1000, 700) // albo .Fullscreen()
                          .Background(RAYWHITE)
@@ -73,10 +77,11 @@ int main() {
             if (engine.KeyPressed(KEY_ONE)) engine.SwitchScene("menu");
             if (engine.KeyPressed(KEY_TWO)) engine.SwitchScene("prymitywy");
             if (engine.KeyPressed(KEY_THREE)) engine.SwitchScene("figury");
+            if (engine.KeyPressed(KEY_FOUR)) engine.SwitchScene("transformacje");
         })
         .OnDraw([&](PrimitiveRenderer&) {
-            const std::string hud =
-                "Scena: " + engine.ActiveScene() + "   [1] menu  [2] prymitywy  [3] figury";
+            const std::string hud = "Scena: " + engine.ActiveScene() +
+                                    "   [1] menu  [2] prymitywy  [3] figury  [4] transformacje";
             ::DrawText(hud.c_str(), 20, 665, 20, DARKGRAY);
         })
         .Run();

@@ -4,12 +4,12 @@
  */
 #pragma once
 
-#include "../Shape.hpp"
+#include "../Entity.hpp"
 
 namespace shapes {
 
 /** @brief Trójkąt z wierzchołkami lokalnymi względem pozycji obiektu. */
-class Triangle : public Shape<Triangle> {
+class Triangle : public Entity {
   public:
     /**
      * @brief Ustawia trzy wierzchołki trójkąta.
@@ -25,15 +25,15 @@ class Triangle : public Shape<Triangle> {
         return *this;
     }
 
-    /** @copydoc Entity::Contains */
+    /** @copydoc Updatable::Contains */
     bool Contains(Vector2 point) const override {
         return ::CheckCollisionPointTriangle(point, World(a_), World(b_), World(c_));
     }
 
   protected:
-    /** @copydoc Entity::Draw */
+    /** @copydoc Drawable::Draw */
     void Draw(PrimitiveRenderer& renderer) const override {
-        renderer.Paint(color_).Fill(filled_).Triangle(World(a_), World(b_), World(c_));
+        renderer.Paint(color_).Fill(filled_).Triangle(a_, b_, c_);
     }
 
   private:

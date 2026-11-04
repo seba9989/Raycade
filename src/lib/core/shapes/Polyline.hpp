@@ -6,7 +6,7 @@
 
 #include <vector>
 
-#include "../Shape.hpp"
+#include "../Entity.hpp"
 #include "Line.hpp"
 
 namespace shapes {
@@ -15,7 +15,7 @@ namespace shapes {
  * @brief Otwarta lub zamknięta łamana o lokalnych współrzędnych wierzchołków.
  * @details W przeciwieństwie do Polygon nie sprawdza samoprzecięć.
  */
-class Polyline : public Shape<Polyline> {
+class Polyline : public Entity {
   public:
     /**
      * @brief Ustawia wierzchołki łamanej.
@@ -48,7 +48,7 @@ class Polyline : public Shape<Polyline> {
     }
 
     /**
-     * @copydoc Entity::Contains
+     * @copydoc Updatable::Contains
      * @details Łamana zamknięta jest traktowana jak wielokąt, otwarta - jak zbiór odcinków.
      */
     bool Contains(Vector2 point) const override {
@@ -62,11 +62,9 @@ class Polyline : public Shape<Polyline> {
     }
 
   protected:
-    /** @copydoc Entity::Draw */
+    /** @copydoc Drawable::Draw */
     void Draw(PrimitiveRenderer& renderer) const override {
-        renderer.Paint(color_)
-            .Incremental(incremental_)
-            .Polyline(WorldVertices(vertices_), closed_);
+        renderer.Paint(color_).Incremental(incremental_).Polyline(vertices_, closed_);
     }
 
   private:

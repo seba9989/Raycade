@@ -7,7 +7,7 @@
 #include <functional>
 
 #include "../../render/Bitmap.hpp"
-#include "../Shape.hpp"
+#include "../Entity.hpp"
 
 namespace shapes {
 
@@ -21,7 +21,7 @@ namespace shapes {
  *     .Content([](PrimitiveRenderer& r) { r.Paint(BLACK).Circle({150, 100}, 80); });
  * @endcode
  */
-class Canvas : public Shape<Canvas> {
+class Canvas : public Entity {
   public:
     /**
      * @brief Ustawia rozmiar, tworząc bitmapę od nowa.
@@ -71,18 +71,18 @@ class Canvas : public Shape<Canvas> {
      */
     Bitmap& Pixels() { return bitmap_; }
 
-    /** @copydoc Entity::Contains */
+    /** @copydoc Updatable::Contains */
     bool Contains(Vector2 point) const override {
-        const Vector2 corner = WorldPosition();
-        return ::CheckCollisionPointRec(point,
-                                        {corner.x, corner.y, static_cast<float>(bitmap_.Width()),
-                                         static_cast<float>(bitmap_.Height())});
+        const auto local = TryToLocal(point);
+        return local &&
+               ::CheckCollisionPointRec(*local, {0.0f, 0.0f, static_cast<float>(bitmap_.Width()),
+                                                 static_cast<float>(bitmap_.Height())});
     }
 
   protected:
-    /** @copydoc Entity::Draw */
+    /** @copydoc Drawable::Draw */
     void Draw(PrimitiveRenderer& renderer) const override {
-        if (bitmap_.Width() > 0) renderer.Blit(bitmap_, WorldPosition());
+        if (bitmap_.Width() > 0) renderer.Blit(bitmap_, {0.0f, 0.0f});
     }
 
   private:

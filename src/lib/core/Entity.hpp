@@ -1,25 +1,30 @@
 /**
  * @file Entity.hpp
- * @brief Abstrakcyjna baza obiektów sceny: hierarchia, warstwy, zdarzenia i rysowanie.
+ * @brief Abstrakcyjna baza obiektów sceny: drzewo, współrzędne i przebieg klatki.
  */
 #pragma once
 
 #include <raylib.h>
+#include <rlgl.h>
 
-#include <algorithm>
-#include <functional>
+#include <cstddef>
 #include <memory>
+#include <optional>
 #include <utility>
 #include <vector>
 
-#include "../render/PrimitiveRenderer.hpp"
-#include "Input.hpp"
+#include "Drawable.hpp"
+#include "Transformable.hpp"
+#include "Updatable.hpp"
 
 /**
  * @brief Abstrakcyjna baza wszystkich obiektów sceny.
  * @details Obiekty tworzą drzewo: każdy może mieć dzieci (Spawn<T>()), a dzieci kolejne
  * dzieci. Pozycja dziecka jest względna wobec rodzica, więc przesunięcie rodzica przesuwa
  * całe poddrzewo. Dzieci są zawsze rysowane nad swoim rodzicem.
+ * Updatable obsługuje własne zdarzenia, Drawable rysuje własny kształt i sortuje
+ * warstwy, a Transformable przechowuje i zmienia macierz. Entity aktualizuje i
+ * rysuje dzieci oraz nakłada macierz podczas rysowania.
  *
  * Obsługiwane zdarzenia (sprawdzane w Update()):
  * - OnUpdate - co klatkę,
@@ -27,17 +32,44 @@
  * - OnMouseEnter / OnMouseLeave - kursor wszedł na obiekt / zszedł z niego,
  * - OnKeyPressed - naciśnięcie konkretnego klawisza.
  *
- * Metody ustawiające zdarzenia z dostępem do konkretnego typu obiektu dodaje Shape<T>.
+ * @section entity_lancuch Łańcuchowanie
+ * Settery i zdarzenia z klas bazowych (Position(), Rotate(), Paint(), OnClick() itd.) używają
+ * jawnego parametru obiektu z C++23 (`this Self& self`). Zwracają więc konkretny typ, na którym
+ * je wywołano, a callbacki zdarzeń dostają ten typ jako argument:
+ * @code{.cpp}
+ * scene.Spawn<shapes::Circle>()
+ *     .Position({400, 300})
+ *     .Rotate(PI / 4)                   // nadal shapes::Circle&
+ *     .Radius(30)                       // setter samego okręgu
+ *     .OnClick([](shapes::Circle& self) { self.Radius(50); });
+ * @endcode
+ *
+ * @section entity_wlasne Własny kształt
+ * Wystarczy dziedziczyć po Entity i nadpisać Draw(). Dla reakcji na mysz należy
+ * nadpisać także Contains(); domyślnie obiekt nie ma obszaru trafienia. Umieszczenie klasy
+ * w przestrzeni nazw `shapes` sprawia, że edytor podpowie ją razem z wbudowanymi.
+ * @code{.cpp}
+ * namespace shapes {
+ * class Star : public Entity {
+ *   public:
+ *     bool Contains(Vector2 point) const override;
+ *   protected:
+ *     void Draw(PrimitiveRenderer& renderer) const override;
+ * };
+ * } // namespace shapes
+ *
+ * scene.Spawn<shapes::Star>().Position({100, 100}).Paint(GOLD);
+ * @endcode
  */
-class Entity {
+class Entity : public Updatable, public Drawable, public Transformable {
   public:
     /** @brief Wirtualny destruktor umożliwiający usuwanie obiektów przez wskaźnik Entity. */
     virtual ~Entity() = default;
 
     /**
      * @brief Tworzy dziecko wybranego typu.
-     * @tparam T Kształt z przestrzeni nazw @ref shapes (lista w opisie klasy Shape)
-     * albo własna klasa dziedzicząca po Shape<T>, np. `Spawn<shapes::Circle>()`.
+     * @tparam T Kształt z przestrzeni nazw @ref shapes albo własna klasa dziedzicząca
+     * po Entity, np. `Spawn<shapes::Circle>()`.
      * @return Referencja do nowego dziecka, do dalszej konfiguracji.
      */
     template <typename T> T& Spawn() {
@@ -49,29 +81,66 @@ class Entity {
     }
 
     /**
-     * @brief Pobiera pozycję lokalną względem rodzica.
-     * @return Pozycja lokalna.
+     * @brief Wykonuje konfigurację dzieci i pozwala kontynuować łańcuch.
+     * @param setup Funkcja otrzymująca ten obiekt jako jego konkretny typ
+     * (dzieci tworzy się w niej przez Spawn<T>()).
+     * @return Ten sam obiekt.
      */
-    Vector2 Position() const { return position_; }
+    template <typename Self> Self& Children(this Self& self, const Callback<Self>& setup) {
+        setup(self);
+        return self;
+    }
+
+    /**
+     * @brief Obsługuje własne zdarzenia, a następnie aktualizuje dzieci.
+     * @param dt Czas od poprzedniej klatki w sekundach.
+     * @param input Stan klawiatury i myszy.
+     */
+    void Update(float dt, const Input& input) override {
+        Updatable::Update(dt, input);
+        // Callback może dodać dziecko, dlatego rozmiar sprawdzamy w każdej iteracji.
+        for (std::size_t i = 0; i < children_.size(); ++i)
+            children_[i]->Update(dt, input);
+    }
+
+    /**
+     * @brief Nakłada lokalną macierz, rysuje własny kształt, a potem dzieci według warstw.
+     * @param renderer Renderer prymitywów.
+     */
+    void Render(PrimitiveRenderer& renderer) const override {
+        const auto matrix = transform_.RlglMatrix();
+        rlPushMatrix();
+        rlMultMatrixf(matrix.data());
+        Drawable::Render(renderer);
+        std::vector<const Drawable*> order;
+        order.reserve(children_.size());
+        for (const auto& child : children_)
+            order.push_back(child.get());
+        for (const Drawable* child : Drawable::ByLayer(std::move(order)))
+            child->Render(renderer);
+        rlPopMatrix();
+    }
 
     /**
      * @brief Oblicza pozycję obiektu w układzie ekranu (z uwzględnieniem rodziców).
      * @return Pozycja na ekranie.
      */
-    Vector2 WorldPosition() const {
-        if (!parent_) return position_;
-        const Vector2 origin = parent_->WorldPosition();
-        return {origin.x + position_.x, origin.y + position_.y};
-    }
+    Vector2 WorldPosition() const { return World({0.0f, 0.0f}); }
 
     /**
      * @brief Przelicza punkt ekranowy (np. kursor) na układ lokalny obiektu.
      * @param point Punkt w układzie ekranu.
-     * @return Punkt względem pozycji obiektu.
+     * @return Punkt w układzie lokalnym albo {0, 0}, gdy macierz jest nieodwracalna.
      */
-    Vector2 ToLocal(Vector2 point) const {
-        const Vector2 origin = WorldPosition();
-        return {point.x - origin.x, point.y - origin.y};
+    Vector2 ToLocal(Vector2 point) const { return TryToLocal(point).value_or(Vector2{}); }
+
+    /**
+     * @brief Przelicza punkt ekranowy na lokalny, jeśli przekształcenie jest odwracalne.
+     * @param point Punkt w układzie ekranu.
+     * @return Punkt lokalny albo brak wyniku, np. po skalowaniu przez zero.
+     */
+    std::optional<Vector2> TryToLocal(Vector2 point) const {
+        return WorldTransform().InverseApply(point);
     }
 
     /**
@@ -80,82 +149,18 @@ class Entity {
      */
     Entity* Parent() const { return parent_; }
 
-    /**
-     * @brief Sprawdza, czy kursor znajduje się nad obiektem.
-     * @return Stan najechania z ostatniego Update().
-     */
-    bool Hovered() const { return hovered_; }
-
-    /**
-     * @brief Pobiera warstwę używaną do kolejności rysowania.
-     * @details Wyższa warstwa jest rysowana na wierzchu, domyślnie 0. Warstwa działa między
-     * rodzeństwem - dzieci zawsze są rysowane nad swoim rodzicem.
-     * @return Numer warstwy.
-     */
-    int Layer() const { return layer_; }
-
-    /**
-     * @brief Sprawdza trafienie punktem (np. kursorem) w obiekt.
-     * @param point Punkt w układzie ekranu.
-     * @return true, gdy punkt należy do obiektu.
-     */
-    virtual bool Contains(Vector2 point) const = 0;
-
-    /**
-     * @brief Aktualizuje obiekt: najpierw jego zdarzenia, potem całe poddrzewo.
-     * @param dt Czas od poprzedniej klatki w sekundach.
-     * @param input Stan wejścia.
-     */
-    void Update(float dt, const Input& input) {
-        HandleEvents(dt, input);
-        // pętla po indeksie: zdarzenie może wywołać Spawn() i powiększyć wektor
-        for (std::size_t i = 0; i < children_.size(); ++i)
-            children_[i]->Update(dt, input);
-    }
-
-    /**
-     * @brief Rysuje obiekt, a nad nim jego dzieci w kolejności warstw.
-     * @details Przed rysowaniem obiektu pędzel jest resetowany, a celem staje się ekran.
-     * @param renderer Renderer prymitywów.
-     */
-    void Render(PrimitiveRenderer& renderer) const {
-        renderer.Reset().TargetScreen();
-        Draw(renderer);
-        for (const Entity* child : ByLayer(children_))
-            child->Render(renderer);
-    }
-
-    /**
-     * @brief Ustala kolejność rysowania: od najniższej warstwy, w tej samej - według dodania.
-     * @param list Obiekty do uporządkowania.
-     * @return Wskaźniki w kolejności rysowania.
-     */
-    static std::vector<const Entity*> ByLayer(const std::vector<std::unique_ptr<Entity>>& list) {
-        std::vector<const Entity*> order;
-        order.reserve(list.size());
-        for (const auto& entity : list)
-            order.push_back(entity.get());
-        std::stable_sort(order.begin(), order.end(),
-                         [](const Entity* a, const Entity* b) { return a->Layer() < b->Layer(); });
-        return order;
-    }
-
   protected:
-    /**
-     * @brief Rysuje sam kształt obiektu, bez dzieci.
-     * @details Współrzędne ekranowe należy wyznaczać przez World() lub WorldPosition().
-     * @param renderer Renderer z wyczyszczonym pędzlem i celem ustawionym na ekran.
-     */
-    virtual void Draw(PrimitiveRenderer& renderer) const = 0;
-
     /**
      * @brief Przelicza punkt lokalny (względem pozycji obiektu) na punkt ekranowy.
      * @param local Punkt lokalny.
      * @return Punkt w układzie ekranu.
      */
-    Vector2 World(Vector2 local) const {
-        const Vector2 origin = WorldPosition();
-        return {origin.x + local.x, origin.y + local.y};
+    Vector2 World(Vector2 local) const { return WorldTransform().Apply(local); }
+
+    /** @brief Łączy własne przekształcenie z przekształceniami rodziców. */
+    AffineMatrix2D WorldTransform() const {
+        if (!parent_) return transform_;
+        return parent_->WorldTransform() * transform_;
     }
 
     /**
@@ -173,38 +178,7 @@ class Entity {
         return world;
     }
 
-    Vector2 position_{};   /**< Pozycja względem rodzica. */
-    Color color_ = BLACK;  /**< Kolor rysowania. */
-    bool filled_ = false;  /**< Czy figura jest wypełniona. */
-    bool hovered_ = false; /**< Czy kursor był nad obiektem w ostatnim Update(). */
-    int layer_ = 0;        /**< Warstwa wśród rodzeństwa. */
-
-    std::function<void(float)> update_; /**< Funkcja OnUpdate. */
-    std::function<void()> click_;       /**< Funkcja OnClick. */
-    std::function<void()> mouseEnter_;  /**< Funkcja OnMouseEnter. */
-    std::function<void()> mouseLeave_;  /**< Funkcja OnMouseLeave. */
-    /** Pary (kod klawisza, funkcja) ustawione przez OnKeyPressed. */
-    std::vector<std::pair<int, std::function<void()>>> keys_;
-
   private:
-    /**
-     * @brief Sprawdza zdarzenia myszy i klawiatury, a potem wywołuje OnUpdate.
-     * @param dt Czas od poprzedniej klatki w sekundach.
-     * @param input Stan wejścia.
-     */
-    void HandleEvents(float dt, const Input& input) {
-        if (input.MouseEnabled()) {
-            const bool inside = Contains(input.MousePosition());
-            if (inside && !hovered_ && mouseEnter_) mouseEnter_();
-            if (!inside && hovered_ && mouseLeave_) mouseLeave_();
-            hovered_ = inside;
-            if (inside && input.MousePressed(MOUSE_BUTTON_LEFT) && click_) click_();
-        }
-        for (const auto& [key, callback] : keys_)
-            if (input.KeyPressed(key)) callback();
-        if (update_) update_(dt);
-    }
-
     Entity* parent_ = nullptr;                      /**< Rodzic albo nullptr. */
     std::vector<std::unique_ptr<Entity>> children_; /**< Dzieci obiektu. */
 };

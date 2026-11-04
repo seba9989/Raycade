@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "../../render/Geometry.hpp"
-#include "../Shape.hpp"
+#include "../Entity.hpp"
 
 namespace shapes {
 
@@ -17,7 +17,7 @@ namespace shapes {
  * można to sprawdzić przez Simple(). Fill() wypełnia wielokąt algorytmem scanline
  * z kontrolą parzystości.
  */
-class Polygon : public Shape<Polygon> {
+class Polygon : public Entity {
   public:
     /**
      * @brief Ustawia wierzchołki obwodu.
@@ -55,7 +55,7 @@ class Polygon : public Shape<Polygon> {
      */
     bool Simple() const { return IsSimplePolygon(vertices_); }
 
-    /** @copydoc Entity::Contains */
+    /** @copydoc Updatable::Contains */
     bool Contains(Vector2 point) const override {
         if (!Simple()) return false;
         std::vector<Vector2> world;
@@ -65,12 +65,9 @@ class Polygon : public Shape<Polygon> {
     }
 
   protected:
-    /** @copydoc Entity::Draw */
+    /** @copydoc Drawable::Draw */
     void Draw(PrimitiveRenderer& renderer) const override {
-        renderer.Paint(color_)
-            .Fill(filled_)
-            .Incremental(incremental_)
-            .Polygon(WorldVertices(vertices_));
+        renderer.Paint(color_).Fill(filled_).Incremental(incremental_).Polygon(vertices_);
     }
 
   private:
