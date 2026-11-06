@@ -13,6 +13,7 @@
 #include <set>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "../render/Bitmap.hpp"
 #include "../render/PrimitiveRenderer.hpp"
@@ -108,6 +109,67 @@ class Engine : public Contextable {
     Engine& VSync(bool value = true);
 
     /**
+     * @brief Pozwala użytkownikowi zmieniać rozmiar okna myszą.
+     * @param value Czy okno ma zmienny rozmiar.
+     * @return Ten sam silnik.
+     */
+    Engine& Resizable(bool value = true);
+
+    /**
+     * @brief Włącza wygładzanie krawędzi (MSAA 4x).
+     * @details Działa tylko przed Init() - później karta graficzna ma już utworzony bufor.
+     * @param value Czy włączyć MSAA.
+     * @return Ten sam silnik.
+     */
+    Engine& Msaa(bool value = true);
+
+    /**
+     * @brief Włącza obsługę wysokiego DPI (ostry obraz przy skalowaniu systemu, np. 150%).
+     * @details Działa tylko przed Init().
+     * @param value Czy włączyć High DPI.
+     * @return Ten sam silnik.
+     */
+    Engine& HighDpi(bool value = true);
+
+    /**
+     * @brief Usuwa ramkę i pasek tytułu okna.
+     * @param value Czy okno ma być bez ramki.
+     * @return Ten sam silnik.
+     */
+    Engine& Undecorated(bool value = true);
+
+    /**
+     * @brief Utrzymuje okno zawsze nad innymi oknami.
+     * @param value Czy okno ma być zawsze na wierzchu.
+     * @return Ten sam silnik.
+     */
+    Engine& AlwaysOnTop(bool value = true);
+
+    /**
+     * @brief Ustawia minimalny rozmiar okna (przy zmiennym rozmiarze).
+     * @param width Minimalna szerokość.
+     * @param height Minimalna wysokość.
+     * @return Ten sam silnik.
+     */
+    Engine& MinSize(int width, int height);
+
+    /**
+     * @brief Ustawia maksymalny rozmiar okna (przy zmiennym rozmiarze).
+     * @param width Maksymalna szerokość.
+     * @param height Maksymalna wysokość.
+     * @return Ten sam silnik.
+     */
+    Engine& MaxSize(int width, int height);
+
+    /**
+     * @brief Ustawia ikonę okna z pliku obrazu (np. PNG).
+     * @details Można wywołać przed Init(). Błąd wczytania jest zapisywany w logu.
+     * @param path Ścieżka pliku, np. AssetPath("ikona.png").
+     * @return Ten sam silnik.
+     */
+    Engine& Icon(std::string path);
+
+    /**
      * @brief Ustawia kolor czyszczenia ekranu na początku każdej klatki.
      * @param color Kolor tła.
      * @return Ten sam silnik.
@@ -181,6 +243,16 @@ class Engine : public Contextable {
         return *this;
     }
 
+    /**
+     * @brief Ustawia, od jakiego poziomu komunikaty samego raylib trafiają do logu.
+     * @details Komunikaty raylib są przekazywane do Log() (z przedrostkiem "[raylib]"), więc
+     * lądują także w pliku logu. Domyślnie LOG_INFO; LOG_WARNING wycisza informacje
+     * o starcie, a LOG_NONE - wszystko.
+     * @param level Poziom raylib (LOG_*).
+     * @return Ten sam silnik.
+     */
+    Engine& RaylibLogLevel(int level);
+
     /** @} */
 
     /** @name Logika globalna (niezależna od aktywnej sceny) */
@@ -203,6 +275,16 @@ class Engine : public Contextable {
      */
     Engine& OnDraw(std::function<void(PrimitiveRenderer&)> draw) {
         draw_ = std::move(draw);
+        return *this;
+    }
+
+    /**
+     * @brief Ustawia reakcję na pliki przeciągnięte na okno.
+     * @param callback Funkcja otrzymująca ścieżki upuszczonych plików.
+     * @return Ten sam silnik.
+     */
+    Engine& OnFilesDropped(std::function<void(const std::vector<std::string>&)> callback) {
+        filesDropped_ = std::move(callback);
         return *this;
     }
 
@@ -563,6 +645,14 @@ class Engine : public Contextable {
      */
     Engine& ClipboardText(const std::string& text);
 
+    /**
+     * @brief Pobiera obraz ze schowka jako bitmapę.
+     * @details W raylib 5.5 działa tylko na Windows; na innych systemach (i przed Init())
+     * zwraca pustą bitmapę - sprawdź Width() > 0.
+     * @return Bitmapa z obrazem albo pusta.
+     */
+    Bitmap ClipboardImage() const;
+
     /** @} */
 
     /** @name Czas, losowość i różne */
@@ -596,6 +686,16 @@ class Engine : public Contextable {
      * @return Wylosowana liczba.
      */
     int RandomValue(int min, int max) const;
+
+    /**
+     * @brief Losuje liczbę zmiennoprzecinkową z przedziału [min, max].
+     * @details Korzysta z tego samego generatora co RandomValue(), więc RandomSeed() działa
+     * dla obu. Rozdzielczość: milionowa część przedziału.
+     * @param min Dolna granica.
+     * @param max Górna granica.
+     * @return Wylosowana liczba.
+     */
+    float RandomFloat(float min, float max) const;
 
     /**
      * @brief Zapisuje zrzut ekranu do pliku PNG.
@@ -635,6 +735,69 @@ class Engine : public Contextable {
     bool DirectoryExists(const std::string& path) const;
     /** @brief Czas ostatniej modyfikacji pliku (sekundy od epoki Uniksa) albo 0. */
     long FileModTime(const std::string& path) const;
+
+    /**
+     * @brief Zwraca pełną ścieżkę zasobu z katalogu assets/ obok pliku wykonywalnego.
+     * @details CMake kopiuje tam katalog assets/ gry, więc ścieżka działa niezależnie od tego,
+     * z jakiego katalogu uruchomiono program.
+     * @param name Nazwa pliku w assets/, np. "player.png" albo "dzwieki/skok.wav".
+     * @return Ścieżka, np. "/home/.../build/assets/player.png".
+     */
+    std::string AssetPath(const std::string& name) const;
+
+    /**
+     * @brief Wczytuje cały plik tekstowy.
+     * @param path Ścieżka pliku.
+     * @return Treść albo brak wartości, gdy pliku nie da się odczytać.
+     */
+    std::optional<std::string> LoadText(const std::string& path) const;
+
+    /**
+     * @brief Zapisuje tekst do pliku (nadpisując go).
+     * @param path Ścieżka pliku.
+     * @param text Treść.
+     * @return true, gdy zapis się udał.
+     */
+    bool SaveText(const std::string& path, const std::string& text) const;
+
+    /** @} */
+
+    /**
+     * @name Nagrywanie i odtwarzanie wejścia
+     * Nagrywa klawiaturę, mysz i pady klatka po klatce, a potem odtwarza je, np. żeby pokazać
+     * demo na obronie zawsze tak samo. Podczas odtwarzania prawdziwe wejście nadal działa.
+     * @code{.cpp}
+     * if (engine.KeyPressed(KEY_F5)) engine.StartRecording();
+     * if (engine.KeyPressed(KEY_F6)) engine.StopRecording("demo.rae");
+     * if (engine.KeyPressed(KEY_F7)) engine.Replay("demo.rae");
+     * @endcode
+     */
+    /** @{ */
+
+    /**
+     * @brief Zaczyna nagrywanie wejścia.
+     * @return Ten sam silnik.
+     */
+    Engine& StartRecording();
+
+    /**
+     * @brief Kończy nagrywanie i zapisuje je do pliku.
+     * @param path Ścieżka pliku nagrania (format tekstowy raylib).
+     * @return true, gdy zapis się udał.
+     */
+    bool StopRecording(const std::string& path);
+
+    /**
+     * @brief Odtwarza nagranie od następnej klatki.
+     * @param path Ścieżka pliku nagrania.
+     * @return true, gdy nagranie wczytano i ma zdarzenia.
+     */
+    bool Replay(const std::string& path);
+
+    /** @brief Czy trwa nagrywanie. */
+    bool Recording() const { return recording_; }
+    /** @brief Czy trwa odtwarzanie. */
+    bool Replaying() const { return replaying_; }
 
     /** @} */
 
@@ -703,6 +866,22 @@ class Engine : public Contextable {
      */
     bool RequireWindow(const char* function);
 
+    /**
+     * @brief Ustawia lub zdejmuje flagę okna (przed Init() - zapamiętuje, po - zmienia okno).
+     * @param flag Flaga raylib (FLAG_*).
+     * @param value Czy flaga ma być ustawiona.
+     * @param name Nazwa metody (do komunikatów).
+     * @param onlyBeforeInit Czy flagi nie da się zmienić po Init() (MSAA, High DPI).
+     * @return Ten sam silnik.
+     */
+    Engine& WindowFlag(unsigned int flag, bool value, const char* name, bool onlyBeforeInit);
+
+    /** @brief Ustawia ikonę z icon_ (wymaga okna). */
+    void ApplyIcon();
+
+    /** @brief Obsługuje upuszczone pliki i odtwarzanie nagrania na początku klatki. */
+    void PollSystemEvents();
+
     std::string title_ = "Gra";             /**< Tytuł okna. */
     int width_ = 800;                       /**< Szerokość okna w trybie okienkowym. */
     int height_ = 600;                      /**< Wysokość okna w trybie okienkowym. */
@@ -713,7 +892,20 @@ class Engine : public Contextable {
     Input input_;                           /**< Stan i ustawienia urządzeń wejścia. */
     int exitKey_ = KEY_ESCAPE;              /**< Klawisz zamykający okno. */
     std::optional<Vector2> windowPosition_; /**< Pozycja okna do ustawienia przy Init(). */
-    std::optional<float> opacity_;       /**< Przezroczystość okna do ustawienia przy Init(). */
+    std::optional<float> opacity_; /**< Przezroczystość okna do ustawienia przy Init(). */
+    unsigned int windowFlags_ = 0; /**< Flagi okna (FLAG_*) z Resizable() itd. */
+    std::optional<std::pair<int, int>> minSize_; /**< Minimalny rozmiar okna. */
+    std::optional<std::pair<int, int>> maxSize_; /**< Maksymalny rozmiar okna. */
+    std::string icon_;                           /**< Ścieżka ikony do ustawienia przy Init(). */
+    int raylibLogLevel_ = LOG_INFO;              /**< Próg komunikatów raylib. */
+    /** Reakcja na pliki upuszczone na okno. */
+    std::function<void(const std::vector<std::string>&)> filesDropped_;
+    AutomationEventList recordList_{};   /**< Bufor nagrywanego wejścia. */
+    AutomationEventList replayList_{};   /**< Odtwarzane nagranie. */
+    bool recording_ = false;             /**< Czy trwa nagrywanie. */
+    bool replaying_ = false;             /**< Czy trwa odtwarzanie. */
+    unsigned int replayIndex_ = 0;       /**< Następne zdarzenie do odtworzenia. */
+    unsigned int replayFrame_ = 0;       /**< Klatka odtwarzania (od 0). */
     std::string logFile_ = "engine.log"; /**< Ścieżka pliku logu; pusta wyłącza zapis. */
 
     std::function<void(float)> update_;            /**< Globalna logika co klatkę. */

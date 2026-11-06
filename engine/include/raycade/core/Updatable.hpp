@@ -47,6 +47,9 @@ class Updatable {
     /** @brief Zwraca zapamiętany stan najechania kursora. */
     bool Hovered() const { return hovered_; }
 
+    /** @brief Sprawdza, czy obiekt jest właśnie przeciągany (patrz OnDrag()). */
+    bool Dragging() const { return dragging_; }
+
     /**
      * @name Zdarzenia
      * Callback otrzymuje obiekt jako jego konkretny typ (np. `shapes::Circle&`), bo metody
@@ -107,6 +110,80 @@ class Updatable {
         return self;
     }
 
+    /**
+     * @brief Ustawia reakcję na puszczenie wybranego klawisza.
+     * @details Można podpiąć kilka różnych klawiszy.
+     * @param key Kod klawisza raylib.
+     * @param callback Funkcja otrzymująca obiekt.
+     * @return Ten sam obiekt.
+     */
+    template <typename Self>
+    Self& OnKeyReleased(this Self& self, int key, Callback<Self> callback) {
+        self.keysReleased_.emplace_back(key, Bind(self, std::move(callback)));
+        return self;
+    }
+
+    /**
+     * @brief Ustawia reakcję na puszczenie lewego przycisku myszy nad obiektem.
+     * @param callback Funkcja otrzymująca obiekt.
+     * @return Ten sam obiekt.
+     */
+    template <typename Self> Self& OnMouseUp(this Self& self, Callback<Self> callback) {
+        self.mouseUp_ = Bind(self, std::move(callback));
+        return self;
+    }
+
+    /**
+     * @brief Ustawia reakcję na kółko myszy, gdy kursor jest nad obiektem.
+     * @param callback Funkcja otrzymująca obiekt i ruch kółka (dodatni w górę).
+     * @return Ten sam obiekt.
+     */
+    template <typename Self> Self& OnScroll(this Self& self, Callback<Self, float> callback) {
+        self.scroll_ = [&self, callback = std::move(callback)](float wheel) {
+            callback(self, wheel);
+        };
+        return self;
+    }
+
+    /**
+     * @brief Ustawia reakcję na rozpoczęcie przeciągania (lewy przycisk wciśnięty na obiekcie).
+     * @param callback Funkcja otrzymująca obiekt.
+     * @return Ten sam obiekt.
+     */
+    template <typename Self> Self& OnDragStart(this Self& self, Callback<Self> callback) {
+        self.dragStart_ = Bind(self, std::move(callback));
+        return self;
+    }
+
+    /**
+     * @brief Ustawia reakcję na ruch kursora podczas przeciągania.
+     * @details Przeciąganie trwa od wciśnięcia lewego przycisku na obiekcie do jego puszczenia,
+     * także gdy kursor wyjdzie poza obiekt. Przesunięcie jest w układzie rodzica, więc
+     * `self.Translate(delta)` przesuwa obiekt dokładnie za kursorem, nawet w obróconej grupie.
+     * @code{.cpp}
+     * scene.Spawn<shapes::Rect>().Size({80, 50}).Fill()
+     *     .OnDrag([](shapes::Rect& self, Vector2 delta) { self.Translate(delta); });
+     * @endcode
+     * @param callback Funkcja otrzymująca obiekt i przesunięcie kursora od poprzedniej klatki.
+     * @return Ten sam obiekt.
+     */
+    template <typename Self> Self& OnDrag(this Self& self, Callback<Self, Vector2> callback) {
+        self.drag_ = [&self, callback = std::move(callback)](Vector2 delta) {
+            callback(self, delta);
+        };
+        return self;
+    }
+
+    /**
+     * @brief Ustawia reakcję na zakończenie przeciągania (puszczenie lewego przycisku).
+     * @param callback Funkcja otrzymująca obiekt.
+     * @return Ten sam obiekt.
+     */
+    template <typename Self> Self& OnDragEnd(this Self& self, Callback<Self> callback) {
+        self.dragEnd_ = Bind(self, std::move(callback));
+        return self;
+    }
+
     /** @} */
 
   protected:
@@ -125,6 +202,24 @@ class Updatable {
     std::function<void()> mouseEnter_;  /**< Reakcja na wejście kursora. */
     std::function<void()> mouseLeave_;  /**< Reakcja na wyjście kursora. */
     std::vector<std::pair<int, std::function<void()>>> keys_; /**< Reakcje na klawisze. */
+    /** Reakcje na puszczenie klawiszy. */
+    std::vector<std::pair<int, std::function<void()>>> keysReleased_;
+    std::function<void()> mouseUp_;     /**< Reakcja na puszczenie przycisku nad obiektem. */
+    std::function<void(float)> scroll_; /**< Reakcja na kółko myszy nad obiektem. */
+    std::function<void()> dragStart_;   /**< Początek przeciągania. */
+    std::function<void(Vector2)> drag_; /**< Ruch podczas przeciągania. */
+    std::function<void()> dragEnd_;     /**< Koniec przeciągania. */
+
+    /**
+     * @brief Zamienia ruch kursora (w układzie ekranu) na przesunięcie dla OnDrag().
+     * @details Domyślnie zwraca różnicę na ekranie. Entity przelicza ją na układ rodzica.
+     * @param from Poprzednia pozycja kursora.
+     * @param to Bieżąca pozycja kursora.
+     * @return Przesunięcie przekazywane do OnDrag().
+     */
+    virtual Vector2 DragDelta(Vector2 from, Vector2 to) const {
+        return {to.x - from.x, to.y - from.y};
+    }
 
   private:
     /**
@@ -141,17 +236,49 @@ class Updatable {
     /** @brief Wywołuje callbacki myszy i klawiatury, Tick() i callback aktualizacji. */
     void HandleEvents(float dt, const Input& input) {
         if (input.MouseEnabled()) {
-            const bool inside = Contains(input.MousePosition());
+            const Vector2 mouse = input.MousePosition();
+            const bool inside = Contains(mouse);
             if (inside && !hovered_ && mouseEnter_) mouseEnter_();
             if (!inside && hovered_ && mouseLeave_) mouseLeave_();
             hovered_ = inside;
-            if (inside && input.MousePressed(MOUSE_BUTTON_LEFT) && click_) click_();
+            if (inside && input.MousePressed(MOUSE_BUTTON_LEFT)) {
+                if (click_) click_();
+                if (!dragging_ && (dragStart_ || drag_ || dragEnd_)) {
+                    dragging_ = true;
+                    dragFrom_ = mouse;
+                    if (dragStart_) dragStart_();
+                }
+            }
+            if (inside && input.MouseReleased(MOUSE_BUTTON_LEFT) && mouseUp_) mouseUp_();
+            if (inside && scroll_)
+                if (const float wheel = input.MouseWheel(); wheel != 0.0f) scroll_(wheel);
         }
+        HandleDrag(input);
         for (const auto& [key, callback] : keys_)
             if (input.KeyPressed(key)) callback();
+        for (const auto& [key, callback] : keysReleased_)
+            if (input.KeyReleased(key)) callback();
         Tick(dt, input);
         if (update_) update_(dt);
     }
 
-    bool hovered_ = false; /**< Ostatni zapamiętany stan najechania kursora. */
+    /** @brief Prowadzi trwające przeciąganie: OnDrag() przy ruchu, OnDragEnd() po puszczeniu. */
+    void HandleDrag(const Input& input) {
+        if (!dragging_) return;
+        // koniec także po wyłączeniu myszy - inaczej obiekt zostałby "przyklejony" do kursora
+        if (!input.MouseDown(MOUSE_BUTTON_LEFT)) {
+            dragging_ = false;
+            if (dragEnd_) dragEnd_();
+            return;
+        }
+        const Vector2 mouse = input.MousePosition();
+        if (mouse.x == dragFrom_.x && mouse.y == dragFrom_.y) return;
+        const Vector2 delta = DragDelta(dragFrom_, mouse);
+        dragFrom_ = mouse;
+        if (drag_) drag_(delta);
+    }
+
+    bool hovered_ = false;  /**< Ostatni zapamiętany stan najechania kursora. */
+    bool dragging_ = false; /**< Czy trwa przeciąganie. */
+    Vector2 dragFrom_{};    /**< Pozycja kursora w poprzedniej klatce przeciągania. */
 };

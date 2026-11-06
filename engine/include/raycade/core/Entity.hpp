@@ -33,7 +33,10 @@ class Scene;
  * - OnUpdate - co klatkę,
  * - OnClick - kliknięcie lewym przyciskiem myszy na obiekcie,
  * - OnMouseEnter / OnMouseLeave - kursor wszedł na obiekt / zszedł z niego,
- * - OnKeyPressed - naciśnięcie konkretnego klawisza.
+ * - OnMouseUp - puszczenie lewego przycisku nad obiektem,
+ * - OnScroll - kółko myszy nad obiektem,
+ * - OnDragStart / OnDrag / OnDragEnd - przeciąganie lewym przyciskiem,
+ * - OnKeyPressed / OnKeyReleased - naciśnięcie / puszczenie konkretnego klawisza.
  *
  * @section entity_lancuch Łańcuchowanie
  * Settery i zdarzenia z klas bazowych (Position(), Rotate(), Paint(), OnClick() itd.) używają
@@ -218,6 +221,19 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
         if (parent_) return parent_;
         if (sceneContext_) return sceneContext_;
         return ContextRoot();
+    }
+
+    /**
+     * @brief Przelicza ruch kursora na przesunięcie w układzie rodzica.
+     * @details Dzięki temu `Translate(delta)` w OnDrag() przesuwa obiekt dokładnie za
+     * kursorem także w obróconej lub przeskalowanej grupie.
+     */
+    Vector2 DragDelta(Vector2 from, Vector2 to) const override {
+        if (!parent_) return Updatable::DragDelta(from, to);
+        const auto a = parent_->TryToLocal(from);
+        const auto b = parent_->TryToLocal(to);
+        if (!a || !b) return Updatable::DragDelta(from, to);
+        return {b->x - a->x, b->y - a->y};
     }
 
     /**

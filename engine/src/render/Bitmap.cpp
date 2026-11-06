@@ -15,6 +15,11 @@ Bitmap::Bitmap(int width, int height, Color background)
     : image_(::GenImageColor(width, height, background)) {
 }
 
+Bitmap::Bitmap(Image image) : image_(image) {
+    if (image_.data != nullptr && image_.format != PIXELFORMAT_UNCOMPRESSED_R8G8B8A8)
+        ::ImageFormat(&image_, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
+}
+
 Bitmap::~Bitmap() {
     Release();
 }

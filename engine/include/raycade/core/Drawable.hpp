@@ -27,7 +27,10 @@ class Drawable {
      */
     virtual void Render(PrimitiveRenderer& renderer) const {
         renderer.Reset().TargetScreen();
+        // raylib nie ma stosu trybów mieszania, więc tryb dotyczy tylko własnego Draw()
+        if (blend_ != BLEND_ALPHA) ::BeginBlendMode(blend_);
         Draw(renderer);
+        if (blend_ != BLEND_ALPHA) ::EndBlendMode();
     }
 
     /**
@@ -35,6 +38,21 @@ class Drawable {
      * @return Numer warstwy; większa wartość oznacza rysowanie później.
      */
     int Layer() const { return layer_; }
+
+    /**
+     * @brief Ustawia sposób mieszania kolorów z tym, co już narysowano.
+     * @details Dotyczy tylko własnego rysunku obiektu, bez dzieci. Przykłady: BLEND_ADDITIVE
+     * (światło, ogień - kolory się sumują), BLEND_MULTIPLIED (cień), BLEND_ALPHA (domyślny).
+     * @param mode Tryb raylib (BLEND_*).
+     * @return Ten sam obiekt.
+     */
+    template <typename Self> Self& Blend(this Self& self, int mode) {
+        self.blend_ = mode;
+        return self;
+    }
+
+    /** @brief Zwraca tryb mieszania kolorów (BLEND_*). */
+    int Blend() const { return blend_; }
 
     /**
      * @brief Ustawia warstwę wśród obiektów tego samego rodzica.
@@ -84,7 +102,8 @@ class Drawable {
     /** @brief Rysuje sam obiekt bez dzieci. */
     virtual void Draw(PrimitiveRenderer& renderer) const = 0;
 
-    Color color_ = BLACK; /**< Kolor figury. */
-    bool filled_ = false; /**< Czy figura jest wypełniona. */
-    int layer_ = 0;       /**< Warstwa wśród rodzeństwa. */
+    Color color_ = BLACK;     /**< Kolor figury. */
+    bool filled_ = false;     /**< Czy figura jest wypełniona. */
+    int layer_ = 0;           /**< Warstwa wśród rodzeństwa. */
+    int blend_ = BLEND_ALPHA; /**< Tryb mieszania kolorów. */
 };

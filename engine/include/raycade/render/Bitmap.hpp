@@ -31,6 +31,14 @@ class Bitmap {
      */
     Bitmap(int width, int height, Color background = BLANK);
 
+    /**
+     * @brief Przejmuje obraz raylib na własność.
+     * @details Obraz jest konwertowany do formatu R8G8B8A8, którego używa Pixel(). Pusty obraz
+     * daje pustą bitmapę (0 x 0).
+     * @param image Obraz, np. z LoadImage(); nie wolno go już zwalniać samodzielnie.
+     */
+    explicit Bitmap(Image image);
+
     /** @brief Zwalnia obraz i ewentualną teksturę. */
     ~Bitmap();
 

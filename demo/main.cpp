@@ -71,6 +71,7 @@
  * Wynik trafia do `doxygen/html/index.html`.
  */
 
+#include "raycade/core/Engine.hpp"
 #include <string>
 
 #include <raycade>

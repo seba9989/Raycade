@@ -8,8 +8,49 @@
 #include <raycade/core/Engine.hpp>
 
 #include <algorithm>
+#include <cstdarg>
+#include <cstdio>
 #include <iostream>
 #include <stdexcept>
+
+namespace {
+
+/**
+ * @brief Przekazuje komunikaty raylib do Engine::Log() (konsola i plik logu).
+ * @details raylib sam filtruje poziom (SetTraceLogLevel) przed wywołaniem tej funkcji.
+ */
+void RaylibLog(int level, const char* text, va_list args) {
+    va_list copy;
+    va_copy(copy, args);
+    const int size = std::vsnprintf(nullptr, 0, text, copy);
+    va_end(copy);
+    std::string message(size > 0 ? static_cast<std::size_t>(size) : 0, '\0');
+    if (size > 0) std::vsnprintf(message.data(), message.size() + 1, text, args);
+
+    const char* name = "INFO";
+    switch (level) {
+    case LOG_TRACE:
+        name = "TRACE";
+        break;
+    case LOG_DEBUG:
+        name = "DEBUG";
+        break;
+    case LOG_WARNING:
+        name = "UWAGA";
+        break;
+    case LOG_ERROR:
+        name = "BLAD";
+        break;
+    case LOG_FATAL:
+        name = "KRYTYCZNY";
+        break;
+    default:
+        break;
+    }
+    Engine::Get().Log(std::string("[raylib] ") + name + ": " + message);
+}
+
+} // namespace
 
 Contextable* ContextRoot() {
     return &Engine::Get();
@@ -58,9 +99,12 @@ Engine& Engine::Fps(int fps) {
 Engine& Engine::Init() {
     if (initialized_) return *this;
     if (!logFile_.empty()) log_.open(logFile_);
+    // przed InitWindow, żeby do logu trafiły też komunikaty o tworzeniu okna
+    ::SetTraceLogLevel(raylibLogLevel_);
+    ::SetTraceLogCallback(RaylibLog);
 
     // flagi okna muszą być ustawione przed InitWindow
-    unsigned int flags = 0;
+    unsigned int flags = windowFlags_;
     if (fullscreen_) flags |= FLAG_FULLSCREEN_MODE;
     if (vsync_) flags |= FLAG_VSYNC_HINT;
     ::SetConfigFlags(flags);
@@ -81,7 +125,10 @@ Engine& Engine::Init() {
         ::SetWindowPosition(static_cast<int>(windowPosition_->x),
                             static_cast<int>(windowPosition_->y));
     if (opacity_) ::SetWindowOpacity(*opacity_);
+    if (minSize_) ::SetWindowMinSize(minSize_->first, minSize_->second);
+    if (maxSize_) ::SetWindowMaxSize(maxSize_->first, maxSize_->second);
     initialized_ = true;
+    ApplyIcon();
     Log("Silnik zainicjalizowany (podwojne buforowanie, V-Sync: " +
         std::string(vsync_ ? "tak" : "nie") + ")");
     return *this;
@@ -103,6 +150,7 @@ int Engine::Run() {
         const auto found = scenes_.find(active_);
         Scene* scene = found != scenes_.end() ? &found->second : nullptr;
 
+        PollSystemEvents();
         if (update_) update_(dt);
         if (scene) scene->Update(dt, input_);
 
@@ -130,7 +178,19 @@ void Engine::Shutdown() {
     unload_.clear();
     reload_.clear();
     ClearContext(); // wartości globalne też mogą trzymać tekstury
+    if (recording_) {
+        ::StopAutomationEventRecording();
+        ::UnloadAutomationEventList(recordList_);
+        recording_ = false;
+        Log("UWAGA: nagrywanie przerwane przy zamykaniu - nagranie nie zostalo zapisane");
+    }
+    if (replaying_) {
+        ::UnloadAutomationEventList(replayList_);
+        replaying_ = false;
+    }
     ::CloseWindow();
+    // komunikaty raylib po zamknięciu znów idą prosto na konsolę (silnik może już nie istnieć)
+    ::SetTraceLogCallback(nullptr);
     initialized_ = false;
 }
 
@@ -538,4 +598,181 @@ bool Engine::DirectoryExists(const std::string& path) const {
 
 long Engine::FileModTime(const std::string& path) const {
     return ::GetFileModTime(path.c_str());
+}
+
+// ---------------------------------------------------------------------------------------------
+// Grupa 2: flagi okna, ikona, logi raylib, pliki, losowość, nagrywanie wejścia
+// ---------------------------------------------------------------------------------------------
+
+Engine& Engine::WindowFlag(unsigned int flag, bool value, const char* name, bool onlyBeforeInit) {
+    if (value)
+        windowFlags_ |= flag;
+    else
+        windowFlags_ &= ~flag;
+    if (!initialized_) return *this;
+    if (onlyBeforeInit) {
+        Log(std::string("UWAGA: ") + name + "() dziala tylko przed Init() - pominieto");
+        return *this;
+    }
+    if (value)
+        ::SetWindowState(flag);
+    else
+        ::ClearWindowState(flag);
+    return *this;
+}
+
+Engine& Engine::Resizable(bool value) {
+    return WindowFlag(FLAG_WINDOW_RESIZABLE, value, "Resizable", false);
+}
+
+Engine& Engine::Msaa(bool value) {
+    return WindowFlag(FLAG_MSAA_4X_HINT, value, "Msaa", true);
+}
+
+Engine& Engine::HighDpi(bool value) {
+    return WindowFlag(FLAG_WINDOW_HIGHDPI, value, "HighDpi", true);
+}
+
+Engine& Engine::Undecorated(bool value) {
+    return WindowFlag(FLAG_WINDOW_UNDECORATED, value, "Undecorated", false);
+}
+
+Engine& Engine::AlwaysOnTop(bool value) {
+    return WindowFlag(FLAG_WINDOW_TOPMOST, value, "AlwaysOnTop", false);
+}
+
+Engine& Engine::MinSize(int width, int height) {
+    minSize_ = std::pair{width, height};
+    if (initialized_) ::SetWindowMinSize(width, height);
+    return *this;
+}
+
+Engine& Engine::MaxSize(int width, int height) {
+    maxSize_ = std::pair{width, height};
+    if (initialized_) ::SetWindowMaxSize(width, height);
+    return *this;
+}
+
+Engine& Engine::Icon(std::string path) {
+    icon_ = std::move(path);
+    if (initialized_) ApplyIcon();
+    return *this;
+}
+
+void Engine::ApplyIcon() {
+    if (icon_.empty()) return;
+    Image image = ::LoadImage(icon_.c_str());
+    if (image.data == nullptr) {
+        Log("BLAD: nie udalo sie wczytac ikony \"" + icon_ + "\"");
+        return;
+    }
+    // SetWindowIcon wymaga formatu R8G8B8A8
+    if (image.format != PIXELFORMAT_UNCOMPRESSED_R8G8B8A8)
+        ::ImageFormat(&image, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
+    ::SetWindowIcon(image);
+    ::UnloadImage(image);
+}
+
+Engine& Engine::RaylibLogLevel(int level) {
+    raylibLogLevel_ = level;
+    ::SetTraceLogLevel(level);
+    return *this;
+}
+
+void Engine::PollSystemEvents() {
+    if (filesDropped_ && ::IsFileDropped()) {
+        const FilePathList files = ::LoadDroppedFiles();
+        std::vector<std::string> paths(files.paths, files.paths + files.count);
+        ::UnloadDroppedFiles(files);
+        filesDropped_(paths);
+    }
+
+    if (!replaying_) return;
+    // zdarzenia nagrane w klatce N odtwarzamy na początku N-tej klatki odtwarzania
+    while (replayIndex_ < replayList_.count &&
+           replayList_.events[replayIndex_].frame <= replayFrame_)
+        ::PlayAutomationEvent(replayList_.events[replayIndex_++]);
+    ++replayFrame_;
+    if (replayIndex_ >= replayList_.count) {
+        ::UnloadAutomationEventList(replayList_);
+        replayList_ = {};
+        replaying_ = false;
+        Log("Koniec odtwarzania nagrania");
+    }
+}
+
+Bitmap Engine::ClipboardImage() const {
+    if (!initialized_) return {};
+    return Bitmap{::GetClipboardImage()};
+}
+
+float Engine::RandomFloat(float min, float max) const {
+    constexpr int kSteps = 1'000'000;
+    const float fraction = static_cast<float>(::GetRandomValue(0, kSteps)) / kSteps;
+    return min + (max - min) * fraction;
+}
+
+std::string Engine::AssetPath(const std::string& name) const {
+    return ApplicationDirectory() + "assets/" + name;
+}
+
+std::optional<std::string> Engine::LoadText(const std::string& path) const {
+    char* text = ::LoadFileText(path.c_str());
+    if (text == nullptr) return std::nullopt;
+    std::string result = text;
+    ::UnloadFileText(text);
+    return result;
+}
+
+bool Engine::SaveText(const std::string& path, const std::string& text) const {
+    std::string copy = text; // raylib przyjmuje char* bez const
+    return ::SaveFileText(path.c_str(), copy.data());
+}
+
+Engine& Engine::StartRecording() {
+    if (!RequireWindow("StartRecording") || recording_) return *this;
+    if (replaying_) {
+        Log("UWAGA: nie mozna nagrywac podczas odtwarzania - pominieto");
+        return *this;
+    }
+    recordList_ = ::LoadAutomationEventList(nullptr); // pusta lista o pełnej pojemności
+    ::SetAutomationEventList(&recordList_);
+    ::SetAutomationEventBaseFrame(0); // numery klatek nagrania liczone od zera
+    ::StartAutomationEventRecording();
+    recording_ = true;
+    Log("Nagrywanie wejscia...");
+    return *this;
+}
+
+bool Engine::StopRecording(const std::string& path) {
+    if (!recording_) return false;
+    ::StopAutomationEventRecording();
+    const bool saved = ::ExportAutomationEventList(recordList_, path.c_str());
+    Log("Nagranie: " + std::to_string(recordList_.count) + " zdarzen -> \"" + path + "\"" +
+        (saved ? "" : " (BLAD zapisu)"));
+    ::UnloadAutomationEventList(recordList_);
+    recordList_ = {};
+    recording_ = false;
+    return saved;
+}
+
+bool Engine::Replay(const std::string& path) {
+    if (!RequireWindow("Replay")) return false;
+    if (recording_) {
+        Log("UWAGA: nie mozna odtwarzac podczas nagrywania - pominieto");
+        return false;
+    }
+    AutomationEventList list = ::LoadAutomationEventList(path.c_str());
+    if (list.count == 0) {
+        ::UnloadAutomationEventList(list);
+        Log("BLAD: brak zdarzen w nagraniu \"" + path + "\"");
+        return false;
+    }
+    if (replaying_) ::UnloadAutomationEventList(replayList_);
+    replayList_ = list;
+    replayIndex_ = 0;
+    replayFrame_ = 0;
+    replaying_ = true;
+    Log("Odtwarzanie nagrania \"" + path + "\" (" + std::to_string(list.count) + " zdarzen)");
+    return true;
 }
