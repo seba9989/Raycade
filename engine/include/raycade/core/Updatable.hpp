@@ -22,6 +22,20 @@ template <typename Self, typename... Args>
 using Callback = std::type_identity_t<std::function<void(Self&, Args...)>>;
 
 /**
+ * @brief Zdarzenia myszy przydzielone jednemu obiektowi w bieżącej klatce.
+ * @details Wypełnia je Entity na podstawie trafień policzonych przez scenę (patrz
+ * @ref entity_trafienia), więc obiekt nie sprawdza kursora sam.
+ */
+struct PointerEvents {
+    bool hovered =
+        false; /**< Kursor nad obiektem (albo nad jego potomkiem) i nic go nie zasłania. */
+    bool pressed = false;   /**< Obiekt dostaje OnClick w tej klatce. */
+    bool released = false;  /**< Obiekt dostaje OnMouseUp w tej klatce. */
+    bool scrolled = false;  /**< Obiekt dostaje OnScroll w tej klatce. */
+    bool dragStart = false; /**< Obiekt zaczyna przeciąganie w tej klatce. */
+};
+
+/**
  * @brief Obiekt aktualizowany co klatkę.
  * @details Klasa obsługuje tylko własne zdarzenia. Aktualizacja dzieci należy do Entity.
  * Domyślna implementacja Contains() nie ma obszaru reagowania na mysz.
@@ -31,20 +45,17 @@ class Updatable {
     virtual ~Updatable() = default;
 
     /**
-     * @brief Obsługuje zdarzenia tego obiektu.
-     * @param dt Czas od poprzedniej klatki w sekundach.
-     * @param input Stan klawiatury i myszy.
-     */
-    virtual void Update(float dt, const Input& input) { HandleEvents(dt, input); }
-
-    /**
      * @brief Sprawdza trafienie punktem w obiekt.
      * @param point Punkt we współrzędnych ekranu.
      * @return true, gdy punkt należy do obiektu.
      */
     virtual bool Contains([[maybe_unused]] Vector2 point) const { return false; }
 
-    /** @brief Zwraca zapamiętany stan najechania kursora. */
+    /**
+     * @brief Sprawdza, czy kursor jest nad obiektem.
+     * @details Tylko najwyżej narysowany obiekt pod kursorem i jego przodkowie są „najechani”
+     * - obiekt zasłonięty przez inny nie jest.
+     */
     bool Hovered() const { return hovered_; }
 
     /** @brief Sprawdza, czy obiekt jest właśnie przeciągany (patrz OnDrag()). */
@@ -222,6 +233,8 @@ class Updatable {
     }
 
   private:
+    friend class Entity;
+
     /**
      * @brief Opakowuje funkcję zdarzenia tak, by otrzymywała obiekt jako jego konkretny typ.
      * @param self Obiekt, którego dotyczy zdarzenie.
@@ -233,26 +246,32 @@ class Updatable {
         return [&self, callback = std::move(callback)] { callback(self); };
     }
 
-    /** @brief Wywołuje callbacki myszy i klawiatury, Tick() i callback aktualizacji. */
-    void HandleEvents(float dt, const Input& input) {
-        if (input.MouseEnabled()) {
-            const Vector2 mouse = input.MousePosition();
-            const bool inside = Contains(mouse);
-            if (inside && !hovered_ && mouseEnter_) mouseEnter_();
-            if (!inside && hovered_ && mouseLeave_) mouseLeave_();
-            hovered_ = inside;
-            if (inside && input.MousePressed(MOUSE_BUTTON_LEFT)) {
-                if (click_) click_();
-                if (!dragging_ && (dragStart_ || drag_ || dragEnd_)) {
-                    dragging_ = true;
-                    dragFrom_ = mouse;
-                    if (dragStart_) dragStart_();
-                }
-            }
-            if (inside && input.MouseReleased(MOUSE_BUTTON_LEFT) && mouseUp_) mouseUp_();
-            if (inside && scroll_)
-                if (const float wheel = input.MouseWheel(); wheel != 0.0f) scroll_(wheel);
+    /** @name Czy obiekt obsługuje dane zdarzenie myszy (do wyboru odbiorcy przez scenę) */
+    /** @{ */
+    bool HandlesClick() const { return static_cast<bool>(click_); }
+    bool HandlesMouseUp() const { return static_cast<bool>(mouseUp_); }
+    bool HandlesScroll() const { return static_cast<bool>(scroll_); }
+    bool HandlesDrag() const { return dragStart_ || drag_ || dragEnd_; }
+    /** @} */
+
+    /**
+     * @brief Wywołuje callbacki myszy i klawiatury, Tick() i callback aktualizacji.
+     * @param dt Czas od poprzedniej klatki w sekundach.
+     * @param input Stan wejścia.
+     * @param pointer Zdarzenia myszy przydzielone temu obiektowi przez scenę.
+     */
+    void HandleEvents(float dt, const Input& input, const PointerEvents& pointer) {
+        if (pointer.hovered && !hovered_ && mouseEnter_) mouseEnter_();
+        if (!pointer.hovered && hovered_ && mouseLeave_) mouseLeave_();
+        hovered_ = pointer.hovered;
+        if (pointer.pressed && click_) click_();
+        if (pointer.dragStart && !dragging_) {
+            dragging_ = true;
+            dragFrom_ = input.MousePosition();
+            if (dragStart_) dragStart_();
         }
+        if (pointer.released && mouseUp_) mouseUp_();
+        if (pointer.scrolled && scroll_) scroll_(input.MouseWheel());
         HandleDrag(input);
         for (const auto& [key, callback] : keys_)
             if (input.KeyPressed(key)) callback();

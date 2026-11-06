@@ -7,6 +7,7 @@
 #include <raylib.h>
 #include <rlgl.h>
 
+#include <algorithm>
 #include <cstddef>
 #include <memory>
 #include <optional>
@@ -19,6 +20,19 @@
 #include "Updatable.hpp"
 
 class Scene;
+class Entity;
+
+/**
+ * @brief Wynik trafiania myszą w jednej klatce, liczony przez scenę.
+ * @details Patrz @ref entity_trafienia.
+ */
+struct PointerFrame {
+    const Entity* target = nullptr;  /**< Najwyżej narysowany obiekt pod kursorem. */
+    const Entity* press = nullptr;   /**< Odbiorca OnClick. */
+    const Entity* release = nullptr; /**< Odbiorca OnMouseUp. */
+    const Entity* scroll = nullptr;  /**< Odbiorca OnScroll. */
+    const Entity* drag = nullptr;    /**< Obiekt, który zaczyna przeciąganie. */
+};
 
 /**
  * @brief Abstrakcyjna baza wszystkich obiektów sceny.
@@ -74,7 +88,8 @@ class Scene;
  * - mieć własne settery z `this Self& self`, żeby łańcuch działał także w klasach pochodnych,
  * - reagować na mysz całą grupą dzięki AnyChildContains().
  *
- * Update() i Render() są `final` - zdarzenia, dzieci i macierz obsługuje zawsze Entity.
+ * Update() nie jest wirtualna, a Render() jest `final` - zdarzenia, dzieci i macierz obsługuje
+ * zawsze Entity.
  * @code{.cpp}
  * class Player : public shapes::Group {
  *   public:
@@ -94,6 +109,20 @@ class Scene;
  *
  * scene.Spawn<Player>().Position({400, 300}).Speed(300).OnClick([](Player& self) { ... });
  * @endcode
+ *
+ * @section entity_trafienia Trafianie myszą
+ * Scena raz na klatkę zbiera obiekty pod kursorem (te, których Contains() zwraca true)
+ * w kolejności od najwyżej narysowanego: wyższa warstwa nad niższą, dziecko nad rodzicem,
+ * a w tej samej warstwie - później dodany nad wcześniejszym.
+ * - Hovered(), OnMouseEnter i OnMouseLeave dotyczą najwyższego trafionego obiektu i jego
+ *   przodków (jak :hover w CSS) - obiekt zasłonięty przez inny nie jest najechany.
+ * - OnClick, OnMouseUp, OnScroll i przeciąganie dostaje jeden obiekt: pierwszy z takim
+ *   zdarzeniem, szukając od najwyższego trafionego w górę jego przodków. Obiekt bez tego
+ *   zdarzenia (np. ozdobny kontur albo część gracza) przepuszcza je do przodka, a gdy żaden
+ *   przodek go nie obsługuje - do obiektów pod spodem.
+ *
+ * Żeby obiekt blokował kliknięcia w to, co pod nim (np. okno dialogowe), wystarczy dać mu
+ * puste zdarzenie: `.OnClick([](auto&) {})`.
  *
  * @section entity_kontekst Kontekst (jak setContext/getContext w Svelte)
  * ProvideContext<T>() udostępnia wartość całemu poddrzewu obiektu, a GetContext<T>() w potomku
@@ -147,15 +176,22 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
 
     /**
      * @brief Obsługuje własne zdarzenia, a następnie aktualizuje dzieci.
-     * @details Metoda jest `final`: logikę klasy pochodnej umieszcza się w Tick().
+     * @details Wywoływana przez scenę. Logikę klasy pochodnej umieszcza się w Tick().
      * @param dt Czas od poprzedniej klatki w sekundach.
      * @param input Stan klawiatury i myszy.
+     * @param pointer Trafienia myszą policzone przez scenę w tej klatce.
      */
-    void Update(float dt, const Input& input) final {
-        Updatable::Update(dt, input);
+    void Update(float dt, const Input& input, const PointerFrame& pointer) {
+        PointerEvents events;
+        events.hovered = IsSelfOrAncestorOf(pointer.target);
+        events.pressed = pointer.press == this;
+        events.released = pointer.release == this;
+        events.scrolled = pointer.scroll == this;
+        events.dragStart = pointer.drag == this;
+        HandleEvents(dt, input, events);
         // Callback może dodać dziecko, dlatego rozmiar sprawdzamy w każdej iteracji.
         for (std::size_t i = 0; i < children_.size(); ++i)
-            children_[i]->Update(dt, input);
+            children_[i]->Update(dt, input, pointer);
     }
 
     /**
@@ -287,6 +323,92 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
 
   private:
     friend class Scene;
+
+    /**
+     * @brief Dopisuje obiekty pod punktem w kolejności od najwyżej narysowanego.
+     * @details Kolejność odwrotna do Render(): najpierw dzieci (od najwyższej warstwy, w niej
+     * od ostatnio dodanego), potem sam obiekt, bo dzieci są rysowane nad rodzicem.
+     * @param point Punkt w układzie ekranu.
+     * @param hits Lista, do której dopisywane są trafienia.
+     */
+    void CollectHits(Vector2 point, std::vector<const Entity*>& hits) const {
+        for (const Entity* child : TopFirst(children_))
+            child->CollectHits(point, hits);
+        if (Contains(point)) hits.push_back(this);
+    }
+
+    /**
+     * @brief Porządkuje obiekty od najwyżej narysowanego (odwrotnie niż Render()).
+     * @param entities Obiekty jednego poziomu drzewa.
+     * @return Wskaźniki od najwyższej warstwy, w warstwie od ostatnio dodanego.
+     */
+    static std::vector<const Entity*>
+    TopFirst(const std::vector<std::unique_ptr<Entity>>& entities) {
+        std::vector<const Entity*> order;
+        order.reserve(entities.size());
+        for (const auto& entity : entities)
+            order.push_back(entity.get());
+        std::stable_sort(order.begin(), order.end(),
+                         [](const Entity* a, const Entity* b) { return a->Layer() > b->Layer(); });
+        // w tej samej warstwie później dodany jest rysowany wyżej
+        for (auto begin = order.begin(); begin != order.end();) {
+            auto end = std::find_if(begin, order.end(), [&](const Entity* e) {
+                return e->Layer() != (*begin)->Layer();
+            });
+            std::reverse(begin, end);
+            begin = end;
+        }
+        return order;
+    }
+
+    /**
+     * @brief Wybiera odbiorcę zdarzenia myszy (patrz @ref entity_trafienia).
+     * @param hits Trafienia od najwyżej narysowanego.
+     * @param handles Czy obiekt obsługuje zdarzenie.
+     * @return Odbiorca albo nullptr.
+     */
+    template <typename Predicate>
+    static const Entity* Receiver(const std::vector<const Entity*>& hits, Predicate handles) {
+        for (const Entity* hit : hits)
+            for (const Entity* entity = hit; entity; entity = entity->parent_)
+                if (handles(*entity)) return entity;
+        return nullptr;
+    }
+
+    /**
+     * @brief Liczy trafienia myszą dla jednej klatki.
+     * @param roots Obiekty najwyższego poziomu sceny.
+     * @param input Stan wejścia.
+     * @return Najwyższy trafiony obiekt i odbiorcy zdarzeń.
+     */
+    static PointerFrame Pointer(const std::vector<std::unique_ptr<Entity>>& roots,
+                                const Input& input) {
+        PointerFrame frame;
+        if (!input.MouseEnabled()) return frame;
+        std::vector<const Entity*> hits;
+        const Vector2 mouse = input.MousePosition();
+        for (const Entity* root : TopFirst(roots))
+            root->CollectHits(mouse, hits);
+        if (hits.empty()) return frame;
+
+        frame.target = hits.front();
+        if (input.MousePressed(MOUSE_BUTTON_LEFT)) {
+            frame.press = Receiver(hits, [](const Entity& e) { return e.HandlesClick(); });
+            frame.drag = Receiver(hits, [](const Entity& e) { return e.HandlesDrag(); });
+        }
+        if (input.MouseReleased(MOUSE_BUTTON_LEFT))
+            frame.release = Receiver(hits, [](const Entity& e) { return e.HandlesMouseUp(); });
+        if (input.MouseWheel() != 0.0f)
+            frame.scroll = Receiver(hits, [](const Entity& e) { return e.HandlesScroll(); });
+        return frame;
+    }
+
+    /** @brief Sprawdza, czy obiekt to podany obiekt albo jego przodek. */
+    bool IsSelfOrAncestorOf(const Entity* entity) const {
+        for (; entity; entity = entity->parent_)
+            if (entity == this) return true;
+        return false;
+    }
 
     /**
      * @brief Podpina obiekt i jego poddrzewo do sceny, wywołując OnMount() (raz na obiekt).

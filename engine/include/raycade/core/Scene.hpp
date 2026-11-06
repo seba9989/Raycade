@@ -74,8 +74,10 @@ class Scene : public Contextable {
     void Update(float dt, const Input& input) {
         if (update_) update_(dt);
         // pętla po indeksie: zdarzenie obiektu może wywołać Spawn() i powiększyć wektor
+        // trafienia myszą liczone raz, przed zmianami w tej klatce (patrz Entity::Pointer)
+        const PointerFrame pointer = Entity::Pointer(entities_, input);
         for (std::size_t i = 0; i < entities_.size(); ++i)
-            entities_[i]->Update(dt, input);
+            entities_[i]->Update(dt, input, pointer);
     }
 
     /**
