@@ -50,7 +50,11 @@
  * @ref PrimitiveRenderer. W scenie `figury` porównano krzywe z raylib.
  *
  * @section obsluga Sceny demonstracyjne
- * Klawisze 1-5 wybierają `menu`, `prymitywy`, `figury`, `transformacje` i `kontekst`.
+ * Klawisze 1-7 wybierają `menu`, `prymitywy`, `figury`, `transformacje`, `kontekst`,
+ * `trafienia` i `kamera` (lista jest też na scenie `menu`). F11 przełącza pełny ekran.
+ * Okno ma zmienny rozmiar: gra rysuje zawsze w 1000x700, a obraz jest skalowany do okna
+ * z zachowaniem proporcji (Engine::ScaleMode(Scaling::Fit)), więc układ scen i kliknięcia
+ * działają przy każdym rozmiarze okna i na pełnym ekranie.
  * Na scenie `prymitywy` strzałki przesuwają prostokąt, L zmienia warstwę,
  * PPM przesuwa koniec odcinka, a spacja przełącza jego algorytm.
  * Na scenie `figury` LPM uruchamia flood fill na płótnie, Shift+LPM
@@ -62,6 +66,13 @@
  * sceny, strzałki poruszają graczem, za którym gonią kółka znajdujące go przez kontekst,
  * a R wczytuje scenę od nowa - wynik sceny wraca do zera, a rekord z kontekstu silnika
  * zostaje.
+ * Na scenie `trafienia` przeciąga się tylko najwyższą kartę, żółta ramka bez zdarzeń
+ * przepuszcza kliknięcia do przycisku, okno z pustym OnClick blokuje przyciski pod sobą,
+ * a robot złożony z kształtów reaguje jako całość (zdarzenia idą do rodzica).
+ * Na scenie `kamera` WASD/strzałki poruszają graczem, za którym podąża kamera, kółko myszy
+ * przybliża, Q/E obracają widok, F przełącza podążanie, a R resetuje kamerę. Skrzynie można
+ * przeciągać, a monety klikać przy dowolnym przybliżeniu i obrocie; przyciski w rogu są
+ * obiektami ekranu (HUD).
  *
  * @section dokumentacja Dokumentacja
  * Dokumentację HTML generuje polecenie `docs` (devenv) albo, w katalogu głównym projektu:
@@ -86,7 +97,12 @@ int main() {
                          .Title("Raycade demo")
                          .VSync(false) // V-Sync wyłączony; podwójne buforowanie działa zawsze
                          .Window(1000, 700) // albo .Fullscreen()
-                         .Fullscreen()
+                         // okno o zmiennym rozmiarze: obraz 1000x700 jest skalowany z pasami
+                         // .Fullscreen()
+                         // .Resizable()
+                         .MinSize(500, 350)
+                         .Resolution(1000, 700)
+                         .ScaleMode(Scaling::Fit)
                          .Background(RAYWHITE)
                          .StartScene("menu")
                          .Init();
@@ -100,11 +116,13 @@ int main() {
             if (engine.KeyPressed(KEY_THREE)) engine.SwitchScene("figury");
             if (engine.KeyPressed(KEY_FOUR)) engine.SwitchScene("transformacje");
             if (engine.KeyPressed(KEY_FIVE)) engine.SwitchScene("kontekst");
+            if (engine.KeyPressed(KEY_SIX)) engine.SwitchScene("trafienia");
+            if (engine.KeyPressed(KEY_SEVEN)) engine.SwitchScene("kamera");
+            if (engine.KeyPressed(KEY_F11)) engine.Fullscreen(!engine.FullscreenEnabled());
         })
         .OnDraw([&](PrimitiveRenderer&) {
             const std::string hud = "Scena: " + engine.ActiveScene() +
-                                    "   [1] menu [2] prymitywy [3] figury [4] transformacje "
-                                    "[5] kontekst";
+                                    "   [1-7] zmiana sceny (lista w menu)   [F11] pelny ekran";
             ::DrawText(hud.c_str(), 20, 668, 18, DARKGRAY);
         })
         .Run();

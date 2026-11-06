@@ -35,5 +35,8 @@ SCENE("menu") {
     scene.OnDraw([](PrimitiveRenderer&) {
         ::DrawText("MENU", 455, 230, 40, DARKBLUE);
         ::DrawText("START", 470, 320, 24, GRAY);
+        ::DrawText("Klawisze scen:", 240, 530, 20, DARKGRAY);
+        ::DrawText("1 menu     2 prymitywy     3 figury     4 transformacje", 240, 560, 18, GRAY);
+        ::DrawText("5 kontekst     6 trafienia     7 kamera", 240, 586, 18, GRAY);
     });
 }

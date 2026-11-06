@@ -169,7 +169,12 @@ class Input {
      * @brief Pobiera przesunięcie kursora od poprzedniej klatki.
      * @return Przesunięcie w pikselach albo {0, 0}, gdy mysz jest wyłączona.
      */
-    Vector2 MouseDelta() const { return mouse_ ? ::GetMouseDelta() : Vector2{0, 0}; }
+    Vector2 MouseDelta() const {
+        if (!mouse_) return {0, 0};
+        // raylib skaluje pozycję kursora (SetMouseScale), ale nie jego przesunięcie
+        const Vector2 delta = ::GetMouseDelta();
+        return {delta.x * scale_.x, delta.y * scale_.y};
+    }
 
     /**
      * @brief Pobiera ruch kółka myszy w bieżącej klatce (większa z osi).
@@ -282,7 +287,10 @@ class Input {
      * @return Pozycja w oknie albo {0, 0}.
      */
     Vector2 TouchPosition(int index = 0) const {
-        return touch_ ? ::GetTouchPosition(index) : Vector2{0, 0};
+        if (!touch_) return {0, 0};
+        // raylib nie przelicza dotyku przez przesunięcie i skalę ekranu - robimy to tutaj
+        const Vector2 position = ::GetTouchPosition(index);
+        return {(position.x + offset_.x) * scale_.x, (position.y + offset_.y) * scale_.y};
     }
 
     /**
@@ -295,6 +303,24 @@ class Input {
     /** @} */
 
   private:
+    friend class Engine;
+
+    /**
+     * @brief Ustawia przeliczenie współrzędnych okna na współrzędne gry (skalowanie ekranu).
+     * @details Wywoływane przez Engine co klatkę przy włączonym ScaleMode(). Przekazuje to samo
+     * do raylib (SetMouseOffset/SetMouseScale), więc MousePosition() też jest przeliczone.
+     * @param offset Przesunięcie dodawane do pozycji w oknie.
+     * @param scale Skala mnożona po przesunięciu.
+     */
+    void Transform(Vector2 offset, Vector2 scale) {
+        offset_ = offset;
+        scale_ = scale;
+        ::SetMouseOffset(static_cast<int>(offset.x), static_cast<int>(offset.y));
+        ::SetMouseScale(scale.x, scale.y);
+    }
+
+    Vector2 offset_{0, 0}; /**< Przesunięcie okno → gra. */
+    Vector2 scale_{1, 1};  /**< Skala okno → gra. */
     bool keyboard_ = true; /**< Czy odczytywać klawiaturę. */
     bool mouse_ = true;    /**< Czy odczytywać mysz. */
     bool gamepad_ = true;  /**< Czy odczytywać pady. */

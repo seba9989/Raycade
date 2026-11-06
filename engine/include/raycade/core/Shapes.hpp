@@ -20,6 +20,7 @@
  * | @ref shapes::Lines    | niezależne odcinki z par wierzchołków | `Vertices()`                          |
  * | @ref shapes::Polyline | łamaną otwartą lub zamkniętą          | `Vertices()`, `Closed()`              |
  * | @ref shapes::Rect     | prostokąt                             | `Size()`                              |
+ * | @ref shapes::Surface  | dzieci rysowane do tekstury GPU       | `Size()`, `Background()`, `Tint()`    |
  * | @ref shapes::Triangle | trójkąt                               | `Vertices()`                          |
  * | @ref shapes::Circle   | okrąg / koło                          | `Radius()`, `Symmetric()`             |
  * | @ref shapes::Ellipse  | elipsę                                | `Radius()`, `Symmetric()`             |
@@ -49,5 +50,6 @@
 #include "shapes/Polygon.hpp"
 #include "shapes/Polyline.hpp"
 #include "shapes/Rect.hpp"
+#include "shapes/Surface.hpp"
 #include "shapes/Triangle.hpp"
 // IWYU pragma: end_exports

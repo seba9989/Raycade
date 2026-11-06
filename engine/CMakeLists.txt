@@ -3,6 +3,7 @@ add_library(raycade STATIC
     src/core/Engine.cpp
     src/render/Bitmap.cpp
     src/render/Geometry.cpp
+    src/render/RenderTarget.cpp
     src/render/primitive_renderer/Fill.cpp
     src/render/primitive_renderer/Polygon.cpp
     src/render/primitive_renderer/Primitives.cpp

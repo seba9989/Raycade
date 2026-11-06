@@ -17,9 +17,24 @@
 
 #include "../render/Bitmap.hpp"
 #include "../render/PrimitiveRenderer.hpp"
+#include "../render/RenderTarget.hpp"
 #include "Input.hpp"
 #include "Scene.hpp"
 #include "Shapes.hpp" // IWYU pragma: export
+
+/**
+ * @brief Sposób dopasowania obrazu gry do okna (Engine::ScaleMode()).
+ * @details Przy trybie innym niż None gra rysuje zawsze w stałej rozdzielczości
+ * (Engine::Resolution()) do tekstury, która jest potem skalowana na okno. Współrzędne myszy
+ * są przeliczane automatycznie, więc obiekty, kliknięcia i MousePosition() działają
+ * w rozdzielczości gry niezależnie od rozmiaru okna.
+ */
+enum class Scaling {
+    None,        /**< Bez skalowania - współrzędne gry to piksele okna (domyślnie). */
+    Stretch,     /**< Rozciągnięcie na całe okno, bez zachowania proporcji. */
+    Fit,         /**< Największa skala z zachowaniem proporcji; resztę wypełniają pasy. */
+    PixelPerfect /**< Jak Fit, ale tylko całkowite skale (ostre piksele, większe pasy). */
+};
 
 /**
  * @brief Główny obiekt silnika zarządzający oknem, scenami, wejściem i pętlą gry.
@@ -84,7 +99,58 @@ class Engine : public Contextable {
     Engine& Window(int width, int height);
 
     /**
+     * @brief Ustawia rozdzielczość gry używaną przy ScaleMode() innym niż None.
+     * @details Domyślnie równa rozmiarowi okna z Window() w chwili Init(). Gra zawsze rysuje
+     * w tej rozdzielczości, a obraz jest skalowany na okno.
+     * @param width Szerokość obszaru gry.
+     * @param height Wysokość obszaru gry.
+     * @return Ten sam silnik.
+     */
+    Engine& Resolution(int width, int height);
+
+    /**
+     * @brief Ustawia sposób dopasowania obrazu do okna (np. w trybie pełnoekranowym).
+     * @param mode Tryb skalowania, patrz Scaling.
+     * @return Ten sam silnik.
+     */
+    Engine& ScaleMode(Scaling mode);
+
+    /**
+     * @brief Wybiera filtr skalowania obrazu.
+     * @details Domyślnie wyłączony: piksele pozostają ostre, co dobrze pokazuje własne
+     * algorytmy rastrowe. Włączony wygładza obraz (filtr dwuliniowy).
+     * @param value Czy wygładzać.
+     * @return Ten sam silnik.
+     */
+    Engine& SmoothScaling(bool value = true);
+
+    /**
+     * @brief Ustawia kolor pasów wokół obrazu w trybach Fit i PixelPerfect.
+     * @param color Kolor pasów (domyślnie czarny).
+     * @return Ten sam silnik.
+     */
+    Engine& Letterbox(Color color) {
+        letterbox_ = color;
+        return *this;
+    }
+
+    /**
+     * @brief Podaje rozmiar obszaru, w którym rysuje gra.
+     * @return Rozdzielczość gry przy włączonym skalowaniu, w przeciwnym razie rozmiar okna.
+     */
+    Vector2 ViewSize() const;
+
+    /**
+     * @brief Sprawdza, czy włączony jest tryb pełnoekranowy.
+     * @return Stan ustawienia Fullscreen().
+     */
+    bool FullscreenEnabled() const { return fullscreen_; }
+
+    /**
      * @brief Włącza lub wyłącza tryb pełnoekranowy.
+     * @details Po Init() okno najpierw dostaje natywną rozdzielczość monitora - inaczej raylib
+     * przełączyłby monitor w tryb o rozmiarze okna (np. 1000x700). Z ScaleMode() obraz gry
+     * jest wtedy skalowany na cały ekran.
      * @param value Czy włączyć ten tryb.
      * @return Ten sam silnik.
      */
@@ -550,9 +616,13 @@ class Engine : public Contextable {
      */
     /** @{ */
 
-    /** @brief Szerokość okna (w punktach ekranu, bez skali DPI). */
+    /**
+     * @brief Szerokość okna (w punktach ekranu, bez skali DPI).
+     * @details Przy ScaleMode() innym niż None gra rysuje w rozdzielczości ViewSize(), a nie
+     * w rozmiarze okna - do układania obiektów służy wtedy ViewSize().
+     */
     int ScreenWidth() const;
-    /** @brief Wysokość okna (w punktach ekranu, bez skali DPI). */
+    /** @brief Wysokość okna (w punktach ekranu, bez skali DPI); patrz ScreenWidth(). */
     int ScreenHeight() const;
     /** @brief Szerokość bufora rysowania w pikselach (z uwzględnieniem DPI). */
     int RenderWidth() const;
@@ -881,6 +951,14 @@ class Engine : public Contextable {
 
     /** @brief Obsługuje upuszczone pliki i odtwarzanie nagrania na początku klatki. */
     void PollSystemEvents();
+    /** @brief Tworzy (albo odtwarza) teksturę gry zgodnie z bieżącymi ustawieniami. */
+    void CreateTarget();
+
+    /** @brief Zwalnia teksturę gry i przywraca przeliczanie myszy 1:1. */
+    void ReleaseTarget();
+
+    /** @brief Liczy prostokąt obrazu w oknie i przeliczenie myszy dla bieżącego rozmiaru okna. */
+    void UpdateScaling();
 
     std::string title_ = "Gra";             /**< Tytuł okna. */
     int width_ = 800;                       /**< Szerokość okna w trybie okienkowym. */
@@ -900,12 +978,20 @@ class Engine : public Contextable {
     int raylibLogLevel_ = LOG_INFO;              /**< Próg komunikatów raylib. */
     /** Reakcja na pliki upuszczone na okno. */
     std::function<void(const std::vector<std::string>&)> filesDropped_;
-    AutomationEventList recordList_{};   /**< Bufor nagrywanego wejścia. */
-    AutomationEventList replayList_{};   /**< Odtwarzane nagranie. */
-    bool recording_ = false;             /**< Czy trwa nagrywanie. */
-    bool replaying_ = false;             /**< Czy trwa odtwarzanie. */
-    unsigned int replayIndex_ = 0;       /**< Następne zdarzenie do odtworzenia. */
-    unsigned int replayFrame_ = 0;       /**< Klatka odtwarzania (od 0). */
+    AutomationEventList recordList_{}; /**< Bufor nagrywanego wejścia. */
+    AutomationEventList replayList_{}; /**< Odtwarzane nagranie. */
+    bool recording_ = false;           /**< Czy trwa nagrywanie. */
+    bool replaying_ = false;           /**< Czy trwa odtwarzanie. */
+    unsigned int replayIndex_ = 0;     /**< Następne zdarzenie do odtworzenia. */
+    unsigned int replayFrame_ = 0;     /**< Klatka odtwarzania (od 0). */
+
+    Scaling scaling_ = Scaling::None;    /**< Tryb dopasowania obrazu do okna. */
+    int viewWidth_ = 0;                  /**< Szerokość gry; 0 = rozmiar okna przy Init(). */
+    int viewHeight_ = 0;                 /**< Wysokość gry; 0 = rozmiar okna przy Init(). */
+    bool smoothScaling_ = false;         /**< Czy wygładzać skalowany obraz. */
+    Color letterbox_ = BLACK;            /**< Kolor pasów wokół obrazu. */
+    RenderTarget target_;                /**< Tekstura, do której rysuje gra przy skalowaniu. */
+    Rectangle destination_{};            /**< Gdzie w oknie rysujemy teksturę gry. */
     std::string logFile_ = "engine.log"; /**< Ścieżka pliku logu; pusta wyłącza zapis. */
 
     std::function<void(float)> update_;            /**< Globalna logika co klatkę. */

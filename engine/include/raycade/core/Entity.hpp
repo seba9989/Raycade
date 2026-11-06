@@ -207,21 +207,16 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
     }
 
     /**
-     * @brief Nakłada lokalną macierz, rysuje własny kształt, a potem dzieci według warstw.
-     * @details Metoda jest `final`: własny wygląd klasy pochodnej rysuje się w Draw().
+     * @brief Nakłada lokalną macierz i rysuje zawartość obiektu (RenderContent()).
+     * @details Metoda jest `final`: własny wygląd klasy pochodnej rysuje się w Draw(),
+     * a zmiana sposobu rysowania dzieci - w RenderContent().
      * @param renderer Renderer prymitywów.
      */
     void Render(PrimitiveRenderer& renderer) const final {
         const auto matrix = transform_.RlglMatrix();
         rlPushMatrix();
         rlMultMatrixf(matrix.data());
-        Drawable::Render(renderer);
-        std::vector<const Drawable*> order;
-        order.reserve(children_.size());
-        for (const auto& child : children_)
-            order.push_back(child.get());
-        for (const Drawable* child : Drawable::ByLayer(std::move(order)))
-            child->Render(renderer);
+        RenderContent(renderer);
         rlPopMatrix();
     }
 
@@ -331,6 +326,39 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
     virtual void OnMount() {}
 
     /**
+     * @brief Rysuje zawartość obiektu w jego układzie lokalnym (macierz jest już nałożona).
+     * @details Domyślnie: własny kształt (Draw()), a nad nim dzieci według warstw. Klasa
+     * pochodna może to zmienić, np. shapes::Surface rysuje dzieci do tekstury.
+     * @param renderer Renderer prymitywów.
+     */
+    virtual void RenderContent(PrimitiveRenderer& renderer) const {
+        Drawable::Render(renderer);
+        RenderChildren(renderer);
+    }
+
+    /**
+     * @brief Rysuje dzieci według warstw (w bieżącym celu i układzie).
+     * @param renderer Renderer prymitywów.
+     */
+    void RenderChildren(PrimitiveRenderer& renderer) const {
+        std::vector<const Drawable*> order;
+        order.reserve(children_.size());
+        for (const auto& child : children_)
+            order.push_back(child.get());
+        for (const Drawable* child : Drawable::ByLayer(std::move(order)))
+            child->Render(renderer);
+    }
+
+    /**
+     * @brief Czy dzieci mogą zostać trafione myszą w tym punkcie.
+     * @details Domyślnie zawsze. Obiekt, który przycina rysunek dzieci (np. shapes::Surface),
+     * zwraca false poza swoim obszarem - niewidocznych części nie da się kliknąć.
+     * @param point Punkt w układzie sceny.
+     * @return Czy sprawdzać trafienia w dzieci.
+     */
+    virtual bool ChildrenHittable([[maybe_unused]] Vector2 point) const { return true; }
+
+    /**
      * @brief Przelicza punkt lokalny (względem pozycji obiektu) na punkt sceny.
      * @param local Punkt lokalny.
      * @return Punkt w układzie sceny.
@@ -382,8 +410,9 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
      * @param hits Lista, do której dopisywane są trafienia.
      */
     void CollectHits(Vector2 point, std::vector<const Entity*>& hits) const {
-        for (const Entity* child : TopFirst(children_))
-            child->CollectHits(point, hits);
+        if (ChildrenHittable(point))
+            for (const Entity* child : TopFirst(children_))
+                child->CollectHits(point, hits);
         if (Contains(point)) hits.push_back(this);
     }
 
