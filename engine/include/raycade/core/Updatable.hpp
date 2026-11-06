@@ -46,7 +46,9 @@ class Updatable {
 
     /**
      * @brief Sprawdza trafienie punktem w obiekt.
-     * @param point Punkt we współrzędnych ekranu.
+     * @details Punkt jest w układzie sceny (po przeliczeniu kursora przez kamerę), czyli w tym
+     * samym co World() i TryToLocal() - patrz @ref entity_uklady.
+     * @param point Punkt w układzie sceny.
      * @return true, gdy punkt należy do obiektu.
      */
     virtual bool Contains([[maybe_unused]] Vector2 point) const { return false; }

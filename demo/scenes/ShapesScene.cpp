@@ -114,7 +114,7 @@ SCENE("figury") {
             static constexpr std::array<Color, 6> kColors{LIME,   PINK,  VIOLET,
                                                           ORANGE, BEIGE, MAGENTA};
             const Engine& engine = Engine::Get();
-            const Vector2 seed = self.ToLocal(engine.MousePosition());
+            const Vector2 seed = self.ScreenToLocal(engine.MousePosition());
             const bool boundary = engine.KeyDown(KEY_LEFT_SHIFT) || engine.KeyDown(KEY_RIGHT_SHIFT);
             const Color color = kColors[colorIndex++ % kColors.size()];
 

@@ -16,6 +16,7 @@
 
 #include "Contextable.hpp"
 #include "Drawable.hpp"
+#include "SceneCamera.hpp"
 #include "Transformable.hpp"
 #include "Updatable.hpp"
 
@@ -112,8 +113,9 @@ struct PointerFrame {
  *
  * @section entity_trafienia Trafianie myszą
  * Scena raz na klatkę zbiera obiekty pod kursorem (te, których Contains() zwraca true)
- * w kolejności od najwyżej narysowanego: wyższa warstwa nad niższą, dziecko nad rodzicem,
- * a w tej samej warstwie - później dodany nad wcześniejszym.
+ * w kolejności od najwyżej narysowanego: obiekty ekranu (ScreenSpace()) nad obiektami świata,
+ * wyższa warstwa nad niższą, dziecko nad rodzicem, a w tej samej warstwie - później dodany
+ * nad wcześniejszym. Dla obiektów świata kursor jest najpierw przeliczany przez kamerę sceny.
  * - Hovered(), OnMouseEnter i OnMouseLeave dotyczą najwyższego trafionego obiektu i jego
  *   przodków (jak :hover w CSS) - obiekt zasłonięty przez inny nie jest najechany.
  * - OnClick, OnMouseUp, OnScroll i przeciąganie dostaje jeden obiekt: pierwszy z takim
@@ -123,6 +125,16 @@ struct PointerFrame {
  *
  * Żeby obiekt blokował kliknięcia w to, co pod nim (np. okno dialogowe), wystarczy dać mu
  * puste zdarzenie: `.OnClick([](auto&) {})`.
+ *
+ * @section entity_uklady Układy współrzędnych i kamera
+ * - lokalny - względem pozycji obiektu (w nim rysuje Draw()),
+ * - sceny (świata) - po złożeniu transformacji wszystkich przodków; w nim działają
+ *   WorldPosition(), ToLocal(), Contains() i World(),
+ * - ekranu (okna) - po przejściu przez kamerę sceny (SceneCamera); w nim jest kursor.
+ *   Przeliczają do niego ScreenPosition() i ScreenToLocal().
+ *
+ * Obiekt ekranu (ScreenSpace(), np. HUD) pomija kamerę: dla niego układ sceny i ekranu to to
+ * samo.
  *
  * @section entity_kontekst Kontekst (jak setContext/getContext w Svelte)
  * ProvideContext<T>() udostępnia wartość całemu poddrzewu obiektu, a GetContext<T>() w potomku
@@ -159,7 +171,7 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
         children_.push_back(std::move(child));
         // dziecko obiektu już podpiętego do sceny podpinamy od razu (wywoła jego OnMount());
         // dzieci tworzone w konstruktorze zostaną podpięte razem z rodzicem
-        if (scene_) ref.Attach(*scene_, *sceneContext_);
+        if (scene_) ref.Attach(*scene_, *sceneContext_, *camera_);
         return ref;
     }
 
@@ -214,21 +226,57 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
     }
 
     /**
-     * @brief Oblicza pozycję obiektu w układzie ekranu (z uwzględnieniem rodziców).
-     * @return Pozycja na ekranie.
+     * @brief Oznacza obiekt jako obiekt ekranu (HUD, menu): bez kamery i nad światem.
+     * @details Liczy się ustawienie obiektu najwyższego poziomu - dzieci je dziedziczą.
+     * @param value Czy obiekt jest w układzie ekranu.
+     * @return Ten sam obiekt.
+     */
+    template <typename Self> Self& ScreenSpace(this Self& self, bool value = true) {
+        self.screenSpace_ = value;
+        return self;
+    }
+
+    /** @brief Sprawdza, czy obiekt (a właściwie jego przodek najwyższego poziomu) jest w układzie
+     * ekranu. */
+    bool IsScreenSpace() const {
+        const Entity* root = this;
+        while (root->parent_)
+            root = root->parent_;
+        return root->screenSpace_;
+    }
+
+    /**
+     * @brief Oblicza pozycję obiektu w układzie sceny (z uwzględnieniem rodziców, bez kamery).
+     * @return Pozycja w świecie.
      */
     Vector2 WorldPosition() const { return World({0.0f, 0.0f}); }
 
     /**
-     * @brief Przelicza punkt ekranowy (np. kursor) na układ lokalny obiektu.
-     * @param point Punkt w układzie ekranu.
+     * @brief Oblicza pozycję obiektu w oknie (po przejściu przez kamerę sceny).
+     * @return Pozycja na ekranie.
+     */
+    Vector2 ScreenPosition() const {
+        const SceneCamera* camera = ViewCamera();
+        return camera ? camera->WorldToScreen(WorldPosition()) : WorldPosition();
+    }
+
+    /**
+     * @brief Przelicza punkt okna (np. kursor) na układ lokalny obiektu, uwzględniając kamerę.
+     * @param point Punkt w układzie okna.
+     * @return Punkt w układzie lokalnym albo {0, 0}, gdy macierz jest nieodwracalna.
+     */
+    Vector2 ScreenToLocal(Vector2 point) const { return ToLocal(ScreenToScene(point)); }
+
+    /**
+     * @brief Przelicza punkt sceny na układ lokalny obiektu.
+     * @param point Punkt w układzie sceny.
      * @return Punkt w układzie lokalnym albo {0, 0}, gdy macierz jest nieodwracalna.
      */
     Vector2 ToLocal(Vector2 point) const { return TryToLocal(point).value_or(Vector2{}); }
 
     /**
-     * @brief Przelicza punkt ekranowy na lokalny, jeśli przekształcenie jest odwracalne.
-     * @param point Punkt w układzie ekranu.
+     * @brief Przelicza punkt sceny na lokalny, jeśli przekształcenie jest odwracalne.
+     * @param point Punkt w układzie sceny.
      * @return Punkt lokalny albo brak wyniku, np. po skalowaniu przez zero.
      */
     std::optional<Vector2> TryToLocal(Vector2 point) const {
@@ -262,9 +310,11 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
     /**
      * @brief Przelicza ruch kursora na przesunięcie w układzie rodzica.
      * @details Dzięki temu `Translate(delta)` w OnDrag() przesuwa obiekt dokładnie za
-     * kursorem także w obróconej lub przeskalowanej grupie.
+     * kursorem także w obróconej lub przeskalowanej grupie i przy przybliżonej kamerze.
      */
-    Vector2 DragDelta(Vector2 from, Vector2 to) const override {
+    Vector2 DragDelta(Vector2 screenFrom, Vector2 screenTo) const override {
+        const Vector2 from = ScreenToScene(screenFrom);
+        const Vector2 to = ScreenToScene(screenTo);
         if (!parent_) return Updatable::DragDelta(from, to);
         const auto a = parent_->TryToLocal(from);
         const auto b = parent_->TryToLocal(to);
@@ -281,9 +331,9 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
     virtual void OnMount() {}
 
     /**
-     * @brief Przelicza punkt lokalny (względem pozycji obiektu) na punkt ekranowy.
+     * @brief Przelicza punkt lokalny (względem pozycji obiektu) na punkt sceny.
      * @param local Punkt lokalny.
-     * @return Punkt w układzie ekranu.
+     * @return Punkt w układzie sceny.
      */
     Vector2 World(Vector2 local) const { return WorldTransform().Apply(local); }
 
@@ -294,10 +344,10 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
     }
 
     /**
-     * @brief Przelicza listę wierzchołków lokalnych na ekranowe.
+     * @brief Przelicza listę wierzchołków lokalnych na układ sceny.
      * @tparam Vertex Typ wierzchołka (Vector2 albo Point2D).
      * @param local Wierzchołki lokalne.
-     * @return Wierzchołki w układzie ekranu.
+     * @return Wierzchołki w układzie sceny.
      */
     template <typename Vertex>
     std::vector<Vertex> WorldVertices(const std::vector<Vertex>& local) const {
@@ -312,7 +362,7 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
      * @brief Sprawdza, czy punkt trafia w któreś z dzieci (rekurencyjnie).
      * @details Ułatwia Contains() obiektów złożonych z części: grupa reaguje na mysz tam,
      * gdzie widać jej dzieci.
-     * @param point Punkt w układzie ekranu.
+     * @param point Punkt w układzie sceny.
      * @return true, gdy któreś dziecko (albo jego potomek) zawiera punkt.
      */
     bool AnyChildContains(Vector2 point) const {
@@ -328,7 +378,7 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
      * @brief Dopisuje obiekty pod punktem w kolejności od najwyżej narysowanego.
      * @details Kolejność odwrotna do Render(): najpierw dzieci (od najwyższej warstwy, w niej
      * od ostatnio dodanego), potem sam obiekt, bo dzieci są rysowane nad rodzicem.
-     * @param point Punkt w układzie ekranu.
+     * @param point Punkt w układzie sceny.
      * @param hits Lista, do której dopisywane są trafienia.
      */
     void CollectHits(Vector2 point, std::vector<const Entity*>& hits) const {
@@ -377,18 +427,25 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
 
     /**
      * @brief Liczy trafienia myszą dla jednej klatki.
+     * @details Obiekty ekranu są sprawdzane pierwsze (leżą nad światem) z kursorem w układzie
+     * okna, a obiekty świata - z kursorem przeliczonym przez kamerę.
      * @param roots Obiekty najwyższego poziomu sceny.
      * @param input Stan wejścia.
+     * @param camera Kamera sceny.
      * @return Najwyższy trafiony obiekt i odbiorcy zdarzeń.
      */
     static PointerFrame Pointer(const std::vector<std::unique_ptr<Entity>>& roots,
-                                const Input& input) {
+                                const Input& input, const SceneCamera& camera) {
         PointerFrame frame;
         if (!input.MouseEnabled()) return frame;
         std::vector<const Entity*> hits;
         const Vector2 mouse = input.MousePosition();
-        for (const Entity* root : TopFirst(roots))
-            root->CollectHits(mouse, hits);
+        const Vector2 worldMouse = camera.ScreenToWorld(mouse);
+        const std::vector<const Entity*> order = TopFirst(roots);
+        for (const Entity* root : order)
+            if (root->screenSpace_) root->CollectHits(mouse, hits);
+        for (const Entity* root : order)
+            if (!root->screenSpace_) root->CollectHits(worldMouse, hits);
         if (hits.empty()) return frame;
 
         frame.target = hits.front();
@@ -415,23 +472,36 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
      * @param scene Scena właściciela.
      * @param sceneContext Ta sama scena jako poziom kontekstu (Scene jest tu typem niepełnym,
      * więc rzutowanie na Contextable wykonuje Scene).
+     * @param camera Kamera sceny.
      */
-    void Attach(Scene& scene, const Contextable& sceneContext) {
+    void Attach(Scene& scene, const Contextable& sceneContext, const SceneCamera& camera) {
         scene_ = &scene;
         sceneContext_ = &sceneContext;
+        camera_ = &camera;
         if (!mounted_) {
             mounted_ = true;
             OnMount();
         }
         // po indeksie: OnMount() może dodać dzieci (Spawn podepnie je od razu)
         for (std::size_t i = 0; i < children_.size(); ++i)
-            if (!children_[i]->mounted_) children_[i]->Attach(scene, sceneContext);
+            if (!children_[i]->mounted_) children_[i]->Attach(scene, sceneContext, camera);
     }
 
     Entity* parent_ = nullptr;                  /**< Rodzic albo nullptr. */
     Scene* scene_ = nullptr;                    /**< Scena właściciela albo nullptr. */
     const Contextable* sceneContext_ = nullptr; /**< Scena jako poziom kontekstu. */
-    bool mounted_ = false;                      /**< Czy OnMount() już się wykonało. */
+    const SceneCamera* camera_ = nullptr;       /**< Kamera sceny albo nullptr. */
+    bool screenSpace_ = false;                  /**< Czy obiekt jest w układzie ekranu. */
+
+    /** @brief Kamera, przez którą widać obiekt: nullptr dla obiektów ekranu i niepodpiętych. */
+    const SceneCamera* ViewCamera() const { return IsScreenSpace() ? nullptr : camera_; }
+
+    /** @brief Przelicza punkt okna na punkt sceny (przez kamerę, jeśli obiekt jej podlega). */
+    Vector2 ScreenToScene(Vector2 point) const {
+        const SceneCamera* camera = ViewCamera();
+        return camera ? camera->ScreenToWorld(point) : point;
+    }
+    bool mounted_ = false; /**< Czy OnMount() już się wykonało. */
     /** Dzieci obiektu. Pola są niszczone przed klasami bazowymi, więc dzieci znikają przed
      *  kontekstem z Contextable i mogą bezpiecznie trzymać do niego referencje. */
     std::vector<std::unique_ptr<Entity>> children_;

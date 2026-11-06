@@ -13,6 +13,7 @@
 #include "Contextable.hpp"
 #include "Entity.hpp"
 #include "Input.hpp"
+#include "SceneCamera.hpp"
 
 /**
  * @brief Zbiór obiektów i funkcji logicznych jednego ekranu silnika.
@@ -35,7 +36,7 @@ class Scene : public Contextable {
         auto entity = std::make_unique<T>();
         T& ref = *entity;
         entities_.push_back(std::move(entity));
-        ref.Attach(*this, *this); // OnMount() obiektu i dzieci utworzonych w jego konstruktorze
+        ref.Attach(*this, *this, camera_); // OnMount() obiektu i dzieci z jego konstruktora
         return ref;
     }
 
@@ -58,6 +59,7 @@ class Scene : public Contextable {
 
     /**
      * @brief Ustawia dodatkowe rysowanie wykonywane po obiektach sceny.
+     * @details Rysuje w układzie okna (bez kamery) - miejsce na podpisy i HUD.
      * @param draw Funkcja otrzymująca renderer.
      * @return Ta sama scena.
      */
@@ -65,6 +67,28 @@ class Scene : public Contextable {
         draw_ = std::move(draw);
         return *this;
     }
+
+    /**
+     * @brief Ustawia rysowanie w układzie świata (przez kamerę), przed obiektami świata.
+     * @details Miejsce na tło, siatkę albo granice poziomu, które mają się przesuwać i
+     * przybliżać razem ze światem.
+     * @param draw Funkcja otrzymująca renderer.
+     * @return Ta sama scena.
+     */
+    Scene& OnDrawWorld(std::function<void(PrimitiveRenderer&)> draw) {
+        drawWorld_ = std::move(draw);
+        return *this;
+    }
+
+    /**
+     * @brief Udostępnia kamerę sceny.
+     * @details Domyślna kamera niczego nie zmienia. Patrz SceneCamera.
+     * @return Kamera tej sceny.
+     */
+    SceneCamera& GetCamera() { return camera_; }
+
+    /** @brief Udostępnia kamerę sceny tylko do odczytu. */
+    const SceneCamera& GetCamera() const { return camera_; }
 
     /**
      * @brief Aktualizuje logikę sceny i jej obiekty.
@@ -75,23 +99,26 @@ class Scene : public Contextable {
         if (update_) update_(dt);
         // pętla po indeksie: zdarzenie obiektu może wywołać Spawn() i powiększyć wektor
         // trafienia myszą liczone raz, przed zmianami w tej klatce (patrz Entity::Pointer)
-        const PointerFrame pointer = Entity::Pointer(entities_, input);
+        const PointerFrame pointer = Entity::Pointer(entities_, input, camera_);
         for (std::size_t i = 0; i < entities_.size(); ++i)
             entities_[i]->Update(dt, input, pointer);
+        // po ruchu obiektów, żeby kamera w tej samej klatce pokazała ich nowe położenie
+        camera_.Update(dt);
     }
 
     /**
-     * @brief Rysuje drzewa obiektów według warstw, a następnie wywołuje OnDraw().
-     * @details Kolejność: od najniższej warstwy, w tej samej warstwie - według dodania.
+     * @brief Rysuje scenę: świat przez kamerę, potem obiekty ekranu i OnDraw().
+     * @details Kolejność: OnDrawWorld() i obiekty świata (przez kamerę), następnie obiekty
+     * ekranu (ScreenSpace()) i OnDraw() w układzie okna. W każdej grupie - od najniższej
+     * warstwy, a w tej samej warstwie - według dodania.
      * @param renderer Renderer prymitywów.
      */
     void Draw(PrimitiveRenderer& renderer) const {
-        std::vector<const Drawable*> order;
-        order.reserve(entities_.size());
-        for (const auto& entity : entities_)
-            order.push_back(entity.get());
-        for (const Drawable* entity : Drawable::ByLayer(std::move(order)))
-            entity->Render(renderer);
+        ::BeginMode2D(camera_.Raw());
+        if (drawWorld_) drawWorld_(renderer.Reset().TargetScreen());
+        DrawRoots(renderer, false);
+        ::EndMode2D();
+        DrawRoots(renderer, true);
         if (draw_) draw_(renderer.Reset().TargetScreen());
     }
 
@@ -100,9 +127,26 @@ class Scene : public Contextable {
     const Contextable* ContextParent() const override { return ContextRoot(); }
 
   private:
+    /**
+     * @brief Rysuje obiekty najwyższego poziomu jednego rodzaju według warstw.
+     * @param renderer Renderer prymitywów.
+     * @param screenSpace true - obiekty ekranu, false - obiekty świata.
+     */
+    void DrawRoots(PrimitiveRenderer& renderer, bool screenSpace) const {
+        std::vector<const Drawable*> order;
+        order.reserve(entities_.size());
+        for (const auto& entity : entities_)
+            if (entity->IsScreenSpace() == screenSpace) order.push_back(entity.get());
+        for (const Drawable* entity : Drawable::ByLayer(std::move(order)))
+            entity->Render(renderer);
+    }
+
+    /** Kamera sceny; obiekty pamiętają jej adres (dlatego sceny nie można kopiować). */
+    SceneCamera camera_;
     /** Obiekty najwyższego poziomu. Pole jest niszczone przed klasą bazową Contextable,
      *  więc obiekty znikają przed kontekstem sceny. */
     std::vector<std::unique_ptr<Entity>> entities_;
     std::function<void(float)> update_;            /**< Logika sceny co klatkę. */
-    std::function<void(PrimitiveRenderer&)> draw_; /**< Dodatkowe rysowanie sceny. */
+    std::function<void(PrimitiveRenderer&)> draw_; /**< Rysowanie w układzie okna, po obiektach. */
+    std::function<void(PrimitiveRenderer&)> drawWorld_; /**< Rysowanie w układzie świata. */
 };
