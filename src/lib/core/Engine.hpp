@@ -9,6 +9,7 @@
 #include <fstream>
 #include <functional>
 #include <map>
+#include <set>
 #include <string>
 #include <utility>
 
@@ -208,6 +209,11 @@ class Engine {
     /**
      * @name Sceny
      * Aktualizowana i rysowana jest tylko aktywna scena; nieaktywne pozostają zamrożone.
+     *
+     * Sceny zarejestrowane (makro SCENE, RegisterScene()) są wczytywane leniwie: konfiguracja
+     * sceny wykonuje się dopiero przy pierwszym wejściu na nią (scena startowa - na początku
+     * Run(), pozostałe - przy pierwszym SwitchScene()). Raz wczytana scena zostaje w pamięci
+     * do końca działania silnika i po powrocie zachowuje swój stan.
      */
     /** @{ */
 
@@ -228,9 +234,10 @@ class Engine {
     Scene& CreateScene(const std::string& name);
 
     /**
-     * @brief Rejestruje konfigurację sceny do wykonania po otwarciu okna.
-     * @details Scena powstaje dopiero w Run(), już po Init(). Zwykle wywoływane przez makro
-     * SCENE.
+     * @brief Rejestruje konfigurację sceny wczytywanej leniwie.
+     * @details Scena powstaje dopiero przy pierwszym wejściu na nią, zawsze po Init(), więc
+     * w konfiguracji można wczytywać tekstury. Zwykle wywoływane przez makro SCENE.
+     * Ponowna rejestracja tej samej nazwy jest ignorowana i zapisywana w logu.
      * @param name Nazwa sceny.
      * @param setup Funkcja konfigurująca scenę.
      * @return Ten sam silnik.
@@ -250,17 +257,59 @@ class Engine {
     }
 
     /**
-     * @brief Pobiera scenę o podanej nazwie.
+     * @brief Pobiera scenę o podanej nazwie, w razie potrzeby wczytując ją.
+     * @details Wczytanie zarejestrowanej sceny wymaga otwartego okna (po Init()).
      * @param name Nazwa sceny.
      * @return Referencja do sceny.
-     * @throw std::out_of_range Gdy scena nie istnieje.
+     * @throw std::out_of_range Gdy scena nie istnieje ani nie jest zarejestrowana.
      */
-    Scene& GetScene(const std::string& name) { return scenes_.at(name); }
+    Scene& GetScene(const std::string& name);
+
+    /**
+     * @brief Sprawdza, czy scena została już wczytana.
+     * @param name Nazwa sceny.
+     * @return true, gdy scena istnieje w pamięci.
+     */
+    bool SceneLoaded(const std::string& name) const { return scenes_.contains(name); }
+
+    /**
+     * @brief Wczytuje zarejestrowaną scenę od razu, bez przełączania na nią.
+     * @details Pozwala wczytać ciężką scenę z wyprzedzeniem (np. na ekranie ładowania), żeby
+     * późniejsze SwitchScene() było natychmiastowe. Już wczytana scena pozostaje bez zmian -
+     * do ponownego wczytania służy ReloadScene(). Wymaga otwartego okna (po Init()).
+     * @param name Nazwa zarejestrowanej sceny.
+     * @return Ten sam silnik.
+     */
+    Engine& LoadScene(const std::string& name);
+
+    /**
+     * @brief Zleca zwolnienie sceny (obiektów i ich tekstur) na koniec bieżącej klatki.
+     * @details Zwolnienie jest odroczone, bo scena może zlecić je z własnego zdarzenia, w trakcie
+     * pętli po swoich obiektach. Następne wejście na scenę wczyta ją od nowa. Zwolnienie
+     * aktywnej sceny bez przełączenia na inną oznacza jej restart. Sceny utworzonej przez
+     * CreateScene() (bez rejestracji) nie da się wczytać ponownie, dlatego aktywnej takiej
+     * sceny nie można zwolnić.
+     * @warning Po zwolnieniu referencje do sceny i jej obiektów (np. z GetScene()) są
+     * nieważne.
+     * @param name Nazwa sceny.
+     * @return Ten sam silnik.
+     */
+    Engine& UnloadScene(const std::string& name);
+
+    /**
+     * @brief Zleca zwolnienie i ponowne wczytanie sceny na koniec bieżącej klatki.
+     * @details Konfiguracja sceny wykonuje się od nowa, więc obiekty wracają do stanu
+     * początkowego (np. restart poziomu). Działa także dla sceny aktywnej.
+     * @param name Nazwa zarejestrowanej sceny.
+     * @return Ten sam silnik.
+     */
+    Engine& ReloadScene(const std::string& name);
 
     /**
      * @brief Zleca zmianę aktywnej sceny na koniec bieżącej klatki.
-     * @details Nieznana nazwa jest zapisywana jako błąd w logu.
-     * @param name Nazwa istniejącej sceny.
+     * @details Niewczytana scena jest wtedy wczytywana. Nieznana nazwa jest zapisywana jako
+     * błąd w logu.
+     * @param name Nazwa sceny utworzonej albo zarejestrowanej.
      * @return Ten sam silnik.
      */
     Engine& SwitchScene(const std::string& name);
@@ -388,16 +437,32 @@ class Engine {
 
     std::map<std::string, Scene> scenes_; /**< Utworzone sceny według nazw. */
     std::string active_;                  /**< Nazwa aktywnej sceny. */
-    std::string pending_;                 /**< Scena, na którą przełączamy po zakończeniu klatki. */
-    std::string start_;                   /**< Scena startowa wybrana przez StartScene(). */
-    /** Sceny zarejestrowane makrem SCENE, tworzone w Run(). */
+    std::string pending_; /**< Scena, na którą przełączamy po zakończeniu klatki. */
+    std::string start_;   /**< Scena startowa wybrana przez StartScene(). */
+    /** Konfiguracje scen zarejestrowanych makrem SCENE, wykonywane przy pierwszym wejściu. */
     std::map<std::string, std::function<void(Scene&)>> registered_;
     PrimitiveRenderer primitives_; /**< Renderer używany do rysowania scen. */
+    /** Czas wczytywania scen w bieżącej klatce, odejmowany od dt następnej. */
+    double loadSeconds_ = 0.0;
+    std::set<std::string> unload_; /**< Sceny do zwolnienia na koniec klatki. */
+    std::set<std::string> reload_; /**< Sceny do ponownego wczytania na koniec klatki. */
 
     /**
-     * @brief Tworzy sceny zarejestrowane przez RegisterScene() i ustawia scenę startową.
+     * @brief Wykonuje odroczone przełączenie, zwolnienia i ponowne wczytania scen.
      */
-    void CreateRegisteredScenes();
+    void ApplySceneChanges();
+
+    /**
+     * @brief Zwraca scenę, wczytując ją przy pierwszym użyciu.
+     * @param name Nazwa sceny.
+     * @return Wskaźnik sceny albo nullptr, gdy scena nie istnieje ani nie jest zarejestrowana.
+     */
+    Scene* Load(const std::string& name);
+
+    /**
+     * @brief Wybiera i wczytuje scenę startową na początku Run().
+     */
+    void LoadStartScene();
 };
 
 /**
@@ -428,8 +493,10 @@ struct SceneRegistration {
 /**
  * @def SCENE(name)
  * @brief Rejestruje scenę z bloku kodu wykonywanego po inicjalizacji okna.
- * @details Wewnątrz bloku dostępna jest zmienna `scene` (Scene&). Scena zostanie utworzona
- * w Engine::Run(), a scenę startową wybiera Engine::StartScene().
+ * @details Wewnątrz bloku dostępna jest zmienna `scene` (Scene&). Blok wykona się przy
+ * pierwszym wejściu na scenę (wczytywanie leniwe), a scenę startową wybiera
+ * Engine::StartScene(). Makro jest przeznaczone dla plików .cpp gry - nie należy go używać
+ * w bibliotece statycznej, bo linker może pominąć plik, do którego nic się nie odwołuje.
  * @code{.cpp}
  * SCENE("menu") {
  *     scene.Spawn<shapes::Rect>().Position({300, 200}).Size({400, 300});
@@ -437,4 +504,4 @@ struct SceneRegistration {
  * @endcode
  * @param name Nazwa sceny używana przez StartScene() i SwitchScene().
  */
-#define SCENE(name) SCENE_IMPL_(name, SCENE_CONCAT(scene_setup_, __LINE__))
+#define SCENE(name) SCENE_IMPL_(name, SCENE_CONCAT(scene_setup_, __COUNTER__))

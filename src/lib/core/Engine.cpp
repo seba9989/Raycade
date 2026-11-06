@@ -7,7 +7,9 @@
 
 #include "Engine.hpp"
 
+#include <algorithm>
 #include <iostream>
+#include <stdexcept>
 
 Engine& Engine::Title(std::string title) {
     title_ = std::move(title);
@@ -78,11 +80,19 @@ Engine& Engine::Init() {
 
 int Engine::Run() {
     if (!Init().Ready()) return 1;
-    CreateRegisteredScenes();
+    LoadStartScene();
+    double previous = ::GetTime();
+    loadSeconds_ = 0.0;
 
     while (!::WindowShouldClose()) {
-        const float dt = ::GetFrameTime();
-        Scene* scene = active_.empty() ? nullptr : &scenes_.at(active_);
+        // Własny pomiar zamiast GetFrameTime(): raylib wlicza czas wczytywania sceny do klatki
+        // dopiero z opóźnieniem. Odejmujemy go, żeby obiekty nie "skoczyły" o duże dt.
+        const double now = ::GetTime();
+        const float dt = static_cast<float>(std::max(0.0, now - previous - loadSeconds_));
+        previous = now;
+        loadSeconds_ = 0.0;
+        const auto found = scenes_.find(active_);
+        Scene* scene = found != scenes_.end() ? &found->second : nullptr;
 
         if (update_) update_(dt);
         if (scene) scene->Update(dt, input_);
@@ -93,11 +103,8 @@ int Engine::Run() {
         if (draw_) draw_(primitives_.Reset().TargetScreen());
         ::EndDrawing();
 
-        if (!pending_.empty()) {
-            active_ = std::move(pending_);
-            pending_.clear();
-            Log("Scena: " + active_);
-        }
+        // zmiany scen między klatkami, poza pętlą po obiektach
+        ApplySceneChanges();
     }
 
     Shutdown();
@@ -111,6 +118,8 @@ void Engine::Shutdown() {
     scenes_.clear();
     active_.clear();
     pending_.clear();
+    unload_.clear();
+    reload_.clear();
     ::CloseWindow();
     initialized_ = false;
 }
@@ -128,37 +137,135 @@ Engine& Engine::CreateScene(const std::string& name, const std::function<void(Sc
 }
 
 Engine& Engine::RegisterScene(std::string name, std::function<void(Scene&)> setup) {
-    registered_[std::move(name)] = std::move(setup);
+    // przed main() plik logu nie jest jeszcze otwarty - komunikat trafi tylko na stderr
+    if (registered_.contains(name)) {
+        Log("UWAGA: scena \"" + name + "\" zarejestrowana ponownie - pominieto");
+        return *this;
+    }
+    registered_.emplace(std::move(name), std::move(setup));
     return *this;
 }
 
 /**
- * @details Kolejność rejestracji między plikami jest nieokreślona, dlatego scena startowa
- * pochodzi z StartScene(), a nie z tego, która zarejestrowała się pierwsza. Brak sceny
- * startowej jest zapisywany w logu.
+ * @details Scena jest wstawiana do mapy przed wykonaniem konfiguracji, więc konfiguracja
+ * może bezpiecznie wywołać GetScene() albo SwitchScene() na samą siebie. Węzły std::map nie
+ * zmieniają adresu, dlatego referencje do innych scen pozostają ważne.
  */
-void Engine::CreateRegisteredScenes() {
-    for (auto& [name, setup] : registered_)
-        setup(CreateScene(name));
-    registered_.clear();
+Scene* Engine::Load(const std::string& name) {
+    if (auto it = scenes_.find(name); it != scenes_.end()) return &it->second;
 
-    if (!start_.empty()) {
-        if (scenes_.contains(start_))
-            active_ = start_;
-        else
-            Log("BLAD: nie ma sceny startowej \"" + start_ + "\"");
-    } else if (scenes_.size() > 1) {
-        Log("UWAGA: brak StartScene(), startowa scena: \"" + active_ + "\"");
+    const auto setup = registered_.find(name);
+    if (setup == registered_.end()) {
+        Log("BLAD: nie ma sceny \"" + name + "\"");
+        return nullptr;
     }
+
+    Scene& scene = scenes_.try_emplace(name).first->second;
+    const double start = ::GetTime();
+    setup->second(scene);
+    const double elapsed = ::GetTime() - start;
+    loadSeconds_ += elapsed;
+    Log("Wczytano scene \"" + name + "\" (" + std::to_string(static_cast<int>(elapsed * 1000.0)) +
+        " ms)");
+    return &scene;
+}
+
+/**
+ * @details Kolejność rejestracji między plikami jest nieokreślona, dlatego scenę startową
+ * należy wskazać przez StartScene(). Bez niej aktywna zostaje pierwsza scena utworzona
+ * przez CreateScene(), a gdy takiej nie ma - pierwsza zarejestrowana alfabetycznie.
+ */
+void Engine::LoadStartScene() {
+    if (!start_.empty()) {
+        if (Load(start_)) active_ = start_;
+        return;
+    }
+    if (!active_.empty() || registered_.empty()) return;
+
+    active_ = registered_.begin()->first;
+    if (registered_.size() > 1)
+        Log("UWAGA: brak StartScene(), startowa scena: \"" + active_ + "\"");
+    Load(active_);
+}
+
+Scene& Engine::GetScene(const std::string& name) {
+    if (Scene* scene = Load(name)) return *scene;
+    throw std::out_of_range("Engine::GetScene: nie ma sceny \"" + name + "\"");
 }
 
 Engine& Engine::SwitchScene(const std::string& name) {
-    if (!scenes_.contains(name)) {
+    if (!scenes_.contains(name) && !registered_.contains(name)) {
         Log("BLAD: nie ma sceny \"" + name + "\"");
         return *this;
     }
     if (name != active_) pending_ = name;
     return *this;
+}
+
+Engine& Engine::LoadScene(const std::string& name) {
+    if (!initialized_) {
+        Log("BLAD: LoadScene(\"" + name + "\") przed Init()");
+        return *this;
+    }
+    Load(name);
+    return *this;
+}
+
+Engine& Engine::UnloadScene(const std::string& name) {
+    if (!scenes_.contains(name) && !registered_.contains(name)) {
+        Log("BLAD: nie ma sceny \"" + name + "\"");
+        return *this;
+    }
+    if (name == active_ && !registered_.contains(name)) {
+        Log("BLAD: aktywnej sceny \"" + name + "\" nie da sie zwolnic (brak rejestracji)");
+        return *this;
+    }
+    unload_.insert(name);
+    return *this;
+}
+
+Engine& Engine::ReloadScene(const std::string& name) {
+    if (!registered_.contains(name)) {
+        Log("BLAD: sceny \"" + name + "\" nie da sie wczytac ponownie (brak rejestracji)");
+        return *this;
+    }
+    reload_.insert(name);
+    return *this;
+}
+
+/**
+ * @details Kolejność:
+ * 1. przełączenie na scenę z SwitchScene() (wczytanie, jeśli trzeba),
+ * 2. zwolnienie scen z UnloadScene() i ReloadScene(),
+ * 3. ponowne wczytanie scen z ReloadScene(),
+ * 4. jeśli aktywna scena została zwolniona - wczytanie jej od nowa (restart).
+ *
+ * Dzięki temu scena może w jednym zdarzeniu przełączyć na inną i zwolnić samą siebie:
+ * `engine.SwitchScene("menu").UnloadScene("poziom1");`
+ */
+void Engine::ApplySceneChanges() {
+    if (!pending_.empty()) {
+        if (Load(pending_)) {
+            active_ = std::move(pending_);
+            Log("Scena: " + active_);
+        }
+        pending_.clear();
+    }
+
+    if (unload_.empty() && reload_.empty()) return;
+
+    // kopie: konfiguracja wczytywanej sceny może zlecić kolejne zmiany na następną klatkę
+    const auto unload = std::exchange(unload_, {});
+    const auto reload = std::exchange(reload_, {});
+
+    for (const auto& names : {std::cref(unload), std::cref(reload)})
+        for (const std::string& name : names.get())
+            if (scenes_.erase(name) > 0) Log("Zwolniono scene \"" + name + "\"");
+
+    for (const std::string& name : reload)
+        Load(name);
+
+    if (!active_.empty() && !scenes_.contains(active_)) Load(active_);
 }
 
 Engine& Engine::Clear(RenderTexture2D& target, Color color) {
