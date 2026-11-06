@@ -9,6 +9,7 @@
 #include <fstream>
 #include <functional>
 #include <map>
+#include <optional>
 #include <set>
 #include <string>
 #include <utility>
@@ -141,6 +142,34 @@ class Engine : public Contextable {
         input_.Mouse(value);
         return *this;
     }
+
+    /**
+     * @brief Włącza lub wyłącza odczyt padów.
+     * @param value Czy włączyć pady.
+     * @return Ten sam silnik.
+     */
+    Engine& Gamepad(bool value = true) {
+        input_.Gamepad(value);
+        return *this;
+    }
+
+    /**
+     * @brief Włącza lub wyłącza odczyt ekranu dotykowego.
+     * @param value Czy włączyć dotyk.
+     * @return Ten sam silnik.
+     */
+    Engine& Touch(bool value = true) {
+        input_.Touch(value);
+        return *this;
+    }
+
+    /**
+     * @brief Ustawia klawisz zamykający okno (domyślnie ESC).
+     * @details Można wywołać przed Init(). KEY_NULL (0) wyłącza zamykanie klawiszem.
+     * @param key Kod klawisza raylib.
+     * @return Ten sam silnik.
+     */
+    Engine& ExitKey(int key);
 
     /**
      * @brief Ustawia ścieżkę pliku diagnostycznego.
@@ -363,6 +392,250 @@ class Engine : public Contextable {
      */
     Vector2 MousePosition() const { return input_.MousePosition(); }
 
+    /**
+     * @brief Udostępnia pełny odczyt wejścia: klawiatura, mysz, pady i dotyk.
+     * @details Powyższe metody to skróty najczęstszych zapytań; resztę (np. KeyReleased(),
+     * MouseWheel(), GamepadAxis()) daje Input.
+     * @return Stan wejścia (ten sam, który obiekty dostają w Tick()).
+     */
+    const Input& GetInput() const { return input_; }
+
+    /** @} */
+
+    /**
+     * @name Kursor i pady (sterowanie)
+     * Działają po Init(); wcześniej są ignorowane (z wpisem w logu).
+     */
+    /** @{ */
+
+    /**
+     * @brief Przenosi kursor w podane miejsce okna.
+     * @param position Nowa pozycja kursora.
+     * @return Ten sam silnik.
+     */
+    Engine& MousePosition(Vector2 position);
+
+    /**
+     * @brief Ustawia wygląd kursora systemowego.
+     * @param cursor Kod raylib (MOUSE_CURSOR_DEFAULT, MOUSE_CURSOR_POINTING_HAND itd.).
+     * @return Ten sam silnik.
+     */
+    Engine& MouseCursor(int cursor);
+
+    /**
+     * @brief Ukrywa albo pokazuje kursor nad oknem.
+     * @param value true - ukryj, false - pokaż.
+     * @return Ten sam silnik.
+     */
+    Engine& HideCursor(bool value = true);
+
+    /**
+     * @brief Blokuje kursor w oknie (ukryty, ruch tylko przez MouseDelta()) albo go zwalnia.
+     * @details Przydatne do sterowania kamerą myszą.
+     * @param value true - zablokuj, false - zwolnij.
+     * @return Ten sam silnik.
+     */
+    Engine& LockCursor(bool value = true);
+
+    /** @brief Sprawdza, czy kursor jest ukryty (także gdy jest zablokowany). */
+    bool CursorHidden() const;
+
+    /** @brief Sprawdza, czy kursor znajduje się nad oknem. */
+    bool CursorOnScreen() const;
+
+    /**
+     * @brief Włącza wibrację pada.
+     * @param gamepad Numer pada.
+     * @param left Siła lewego silnika (0-1).
+     * @param right Siła prawego silnika (0-1).
+     * @param seconds Czas trwania w sekundach.
+     * @return Ten sam silnik.
+     */
+    Engine& GamepadVibration(int gamepad, float left, float right, float seconds);
+
+    /**
+     * @brief Wczytuje mapowania padów w formacie SDL_GameControllerDB.
+     * @param mappings Treść mapowań.
+     * @return Liczba wczytanych mapowań albo 0.
+     */
+    int GamepadMappings(const std::string& mappings);
+
+    /** @} */
+
+    /**
+     * @name Stan okna i monitory
+     * Przed Init() zwracają wartości domyślne (0, false, {0, 0}).
+     */
+    /** @{ */
+
+    /** @brief Szerokość okna (w punktach ekranu, bez skali DPI). */
+    int ScreenWidth() const;
+    /** @brief Wysokość okna (w punktach ekranu, bez skali DPI). */
+    int ScreenHeight() const;
+    /** @brief Szerokość bufora rysowania w pikselach (z uwzględnieniem DPI). */
+    int RenderWidth() const;
+    /** @brief Wysokość bufora rysowania w pikselach (z uwzględnieniem DPI). */
+    int RenderHeight() const;
+    /** @brief Czy rozmiar okna zmienił się w poprzedniej klatce. */
+    bool WindowResized() const;
+    /** @brief Czy okno ma fokus. */
+    bool WindowFocused() const;
+    /** @brief Czy okno jest ukryte. */
+    bool WindowHidden() const;
+    /** @brief Czy okno jest zminimalizowane. */
+    bool WindowMinimized() const;
+    /** @brief Czy okno jest zmaksymalizowane. */
+    bool WindowMaximized() const;
+    /** @brief Pozycja okna na pulpicie. */
+    Vector2 WindowPosition() const;
+    /** @brief Skala DPI okna (np. {1.5, 1.5} przy 150%). */
+    Vector2 WindowScaleDpi() const;
+
+    /** @brief Liczba podłączonych monitorów. */
+    int MonitorCount() const;
+    /** @brief Numer monitora, na którym jest okno. */
+    int CurrentMonitor() const;
+    /** @brief Pozycja monitora na wirtualnym pulpicie. */
+    Vector2 MonitorPosition(int monitor) const;
+    /** @brief Szerokość trybu wideo monitora w pikselach. */
+    int MonitorWidth(int monitor) const;
+    /** @brief Wysokość trybu wideo monitora w pikselach. */
+    int MonitorHeight(int monitor) const;
+    /** @brief Fizyczna szerokość monitora w milimetrach. */
+    int MonitorPhysicalWidth(int monitor) const;
+    /** @brief Fizyczna wysokość monitora w milimetrach. */
+    int MonitorPhysicalHeight(int monitor) const;
+    /** @brief Częstotliwość odświeżania monitora w Hz. */
+    int MonitorRefreshRate(int monitor) const;
+    /** @brief Nazwa monitora (albo pusty napis). */
+    std::string MonitorName(int monitor) const;
+
+    /** @} */
+
+    /**
+     * @name Sterowanie oknem
+     * WindowPosition() i Opacity() można wywołać przed Init() - zostaną zastosowane przy
+     * otwarciu okna. Pozostałe działają po Init().
+     */
+    /** @{ */
+
+    /**
+     * @brief Ustawia pozycję okna na pulpicie.
+     * @param x Pozycja pozioma.
+     * @param y Pozycja pionowa.
+     * @return Ten sam silnik.
+     */
+    Engine& WindowPosition(int x, int y);
+
+    /**
+     * @brief Ustawia przezroczystość całego okna.
+     * @param opacity Od 0 (niewidoczne) do 1 (nieprzezroczyste).
+     * @return Ten sam silnik.
+     */
+    Engine& Opacity(float opacity);
+
+    /** @brief Maksymalizuje okno (wymaga okna o zmiennym rozmiarze). */
+    Engine& Maximize();
+    /** @brief Minimalizuje okno. */
+    Engine& Minimize();
+    /** @brief Przywraca zminimalizowane albo zmaksymalizowane okno. */
+    Engine& Restore();
+    /** @brief Przełącza tryb okna bez ramki na cały ekran (borderless windowed). */
+    Engine& ToggleBorderless();
+    /** @brief Przenosi fokus na okno. */
+    Engine& Focus();
+
+    /** @} */
+
+    /** @name Schowek */
+    /** @{ */
+
+    /**
+     * @brief Pobiera tekst ze schowka systemowego.
+     * @return Tekst albo pusty napis (także przed Init()).
+     */
+    std::string ClipboardText() const;
+
+    /**
+     * @brief Kopiuje tekst do schowka systemowego.
+     * @param text Tekst (UTF-8).
+     * @return Ten sam silnik.
+     */
+    Engine& ClipboardText(const std::string& text);
+
+    /** @} */
+
+    /** @name Czas, losowość i różne */
+    /** @{ */
+
+    /**
+     * @brief Pobiera zmierzoną liczbę klatek na sekundę.
+     * @details W odróżnieniu od Fps(int), które ustawia wartość docelową.
+     * @return Średnia z ostatnich klatek.
+     */
+    int CurrentFps() const;
+
+    /**
+     * @brief Usypia program na podany czas.
+     * @param seconds Czas w sekundach.
+     * @return Ten sam silnik.
+     */
+    Engine& Wait(double seconds);
+
+    /**
+     * @brief Ustawia ziarno generatora liczb losowych (powtarzalne wyniki).
+     * @param seed Ziarno.
+     * @return Ten sam silnik.
+     */
+    Engine& RandomSeed(unsigned int seed);
+
+    /**
+     * @brief Losuje liczbę całkowitą z przedziału domkniętego.
+     * @param min Dolna granica.
+     * @param max Górna granica.
+     * @return Wylosowana liczba.
+     */
+    int RandomValue(int min, int max) const;
+
+    /**
+     * @brief Zapisuje zrzut ekranu do pliku PNG.
+     * @param path Ścieżka pliku (względem katalogu roboczego).
+     * @return Ten sam silnik.
+     */
+    Engine& Screenshot(const std::string& path);
+
+    /**
+     * @brief Otwiera adres w domyślnej przeglądarce.
+     * @param url Adres (http:// albo https://).
+     * @return Ten sam silnik.
+     */
+    Engine& OpenUrl(const std::string& url);
+
+    /**
+     * @brief Włącza czekanie na zdarzenia zamiast ciągłego odświeżania.
+     * @details Program zużywa mniej procesora, ale klatki pojawiają się tylko przy wejściu
+     * użytkownika - dobre dla narzędzi, złe dla animacji.
+     * @param value Czy czekać na zdarzenia.
+     * @return Ten sam silnik.
+     */
+    Engine& EventWaiting(bool value = true);
+
+    /** @} */
+
+    /** @name Pliki i katalogi */
+    /** @{ */
+
+    /** @brief Katalog, w którym leży plik wykonywalny (z ukośnikiem na końcu). */
+    std::string ApplicationDirectory() const;
+    /** @brief Bieżący katalog roboczy. */
+    std::string WorkingDirectory() const;
+    /** @brief Sprawdza, czy plik istnieje. */
+    bool FileExists(const std::string& path) const;
+    /** @brief Sprawdza, czy katalog istnieje. */
+    bool DirectoryExists(const std::string& path) const;
+    /** @brief Czas ostatniej modyfikacji pliku (sekundy od epoki Uniksa) albo 0. */
+    long FileModTime(const std::string& path) const;
+
     /** @} */
 
     /** @name Czyszczenie ekranu i bitmap */
@@ -423,14 +696,24 @@ class Engine : public Contextable {
     /** @brief Destruktor wywołuje Shutdown(). */
     ~Engine() { Shutdown(); }
 
-    std::string title_ = "Gra";          /**< Tytuł okna. */
-    int width_ = 800;                    /**< Szerokość okna w trybie okienkowym. */
-    int height_ = 600;                   /**< Wysokość okna w trybie okienkowym. */
-    bool fullscreen_ = false;            /**< Czy używać trybu pełnoekranowego. */
-    bool vsync_ = false;                 /**< Czy włączyć synchronizację pionową. */
-    int fps_ = 60;                       /**< Docelowa liczba klatek na sekundę. */
-    Color background_ = BLACK;           /**< Kolor czyszczenia ekranu w każdej klatce. */
-    Input input_;                        /**< Stan i ustawienia klawiatury oraz myszy. */
+    /**
+     * @brief Sprawdza, czy okno istnieje; jeśli nie - zapisuje ostrzeżenie w logu.
+     * @param function Nazwa wywołanej metody (do komunikatu).
+     * @return true, gdy okno jest gotowe.
+     */
+    bool RequireWindow(const char* function);
+
+    std::string title_ = "Gra";             /**< Tytuł okna. */
+    int width_ = 800;                       /**< Szerokość okna w trybie okienkowym. */
+    int height_ = 600;                      /**< Wysokość okna w trybie okienkowym. */
+    bool fullscreen_ = false;               /**< Czy używać trybu pełnoekranowego. */
+    bool vsync_ = false;                    /**< Czy włączyć synchronizację pionową. */
+    int fps_ = 60;                          /**< Docelowa liczba klatek na sekundę. */
+    Color background_ = BLACK;              /**< Kolor czyszczenia ekranu w każdej klatce. */
+    Input input_;                           /**< Stan i ustawienia urządzeń wejścia. */
+    int exitKey_ = KEY_ESCAPE;              /**< Klawisz zamykający okno. */
+    std::optional<Vector2> windowPosition_; /**< Pozycja okna do ustawienia przy Init(). */
+    std::optional<float> opacity_;       /**< Przezroczystość okna do ustawienia przy Init(). */
     std::string logFile_ = "engine.log"; /**< Ścieżka pliku logu; pusta wyłącza zapis. */
 
     std::function<void(float)> update_;            /**< Globalna logika co klatkę. */

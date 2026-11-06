@@ -85,6 +85,7 @@ int main() {
                          .Title("Raycade demo")
                          .VSync(false) // V-Sync wyłączony; podwójne buforowanie działa zawsze
                          .Window(1000, 700) // albo .Fullscreen()
+                         .Fullscreen()
                          .Background(RAYWHITE)
                          .StartScene("menu")
                          .Init();

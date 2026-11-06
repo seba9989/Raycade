@@ -76,6 +76,11 @@ Engine& Engine::Init() {
     }
 
     ::SetTargetFPS(fps_);
+    ::SetExitKey(exitKey_);
+    if (windowPosition_)
+        ::SetWindowPosition(static_cast<int>(windowPosition_->x),
+                            static_cast<int>(windowPosition_->y));
+    if (opacity_) ::SetWindowOpacity(*opacity_);
     initialized_ = true;
     Log("Silnik zainicjalizowany (podwojne buforowanie, V-Sync: " +
         std::string(vsync_ ? "tak" : "nie") + ")");
@@ -284,4 +289,253 @@ Engine& Engine::Log(const std::string& message) {
     std::cerr << message << '\n';
     if (log_.is_open()) log_ << message << std::endl;
     return *this;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Wrappery raylib: wejście (sterowanie), okno, schowek, czas, pliki
+// ---------------------------------------------------------------------------------------------
+
+bool Engine::RequireWindow(const char* function) {
+    if (initialized_) return true;
+    Log(std::string("UWAGA: ") + function + "() wymaga otwartego okna (po Init()) - pominieto");
+    return false;
+}
+
+Engine& Engine::ExitKey(int key) {
+    exitKey_ = key;
+    if (initialized_) ::SetExitKey(key);
+    return *this;
+}
+
+Engine& Engine::MousePosition(Vector2 position) {
+    if (RequireWindow("MousePosition"))
+        ::SetMousePosition(static_cast<int>(position.x), static_cast<int>(position.y));
+    return *this;
+}
+
+Engine& Engine::MouseCursor(int cursor) {
+    if (RequireWindow("MouseCursor")) ::SetMouseCursor(cursor);
+    return *this;
+}
+
+Engine& Engine::HideCursor(bool value) {
+    if (!RequireWindow("HideCursor")) return *this;
+    if (value)
+        ::HideCursor();
+    else
+        ::ShowCursor();
+    return *this;
+}
+
+Engine& Engine::LockCursor(bool value) {
+    if (!RequireWindow("LockCursor")) return *this;
+    if (value)
+        ::DisableCursor();
+    else
+        ::EnableCursor();
+    return *this;
+}
+
+bool Engine::CursorHidden() const {
+    return initialized_ && ::IsCursorHidden();
+}
+
+bool Engine::CursorOnScreen() const {
+    return initialized_ && ::IsCursorOnScreen();
+}
+
+Engine& Engine::GamepadVibration(int gamepad, float left, float right, float seconds) {
+    if (RequireWindow("GamepadVibration")) ::SetGamepadVibration(gamepad, left, right, seconds);
+    return *this;
+}
+
+int Engine::GamepadMappings(const std::string& mappings) {
+    if (!RequireWindow("GamepadMappings")) return 0;
+    return ::SetGamepadMappings(mappings.c_str());
+}
+
+int Engine::ScreenWidth() const {
+    return initialized_ ? ::GetScreenWidth() : 0;
+}
+
+int Engine::ScreenHeight() const {
+    return initialized_ ? ::GetScreenHeight() : 0;
+}
+
+int Engine::RenderWidth() const {
+    return initialized_ ? ::GetRenderWidth() : 0;
+}
+
+int Engine::RenderHeight() const {
+    return initialized_ ? ::GetRenderHeight() : 0;
+}
+
+bool Engine::WindowResized() const {
+    return initialized_ && ::IsWindowResized();
+}
+
+bool Engine::WindowFocused() const {
+    return initialized_ && ::IsWindowFocused();
+}
+
+bool Engine::WindowHidden() const {
+    return initialized_ && ::IsWindowHidden();
+}
+
+bool Engine::WindowMinimized() const {
+    return initialized_ && ::IsWindowMinimized();
+}
+
+bool Engine::WindowMaximized() const {
+    return initialized_ && ::IsWindowMaximized();
+}
+
+Vector2 Engine::WindowPosition() const {
+    return initialized_ ? ::GetWindowPosition() : Vector2{0, 0};
+}
+
+Vector2 Engine::WindowScaleDpi() const {
+    return initialized_ ? ::GetWindowScaleDPI() : Vector2{1, 1};
+}
+
+int Engine::MonitorCount() const {
+    return initialized_ ? ::GetMonitorCount() : 0;
+}
+
+int Engine::CurrentMonitor() const {
+    return initialized_ ? ::GetCurrentMonitor() : 0;
+}
+
+Vector2 Engine::MonitorPosition(int monitor) const {
+    return initialized_ ? ::GetMonitorPosition(monitor) : Vector2{0, 0};
+}
+
+int Engine::MonitorWidth(int monitor) const {
+    return initialized_ ? ::GetMonitorWidth(monitor) : 0;
+}
+
+int Engine::MonitorHeight(int monitor) const {
+    return initialized_ ? ::GetMonitorHeight(monitor) : 0;
+}
+
+int Engine::MonitorPhysicalWidth(int monitor) const {
+    return initialized_ ? ::GetMonitorPhysicalWidth(monitor) : 0;
+}
+
+int Engine::MonitorPhysicalHeight(int monitor) const {
+    return initialized_ ? ::GetMonitorPhysicalHeight(monitor) : 0;
+}
+
+int Engine::MonitorRefreshRate(int monitor) const {
+    return initialized_ ? ::GetMonitorRefreshRate(monitor) : 0;
+}
+
+std::string Engine::MonitorName(int monitor) const {
+    if (!initialized_) return {};
+    const char* name = ::GetMonitorName(monitor);
+    return name ? name : "";
+}
+
+Engine& Engine::WindowPosition(int x, int y) {
+    windowPosition_ = Vector2{static_cast<float>(x), static_cast<float>(y)};
+    if (initialized_) ::SetWindowPosition(x, y);
+    return *this;
+}
+
+Engine& Engine::Opacity(float opacity) {
+    opacity_ = opacity;
+    if (initialized_) ::SetWindowOpacity(opacity);
+    return *this;
+}
+
+Engine& Engine::Maximize() {
+    if (RequireWindow("Maximize")) ::MaximizeWindow();
+    return *this;
+}
+
+Engine& Engine::Minimize() {
+    if (RequireWindow("Minimize")) ::MinimizeWindow();
+    return *this;
+}
+
+Engine& Engine::Restore() {
+    if (RequireWindow("Restore")) ::RestoreWindow();
+    return *this;
+}
+
+Engine& Engine::ToggleBorderless() {
+    if (RequireWindow("ToggleBorderless")) ::ToggleBorderlessWindowed();
+    return *this;
+}
+
+Engine& Engine::Focus() {
+    if (RequireWindow("Focus")) ::SetWindowFocused();
+    return *this;
+}
+
+std::string Engine::ClipboardText() const {
+    if (!initialized_) return {};
+    const char* text = ::GetClipboardText();
+    return text ? text : "";
+}
+
+Engine& Engine::ClipboardText(const std::string& text) {
+    if (RequireWindow("ClipboardText")) ::SetClipboardText(text.c_str());
+    return *this;
+}
+
+int Engine::CurrentFps() const {
+    return initialized_ ? ::GetFPS() : 0;
+}
+
+Engine& Engine::Wait(double seconds) {
+    ::WaitTime(seconds);
+    return *this;
+}
+
+Engine& Engine::RandomSeed(unsigned int seed) {
+    ::SetRandomSeed(seed);
+    return *this;
+}
+
+int Engine::RandomValue(int min, int max) const {
+    return ::GetRandomValue(min, max);
+}
+
+Engine& Engine::Screenshot(const std::string& path) {
+    if (RequireWindow("Screenshot")) ::TakeScreenshot(path.c_str());
+    return *this;
+}
+
+Engine& Engine::OpenUrl(const std::string& url) {
+    ::OpenURL(url.c_str());
+    return *this;
+}
+
+Engine& Engine::EventWaiting(bool value) {
+    if (value)
+        ::EnableEventWaiting();
+    else
+        ::DisableEventWaiting();
+    return *this;
+}
+
+std::string Engine::ApplicationDirectory() const {
+    return ::GetApplicationDirectory();
+}
+
+std::string Engine::WorkingDirectory() const {
+    return ::GetWorkingDirectory();
+}
+
+bool Engine::FileExists(const std::string& path) const {
+    return ::FileExists(path.c_str());
+}
+
+bool Engine::DirectoryExists(const std::string& path) const {
+    return ::DirectoryExists(path.c_str());
+}
+
+long Engine::FileModTime(const std::string& path) const {
+    return ::GetFileModTime(path.c_str());
 }
