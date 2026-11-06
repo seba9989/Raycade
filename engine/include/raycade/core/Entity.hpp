@@ -60,6 +60,34 @@
  *
  * scene.Spawn<shapes::Star>().Position({100, 100}).Paint(GOLD);
  * @endcode
+ *
+ * @section entity_komponent Własny komponent wielokrotnego użytku
+ * Klasa pochodna może:
+ * - zbudować swoje części jako dzieci w konstruktorze (Spawn<T>()),
+ * - mieć logikę w Tick() - scena nadal może dołożyć własną przez OnUpdate(),
+ * - mieć własne settery z `this Self& self`, żeby łańcuch działał także w klasach pochodnych,
+ * - reagować na mysz całą grupą dzięki AnyChildContains().
+ *
+ * Update() i Render() są `final` - zdarzenia, dzieci i macierz obsługuje zawsze Entity.
+ * @code{.cpp}
+ * class Player : public shapes::Group {
+ *   public:
+ *     Player() { Spawn<shapes::Rect>().Position({-15, -20}).Size({30, 40}).Fill(); }
+ *     template <typename Self> Self& Speed(this Self& self, float speed) {
+ *         self.speed_ = speed;
+ *         return self;
+ *     }
+ *     bool Contains(Vector2 point) const override { return AnyChildContains(point); }
+ *   protected:
+ *     void Tick(float dt, const Input& input) override {
+ *         if (input.KeyDown(KEY_D)) Translate({speed_ * dt, 0});
+ *     }
+ *   private:
+ *     float speed_ = 200.0f;
+ * };
+ *
+ * scene.Spawn<Player>().Position({400, 300}).Speed(300).OnClick([](Player& self) { ... });
+ * @endcode
  */
 class Entity : public Updatable, public Drawable, public Transformable {
   public:
@@ -93,10 +121,11 @@ class Entity : public Updatable, public Drawable, public Transformable {
 
     /**
      * @brief Obsługuje własne zdarzenia, a następnie aktualizuje dzieci.
+     * @details Metoda jest `final`: logikę klasy pochodnej umieszcza się w Tick().
      * @param dt Czas od poprzedniej klatki w sekundach.
      * @param input Stan klawiatury i myszy.
      */
-    void Update(float dt, const Input& input) override {
+    void Update(float dt, const Input& input) final {
         Updatable::Update(dt, input);
         // Callback może dodać dziecko, dlatego rozmiar sprawdzamy w każdej iteracji.
         for (std::size_t i = 0; i < children_.size(); ++i)
@@ -105,9 +134,10 @@ class Entity : public Updatable, public Drawable, public Transformable {
 
     /**
      * @brief Nakłada lokalną macierz, rysuje własny kształt, a potem dzieci według warstw.
+     * @details Metoda jest `final`: własny wygląd klasy pochodnej rysuje się w Draw().
      * @param renderer Renderer prymitywów.
      */
-    void Render(PrimitiveRenderer& renderer) const override {
+    void Render(PrimitiveRenderer& renderer) const final {
         const auto matrix = transform_.RlglMatrix();
         rlPushMatrix();
         rlMultMatrixf(matrix.data());
@@ -176,6 +206,19 @@ class Entity : public Updatable, public Drawable, public Transformable {
         for (const Vertex& vertex : local)
             world.push_back(Vertex{World(vertex)});
         return world;
+    }
+
+    /**
+     * @brief Sprawdza, czy punkt trafia w któreś z dzieci (rekurencyjnie).
+     * @details Ułatwia Contains() obiektów złożonych z części: grupa reaguje na mysz tam,
+     * gdzie widać jej dzieci.
+     * @param point Punkt w układzie ekranu.
+     * @return true, gdy któreś dziecko (albo jego potomek) zawiera punkt.
+     */
+    bool AnyChildContains(Vector2 point) const {
+        for (const auto& child : children_)
+            if (child->Contains(point) || child->AnyChildContains(point)) return true;
+        return false;
     }
 
   private:

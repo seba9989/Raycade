@@ -110,6 +110,16 @@ class Updatable {
     /** @} */
 
   protected:
+    /**
+     * @brief Własna logika klasy pochodnej, wywoływana co klatkę.
+     * @details Miejsce na zachowanie komponentu (np. sterowanie graczem). Wywoływana po
+     * zdarzeniach myszy i klawiatury, a przed callbackiem OnUpdate() - scena może więc
+     * dołożyć własną logikę przez OnUpdate() bez nadpisywania zachowania klasy.
+     * @param dt Czas od poprzedniej klatki w sekundach.
+     * @param input Stan klawiatury i myszy.
+     */
+    virtual void Tick([[maybe_unused]] float dt, [[maybe_unused]] const Input& input) {}
+
     std::function<void(float)> update_; /**< Callback wykonywany co klatkę. */
     std::function<void()> click_;       /**< Reakcja na kliknięcie. */
     std::function<void()> mouseEnter_;  /**< Reakcja na wejście kursora. */
@@ -128,7 +138,7 @@ class Updatable {
         return [&self, callback = std::move(callback)] { callback(self); };
     }
 
-    /** @brief Wywołuje callbacki myszy, klawiatury i aktualizacji. */
+    /** @brief Wywołuje callbacki myszy i klawiatury, Tick() i callback aktualizacji. */
     void HandleEvents(float dt, const Input& input) {
         if (input.MouseEnabled()) {
             const bool inside = Contains(input.MousePosition());
@@ -139,6 +149,7 @@ class Updatable {
         }
         for (const auto& [key, callback] : keys_)
             if (input.KeyPressed(key)) callback();
+        Tick(dt, input);
         if (update_) update_(dt);
     }
 
