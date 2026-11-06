@@ -8,7 +8,7 @@
 #include <cmath>
 #include <vector>
 
-#include "lib/core/Engine.hpp"
+#include <raycade>
 
 /** @brief Konfiguruje interaktywną scenę prymitywów. */
 SCENE("prymitywy") {

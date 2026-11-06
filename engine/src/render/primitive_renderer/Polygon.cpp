@@ -5,7 +5,7 @@
  * łączone w pary według reguły parzystości.
  */
 
-#include "../PrimitiveRenderer.hpp"
+#include <raycade/render/PrimitiveRenderer.hpp>
 
 #include <algorithm>
 #include <cmath>

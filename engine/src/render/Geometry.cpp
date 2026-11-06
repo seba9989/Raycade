@@ -5,11 +5,11 @@
  * niesąsiednich krawędzi.
  */
 
-#include "Geometry.hpp"
+#include <raycade/render/Geometry.hpp>
 
 #include <algorithm>
 
-#include "PrimitiveRenderer.hpp"
+#include <raycade/render/PrimitiveRenderer.hpp>
 
 namespace {
 

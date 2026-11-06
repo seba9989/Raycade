@@ -4,7 +4,7 @@
  * @details Stos pikseli zastępuje rekurencję. Każdy krok bada czterech sąsiadów.
  */
 
-#include "../PrimitiveRenderer.hpp"
+#include <raycade/render/PrimitiveRenderer.hpp>
 
 #include <cmath>
 #include <utility>

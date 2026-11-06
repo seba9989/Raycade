@@ -3,7 +3,7 @@
  * @brief Pokaz figur przed i po transformacji z laboratorium 4.
  */
 
-#include "lib/core/Engine.hpp"
+#include <raycade>
 
 /** @brief Tworzy trzy porównania transformacji. */
 SCENE("transformacje") {

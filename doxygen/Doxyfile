@@ -1,13 +1,18 @@
 # Uruchamiaj z katalogu głównego projektu: doxygen doxygen/Doxyfile
-PROJECT_NAME           = "Silnik 2D"
-PROJECT_BRIEF          = "Dokumentacja techniczna silnika 2D"
+PROJECT_NAME           = "Raycade"
+PROJECT_BRIEF          = "Silnik 2D na raylib z kaskadowym API"
 OUTPUT_LANGUAGE        = Polish
 OUTPUT_DIRECTORY       = doxygen
 
-INPUT                  = src
-FILE_PATTERNS          = *.hpp *.cpp
+INPUT                  = engine demo
+# nagłówek zbiorczy "raycade" nie ma rozszerzenia
+EXTENSION_MAPPING      = no_extension=C++
+FILE_PATTERNS          = *.hpp *.cpp raycade
 RECURSIVE              = YES
-STRIP_FROM_PATH        = src
+STRIP_FROM_PATH        = engine/umbrella engine/include engine/src demo
+# w dokumentacji klas pokazuj #include <raycade/...>, tak jak dołącza je gra
+STRIP_FROM_INC_PATH    = engine/umbrella engine/include
+FULL_PATH_NAMES        = YES
 EXTRACT_ALL            = NO
 EXTRACT_PRIVATE        = YES
 SOURCE_BROWSER         = YES

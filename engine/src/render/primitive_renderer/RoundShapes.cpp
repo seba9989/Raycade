@@ -5,7 +5,7 @@
  * cztery odbicia punktu obliczonego w ćwiartce.
  */
 
-#include "../PrimitiveRenderer.hpp"
+#include <raycade/render/PrimitiveRenderer.hpp>
 
 #include <algorithm>
 #include <cmath>

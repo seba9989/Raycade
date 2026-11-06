@@ -31,12 +31,12 @@
   '';
 
   scripts.run.exec = ''
-    build && "$DEVENV_ROOT/build/silnik" "$@"
+    build && "$DEVENV_ROOT/build/raycade-demo" "$@"
   '';
 
   # Formatowanie wszystkich plików według .clang-format
   scripts.fmt.exec = ''
-    find "$DEVENV_ROOT/src" -name '*.cpp' -o -name '*.h' -o -name '*.hpp' \
+    find "$DEVENV_ROOT/engine" "$DEVENV_ROOT/demo" -name '*.cpp' -o -name '*.h' -o -name '*.hpp' \
       | xargs clang-format -i
   '';
 
@@ -63,7 +63,7 @@
   '';
 
   enterShell = ''
-    echo "Silnik 2D (raylib ${pkgs.raylib.version})"
+    echo "Raycade (raylib ${pkgs.raylib.version})"
     echo "  build  - konfiguracja i kompilacja"
     echo "  run    - kompilacja i uruchomienie"
     echo "  fmt    - formatowanie kodu (.clang-format, także hook pre-commit)"

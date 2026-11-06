@@ -110,10 +110,10 @@ class Updatable {
     /** @} */
 
   protected:
-    std::function<void(float)> update_;                       /**< Callback wykonywany co klatkę. */
-    std::function<void()> click_;                             /**< Reakcja na kliknięcie. */
-    std::function<void()> mouseEnter_;                        /**< Reakcja na wejście kursora. */
-    std::function<void()> mouseLeave_;                        /**< Reakcja na wyjście kursora. */
+    std::function<void(float)> update_; /**< Callback wykonywany co klatkę. */
+    std::function<void()> click_;       /**< Reakcja na kliknięcie. */
+    std::function<void()> mouseEnter_;  /**< Reakcja na wejście kursora. */
+    std::function<void()> mouseLeave_;  /**< Reakcja na wyjście kursora. */
     std::vector<std::pair<int, std::function<void()>>> keys_; /**< Reakcje na klawisze. */
 
   private:

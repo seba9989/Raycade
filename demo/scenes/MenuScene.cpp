@@ -6,7 +6,7 @@
 
 #include <cmath>
 
-#include "lib/core/Engine.hpp"
+#include <raycade>
 
 /** @brief Konfiguruje scenę menu po otwarciu okna. */
 SCENE("menu") {

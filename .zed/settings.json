@@ -11,6 +11,11 @@
     "cmake": true  // CMakeLists.txt
   },
 
+  // Nagłówek zbiorczy <raycade> nie ma rozszerzenia - wskazujemy język ręcznie.
+  "file_types": {
+    "C++": ["**/umbrella/raycade"]
+  },
+
   "languages": {
     // Formatowanie robi clangd według .clang-format (styl Google).
     // tab_size i preferred_line_length muszą się z nim zgadzać,

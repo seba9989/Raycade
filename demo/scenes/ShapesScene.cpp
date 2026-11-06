@@ -8,7 +8,7 @@
 #include <array>
 #include <vector>
 
-#include "lib/core/Engine.hpp"
+#include <raycade>
 
 /** @brief Konfiguruje scenę porównania algorytmów z raylib. */
 SCENE("figury") {

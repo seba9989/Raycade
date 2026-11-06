@@ -3,7 +3,7 @@
  * @brief Stan pędzla, podstawowe prymitywy, łamane i algorytm przyrostowy odcinka.
  */
 
-#include "../PrimitiveRenderer.hpp"
+#include <raycade/render/PrimitiveRenderer.hpp>
 
 #include <cmath>
 #include <utility>

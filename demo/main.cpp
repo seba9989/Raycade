@@ -4,11 +4,12 @@
  */
 
 /**
- * @mainpage Silnik 2D
+ * @mainpage Raycade
  *
  * @section cel Cel projektu
- * Silnik 2D napisany w C++23 z użyciem raylib. Biblioteka udostępnia sceny,
- * obiekty z hierarchią dzieci, wejście z klawiatury i myszy oraz renderer
+ * Raycade (ray + cascade + arcade) to silnik 2D napisany w C++23 z użyciem raylib,
+ * z API opartym na kaskadzie wywołań: `scene.Spawn<shapes::Circle>().Radius(20).Fill()`. Biblioteka
+ * udostępnia sceny, obiekty z hierarchią dzieci, wejście z klawiatury i myszy oraz renderer
  * prymitywów. Program zawiera demonstrację funkcji z laboratoriów 1-4.
  *
  * @section uruchomienie Kompilacja i uruchomienie
@@ -17,8 +18,22 @@
  * cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
  * cmake --build build
  * @endcode
- * Program wynikowy to `build/silnik.exe` na Windows albo `build/silnik` na Linux.
+ * Program wynikowy to `build/raycade-demo.exe` na Windows albo `build/raycade-demo` na Linux.
  * Jeśli raylib nie jest dostępny lokalnie, CMake pobiera wersję 5.5.
+ *
+ * @section struktura Struktura projektu
+ * - `engine/` - biblioteka statyczna Raycade (cel CMake `raycade::raycade`):
+ *   nagłówek zbiorczy `engine/umbrella/raycade`, pozostałe publiczne nagłówki
+ *   w `engine/include/raycade/`, implementacja w `engine/src/`.
+ * - `demo/` - program demonstracyjny: ten plik i sceny z laboratoriów (`demo/scenes/`).
+ *
+ * Gra dołącza jeden nagłówek `#include <raycade>`. Inny projekt CMake może użyć
+ * biblioteki bez demo:
+ * @code{.cmake}
+ * add_subdirectory(raycade)   # demo budowane jest tylko w głównym projekcie
+ * target_link_libraries(gra PRIVATE raycade::raycade)
+ * @endcode
+ * Sceny (makro SCENE) muszą leżeć w plikach programu, nie w bibliotece statycznej.
  *
  * @section budowa Najważniejsze części
  * - @ref Engine zarządza oknem, pętlą i przełączaniem scen.
@@ -54,7 +69,7 @@
 
 #include <string>
 
-#include "lib/core/Engine.hpp"
+#include <raycade>
 
 /**
  * @brief Konfiguruje silnik, ustawia logikę globalną i uruchamia pętlę gry.
@@ -63,8 +78,8 @@
  */
 int main() {
     Engine& engine = Engine::Get()
-                         .Title("Silnik 2D")
-                         .VSync(false)      // V-Sync wyłączony; podwójne buforowanie działa zawsze
+                         .Title("Raycade demo")
+                         .VSync(false) // V-Sync wyłączony; podwójne buforowanie działa zawsze
                          .Window(1000, 700) // albo .Fullscreen()
                          .Background(RAYWHITE)
                          .StartScene("menu")

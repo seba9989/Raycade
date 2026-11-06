@@ -5,7 +5,7 @@
  * okno na bieżąco.
  */
 
-#include "Engine.hpp"
+#include <raycade/core/Engine.hpp>
 
 #include <algorithm>
 #include <iostream>
