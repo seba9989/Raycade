@@ -20,7 +20,8 @@
 #include "../render/RenderTarget.hpp"
 #include "Input.hpp"
 #include "Scene.hpp"
-#include "Shapes.hpp" // IWYU pragma: export
+#include "Shapes.hpp"       // IWYU pragma: export
+#include "ui/TextField.hpp" // IWYU pragma: export
 
 /**
  * @brief Sposób dopasowania obrazu gry do okna (Engine::ScaleMode()).
@@ -551,6 +552,76 @@ class Engine : public Contextable {
     /** @} */
 
     /**
+     * @name Akcje i osie wejścia
+     * Nazwy zamiast konkretnych klawiszy: gra pyta o "skok", a nie o spację. Dzięki temu jedna
+     * akcja może mieć kilka źródeł (klawiatura, mysz, pad), a sterowanie da się zmienić
+     * w jednym miejscu. Odczyt: Input::ActionPressed(), Input::Axis() (także w Tick()).
+     * @code{.cpp}
+     * engine.BindAction("skok", {bind::Key(KEY_SPACE), bind::Pad(GAMEPAD_BUTTON_RIGHT_FACE_DOWN)})
+     *     .BindAxis("ruch_x", {bind::Key(KEY_A), bind::Key(KEY_LEFT)},
+     *               {bind::Key(KEY_D), bind::Key(KEY_RIGHT)},
+     *               {bind::PadAxis(GAMEPAD_AXIS_LEFT_X, 1.0f)});
+     *
+     * // w Tick(dt, input):
+     * if (input.ActionPressed("skok")) Jump();
+     * Translate({input.Axis("ruch_x") * speed * dt, 0});
+     * @endcode
+     */
+    /** @{ */
+
+    /**
+     * @brief Ustawia źródła akcji (zastępuje poprzednie).
+     * @param action Nazwa akcji.
+     * @param bindings Źródła z przestrzeni nazw bind.
+     * @return Ten sam silnik.
+     */
+    Engine& BindAction(const std::string& action, std::vector<InputBinding> bindings) {
+        input_.actions_->actions[action] = std::move(bindings);
+        input_.actions_->analogDown.erase(action);
+        return *this;
+    }
+
+    /**
+     * @brief Ustawia oś: źródła na minus, na plus i osie analogowe pada.
+     * @param axis Nazwa osi.
+     * @param negative Źródła dające -1 (np. A, strzałka w lewo).
+     * @param positive Źródła dające +1 (np. D, strzałka w prawo).
+     * @param analog Osie pada: bind::PadAxis(GAMEPAD_AXIS_*, kierunek); kierunek -1 odwraca oś.
+     * @param deadzone Wychylenia analogowe mniejsze od tej wartości są pomijane.
+     * @return Ten sam silnik.
+     */
+    Engine& BindAxis(const std::string& axis, std::vector<InputBinding> negative,
+                     std::vector<InputBinding> positive, std::vector<InputBinding> analog = {},
+                     float deadzone = 0.15f) {
+        input_.actions_->axes[axis] =
+            InputAxis{std::move(negative), std::move(positive), std::move(analog), deadzone};
+        return *this;
+    }
+
+    /**
+     * @brief Usuwa akcję albo oś o podanej nazwie.
+     * @param name Nazwa akcji lub osi.
+     * @return Ten sam silnik.
+     */
+    Engine& Unbind(const std::string& name) {
+        input_.actions_->actions.erase(name);
+        input_.actions_->axes.erase(name);
+        input_.actions_->analogDown.erase(name);
+        return *this;
+    }
+
+    /** @brief Skrót: Input::ActionDown(). */
+    bool ActionDown(const std::string& action) const { return input_.ActionDown(action); }
+    /** @brief Skrót: Input::ActionPressed(). */
+    bool ActionPressed(const std::string& action) const { return input_.ActionPressed(action); }
+    /** @brief Skrót: Input::ActionReleased(). */
+    bool ActionReleased(const std::string& action) const { return input_.ActionReleased(action); }
+    /** @brief Skrót: Input::Axis(). */
+    float Axis(const std::string& axis) const { return input_.Axis(axis); }
+
+    /** @} */
+
+    /**
      * @name Kursor i pady (sterowanie)
      * Działają po Init(); wcześniej są ignorowane (z wpisem w logu).
      */
@@ -970,8 +1041,8 @@ class Engine : public Contextable {
     Input input_;                           /**< Stan i ustawienia urządzeń wejścia. */
     int exitKey_ = KEY_ESCAPE;              /**< Klawisz zamykający okno. */
     std::optional<Vector2> windowPosition_; /**< Pozycja okna do ustawienia przy Init(). */
-    std::optional<float> opacity_; /**< Przezroczystość okna do ustawienia przy Init(). */
-    unsigned int windowFlags_ = 0; /**< Flagi okna (FLAG_*) z Resizable() itd. */
+    std::optional<float> opacity_;          /**< Przezroczystość okna do ustawienia przy Init(). */
+    unsigned int windowFlags_ = 0;          /**< Flagi okna (FLAG_*) z Resizable() itd. */
     std::optional<std::pair<int, int>> minSize_; /**< Minimalny rozmiar okna. */
     std::optional<std::pair<int, int>> maxSize_; /**< Maksymalny rozmiar okna. */
     std::string icon_;                           /**< Ścieżka ikony do ustawienia przy Init(). */
@@ -1002,8 +1073,8 @@ class Engine : public Contextable {
 
     std::map<std::string, Scene> scenes_; /**< Utworzone sceny według nazw. */
     std::string active_;                  /**< Nazwa aktywnej sceny. */
-    std::string pending_; /**< Scena, na którą przełączamy po zakończeniu klatki. */
-    std::string start_;   /**< Scena startowa wybrana przez StartScene(). */
+    std::string pending_;                 /**< Scena, na którą przełączamy po zakończeniu klatki. */
+    std::string start_;                   /**< Scena startowa wybrana przez StartScene(). */
     /** Konfiguracje scen zarejestrowanych makrem SCENE, wykonywane przy pierwszym wejściu. */
     std::map<std::string, std::function<void(Scene&)>> registered_;
     PrimitiveRenderer primitives_; /**< Renderer używany do rysowania scen. */

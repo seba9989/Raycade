@@ -244,6 +244,13 @@ int Engine::Run() {
 
         // rozmiar okna mógł się zmienić (pełny ekran, zmiana rozmiaru) - przed odczytem myszy
         if (target_.Valid()) UpdateScaling();
+        // pole tekstowe z fokusem (z poprzedniej klatki) zabiera klawiaturę reszcie gry,
+        // także globalnemu OnUpdate - np. cyfry nie przełączają wtedy scen
+        const bool captured = scene && scene->KeyboardCaptured();
+        // Escape w polu tekstowym ma zdjąć fokus, a nie zamknąć okno (raylib sprawdza klawisz
+        // wyjścia sam, niezależnie od przejęcia klawiatury)
+        if (captured != input_.captured_) ::SetExitKey(captured ? KEY_NULL : exitKey_);
+        input_.captured_ = captured;
 
         PollSystemEvents();
         if (update_) update_(dt);
@@ -267,6 +274,7 @@ int Engine::Run() {
             target_.Draw(destination_);
         }
         ::EndDrawing();
+        input_.UpdateActionState(); // stan osi pada do ActionPressed/Released w następnej klatce
 
         // zmiany scen między klatkami, poza pętlą po obiektach
         ApplySceneChanges();
@@ -472,7 +480,8 @@ bool Engine::RequireWindow(const char* function) {
 
 Engine& Engine::ExitKey(int key) {
     exitKey_ = key;
-    if (initialized_) ::SetExitKey(key);
+    // przy przejętej klawiaturze klawisz wyjścia jest wyłączony - wróci po utracie fokusu
+    if (initialized_ && !input_.captured_) ::SetExitKey(key);
     return *this;
 }
 

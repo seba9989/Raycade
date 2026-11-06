@@ -16,6 +16,7 @@
 
 #include "Contextable.hpp"
 #include "Drawable.hpp"
+#include "Focusable.hpp"
 #include "SceneCamera.hpp"
 #include "Transformable.hpp"
 #include "Updatable.hpp"
@@ -24,15 +25,30 @@ class Scene;
 class Entity;
 
 /**
+ * @brief Powiązania obiektu ze sceną, wspólne dla wszystkich jej obiektów.
+ * @details Scena ma jeden taki zestaw, a każdy obiekt - tylko wskaźnik do niego (zamiast
+ * osobnych wskaźników na scenę, kontekst, kamerę i fokus).
+ */
+struct SceneLinks {
+    Scene* scene = nullptr;               /**< Scena. */
+    const Contextable* context = nullptr; /**< Scena jako poziom kontekstu. */
+    const SceneCamera* camera = nullptr;  /**< Kamera sceny. */
+    FocusState* focus = nullptr;          /**< Fokus klawiatury sceny. */
+};
+
+/**
  * @brief Wynik trafiania myszą w jednej klatce, liczony przez scenę.
  * @details Patrz @ref entity_trafienia.
  */
 struct PointerFrame {
-    const Entity* target = nullptr;  /**< Najwyżej narysowany obiekt pod kursorem. */
-    const Entity* press = nullptr;   /**< Odbiorca OnClick. */
-    const Entity* release = nullptr; /**< Odbiorca OnMouseUp. */
-    const Entity* scroll = nullptr;  /**< Odbiorca OnScroll. */
-    const Entity* drag = nullptr;    /**< Obiekt, który zaczyna przeciąganie. */
+    const Entity* target = nullptr;   /**< Najwyżej narysowany obiekt pod kursorem. */
+    const Entity* press = nullptr;    /**< Odbiorca OnClick. */
+    const Entity* release = nullptr;  /**< Odbiorca OnMouseUp. */
+    const Entity* scroll = nullptr;   /**< Odbiorca OnScroll. */
+    const Entity* drag = nullptr;     /**< Obiekt, który zaczyna przeciąganie. */
+    const Focusable* focus = nullptr; /**< Obiekt, który dostaje fokus po kliknięciu. */
+    const Entity* focused = nullptr;  /**< Obiekt z fokusem (do przekazania mu klawiatury). */
+    bool pressed = false;             /**< Czy w tej klatce wciśnięto lewy przycisk myszy. */
 };
 
 /**
@@ -126,6 +142,9 @@ struct PointerFrame {
  * Żeby obiekt blokował kliknięcia w to, co pod nim (np. okno dialogowe), wystarczy dać mu
  * puste zdarzenie: `.OnClick([](auto&) {})`.
  *
+ * @section entity_fokus Fokus klawiatury
+ * Fokus mają tylko obiekty z cechą Focusable (np. ui::TextField) - patrz jej opis.
+ *
  * @section entity_uklady Układy współrzędnych i kamera
  * - lokalny - względem pozycji obiektu (w nim rysuje Draw()),
  * - sceny (świata) - po złożeniu transformacji wszystkich przodków; w nim działają
@@ -171,7 +190,7 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
         children_.push_back(std::move(child));
         // dziecko obiektu już podpiętego do sceny podpinamy od razu (wywoła jego OnMount());
         // dzieci tworzone w konstruktorze zostaną podpięte razem z rodzicem
-        if (scene_) ref.Attach(*scene_, *sceneContext_, *camera_);
+        if (links_) ref.Attach(*links_);
         return ref;
     }
 
@@ -195,12 +214,20 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
      */
     void Update(float dt, const Input& input, const PointerFrame& pointer) {
         PointerEvents events;
+        const bool focused = pointer.focused == this;
         events.hovered = IsSelfOrAncestorOf(pointer.target);
         events.pressed = pointer.press == this;
         events.released = pointer.release == this;
         events.scrolled = pointer.scroll == this;
         events.dragStart = pointer.drag == this;
-        HandleEvents(dt, input, events);
+        if (focused && input.KeyboardCaptured()) {
+            // obiekt z fokusem jako jedyny widzi przejętą przez siebie klawiaturę
+            Input own = input;
+            own.captured_ = false;
+            HandleEvents(dt, own, events);
+        } else {
+            HandleEvents(dt, input, events);
+        }
         // Callback może dodać dziecko, dlatego rozmiar sprawdzamy w każdej iteracji.
         for (std::size_t i = 0; i < children_.size(); ++i)
             children_[i]->Update(dt, input, pointer);
@@ -288,7 +315,7 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
      * @brief Pobiera scenę, do której należy obiekt.
      * @return Wskaźnik sceny albo nullptr, gdy obiekt nie jest jeszcze podpięty.
      */
-    Scene* OwnerScene() const { return scene_; }
+    Scene* OwnerScene() const { return links_ ? links_->scene : nullptr; }
 
   protected:
     /**
@@ -298,7 +325,7 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
      */
     const Contextable* ContextParent() const override {
         if (parent_) return parent_;
-        if (sceneContext_) return sceneContext_;
+        if (links_) return links_->context;
         return ContextRoot();
     }
 
@@ -467,6 +494,7 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
                                 const Input& input, const SceneCamera& camera) {
         PointerFrame frame;
         if (!input.MouseEnabled()) return frame;
+        frame.pressed = input.MousePressed(MOUSE_BUTTON_LEFT); // także w puste miejsce
         std::vector<const Entity*> hits;
         const Vector2 mouse = input.MousePosition();
         const Vector2 worldMouse = camera.ScreenToWorld(mouse);
@@ -479,6 +507,12 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
 
         frame.target = hits.front();
         if (input.MousePressed(MOUSE_BUTTON_LEFT)) {
+            // dynamic_cast tylko przy kliknięciu: pierwszy obiekt z cechą Focusable w górę drzewa
+            for (const Entity* hit : hits) {
+                for (const Entity* e = hit; e && !frame.focus; e = e->parent_)
+                    frame.focus = dynamic_cast<const Focusable*>(e);
+                if (frame.focus) break;
+            }
             frame.press = Receiver(hits, [](const Entity& e) { return e.HandlesClick(); });
             frame.drag = Receiver(hits, [](const Entity& e) { return e.HandlesDrag(); });
         }
@@ -498,32 +532,30 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
 
     /**
      * @brief Podpina obiekt i jego poddrzewo do sceny, wywołując OnMount() (raz na obiekt).
-     * @param scene Scena właściciela.
-     * @param sceneContext Ta sama scena jako poziom kontekstu (Scene jest tu typem niepełnym,
-     * więc rzutowanie na Contextable wykonuje Scene).
-     * @param camera Kamera sceny.
+     * @param links Powiązania ze sceną (należą do sceny).
      */
-    void Attach(Scene& scene, const Contextable& sceneContext, const SceneCamera& camera) {
-        scene_ = &scene;
-        sceneContext_ = &sceneContext;
-        camera_ = &camera;
+    void Attach(const SceneLinks& links) {
+        links_ = &links;
+        // jedyny dynamic_cast na obiekt - przy dodaniu do sceny, a nie co klatkę
+        if (Focusable* focusable = dynamic_cast<Focusable*>(this))
+            focusable->AttachFocus(*links.focus, this);
         if (!mounted_) {
             mounted_ = true;
             OnMount();
         }
         // po indeksie: OnMount() może dodać dzieci (Spawn podepnie je od razu)
         for (std::size_t i = 0; i < children_.size(); ++i)
-            if (!children_[i]->mounted_) children_[i]->Attach(scene, sceneContext, camera);
+            if (!children_[i]->mounted_) children_[i]->Attach(links);
     }
 
-    Entity* parent_ = nullptr;                  /**< Rodzic albo nullptr. */
-    Scene* scene_ = nullptr;                    /**< Scena właściciela albo nullptr. */
-    const Contextable* sceneContext_ = nullptr; /**< Scena jako poziom kontekstu. */
-    const SceneCamera* camera_ = nullptr;       /**< Kamera sceny albo nullptr. */
-    bool screenSpace_ = false;                  /**< Czy obiekt jest w układzie ekranu. */
+    Entity* parent_ = nullptr;          /**< Rodzic albo nullptr. */
+    const SceneLinks* links_ = nullptr; /**< Powiązania ze sceną albo nullptr. */
+    bool screenSpace_ = false;          /**< Czy obiekt jest w układzie ekranu. */
 
     /** @brief Kamera, przez którą widać obiekt: nullptr dla obiektów ekranu i niepodpiętych. */
-    const SceneCamera* ViewCamera() const { return IsScreenSpace() ? nullptr : camera_; }
+    const SceneCamera* ViewCamera() const {
+        return IsScreenSpace() || !links_ ? nullptr : links_->camera;
+    }
 
     /** @brief Przelicza punkt okna na punkt sceny (przez kamerę, jeśli obiekt jej podlega). */
     Vector2 ScreenToScene(Vector2 point) const {

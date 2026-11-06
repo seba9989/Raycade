@@ -10,7 +10,6 @@
 
 #include <raycade/render/RenderTarget.hpp>
 
-#include <raymath.h>
 #include <rlgl.h>
 
 #include <utility>
@@ -31,10 +30,16 @@ std::vector<Frame>& Stack() {
     return stack;
 }
 
-/** @brief Ustawia macierz bieżącego trybu na podaną (rlgl nie ma rlLoadMatrix). */
-void Load(Matrix matrix) {
+/**
+ * @brief Ustawia macierz bieżącego trybu na podaną (rlgl nie ma rlLoadMatrix).
+ * @details Tablica w kolejności m0..m15, jak MatrixToFloat() z raymath - bez dołączania
+ * raymath.h, który przy raylib z FetchContent dawałby ostrzeżenia kompilatora.
+ */
+void Load(const Matrix& m) {
+    const float values[16] = {m.m0, m.m1, m.m2,  m.m3,  m.m4,  m.m5,  m.m6,  m.m7,
+                              m.m8, m.m9, m.m10, m.m11, m.m12, m.m13, m.m14, m.m15};
     ::rlLoadIdentity();
-    ::rlMultMatrixf(MatrixToFloat(matrix));
+    ::rlMultMatrixf(values);
 }
 
 } // namespace
