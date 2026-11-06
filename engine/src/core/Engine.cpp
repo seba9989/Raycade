@@ -11,6 +11,10 @@
 #include <iostream>
 #include <stdexcept>
 
+Contextable* ContextRoot() {
+    return &Engine::Get();
+}
+
 Engine& Engine::Title(std::string title) {
     title_ = std::move(title);
     if (initialized_) ::SetWindowTitle(title_.c_str());
@@ -120,6 +124,7 @@ void Engine::Shutdown() {
     pending_.clear();
     unload_.clear();
     reload_.clear();
+    ClearContext(); // wartości globalne też mogą trzymać tekstury
     ::CloseWindow();
     initialized_ = false;
 }

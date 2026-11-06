@@ -50,7 +50,7 @@
  * @ref PrimitiveRenderer. W scenie `figury` porównano krzywe z raylib.
  *
  * @section obsluga Sceny demonstracyjne
- * Klawisze 1, 2, 3 i 4 wybierają `menu`, `prymitywy`, `figury` i `transformacje`.
+ * Klawisze 1-5 wybierają `menu`, `prymitywy`, `figury`, `transformacje` i `kontekst`.
  * Na scenie `prymitywy` strzałki przesuwają prostokąt, L zmienia warstwę,
  * PPM przesuwa koniec odcinka, a spacja przełącza jego algorytm.
  * Na scenie `figury` LPM uruchamia flood fill na płótnie, Shift+LPM
@@ -58,6 +58,10 @@
  * Na scenie `transformacje` szary kontur pokazuje stan przed obrotem lub skalowaniem,
  * a kolorowa figura stan po; grupa obraca się razem z dziećmi. LPM zmienia kolor
  * obróconego prostokąta.
+ * Na scenie `kontekst` LPM na kafelku zmienia motyw (Theme) całego panelu i podbija wynik
+ * sceny, strzałki poruszają graczem, za którym gonią kółka znajdujące go przez kontekst,
+ * a R wczytuje scenę od nowa - wynik sceny wraca do zera, a rekord z kontekstu silnika
+ * zostaje.
  *
  * @section dokumentacja Dokumentacja
  * Dokumentację HTML generuje polecenie `docs` (devenv) albo, w katalogu głównym projektu:
@@ -93,11 +97,13 @@ int main() {
             if (engine.KeyPressed(KEY_TWO)) engine.SwitchScene("prymitywy");
             if (engine.KeyPressed(KEY_THREE)) engine.SwitchScene("figury");
             if (engine.KeyPressed(KEY_FOUR)) engine.SwitchScene("transformacje");
+            if (engine.KeyPressed(KEY_FIVE)) engine.SwitchScene("kontekst");
         })
         .OnDraw([&](PrimitiveRenderer&) {
             const std::string hud = "Scena: " + engine.ActiveScene() +
-                                    "   [1] menu  [2] prymitywy  [3] figury  [4] transformacje";
-            ::DrawText(hud.c_str(), 20, 665, 20, DARKGRAY);
+                                    "   [1] menu [2] prymitywy [3] figury [4] transformacje "
+                                    "[5] kontekst";
+            ::DrawText(hud.c_str(), 20, 668, 18, DARKGRAY);
         })
         .Run();
 }

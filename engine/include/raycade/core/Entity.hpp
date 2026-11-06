@@ -13,9 +13,12 @@
 #include <utility>
 #include <vector>
 
+#include "Contextable.hpp"
 #include "Drawable.hpp"
 #include "Transformable.hpp"
 #include "Updatable.hpp"
+
+class Scene;
 
 /**
  * @brief Abstrakcyjna baza wszystkich obiektów sceny.
@@ -88,8 +91,25 @@
  *
  * scene.Spawn<Player>().Position({400, 300}).Speed(300).OnClick([](Player& self) { ... });
  * @endcode
+ *
+ * @section entity_kontekst Kontekst (jak setContext/getContext w Svelte)
+ * ProvideContext<T>() udostępnia wartość całemu poddrzewu obiektu, a GetContext<T>() w potomku
+ * zwraca najbliższą wartość typu T: z samego obiektu, jego przodków, sceny
+ * (Scene::ProvideContext()) albo silnika (Engine::ProvideContext()). Kluczem jest typ.
+ * @code{.cpp}
+ * struct Theme { Color accent = RED; };
+ *
+ * scene.Spawn<shapes::Group>()
+ *     .ProvideContext<Theme>(Theme{GOLD})                 // całe menu w złotym kolorze
+ *     .Children([](shapes::Group& menu) { menu.Spawn<Button>(); });
+ *
+ * // w Button::OnMount() albo Button::Tick():
+ * if (const Theme* theme = GetContext<Theme>()) Paint(theme->accent);
+ * @endcode
+ * W konstruktorze obiekt nie zna jeszcze rodzica ani sceny - kontekst odczytuje się
+ * w OnMount() albo później (Tick(), Draw(), zdarzenia).
  */
-class Entity : public Updatable, public Drawable, public Transformable {
+class Entity : public Updatable, public Drawable, public Transformable, public Contextable {
   public:
     /** @brief Wirtualny destruktor umożliwiający usuwanie obiektów przez wskaźnik Entity. */
     virtual ~Entity() = default;
@@ -105,6 +125,9 @@ class Entity : public Updatable, public Drawable, public Transformable {
         T& ref = *child;
         child->parent_ = this;
         children_.push_back(std::move(child));
+        // dziecko obiektu już podpiętego do sceny podpinamy od razu (wywoła jego OnMount());
+        // dzieci tworzone w konstruktorze zostaną podpięte razem z rodzicem
+        if (scene_) ref.Attach(*scene_, *sceneContext_);
         return ref;
     }
 
@@ -179,7 +202,32 @@ class Entity : public Updatable, public Drawable, public Transformable {
      */
     Entity* Parent() const { return parent_; }
 
+    /**
+     * @brief Pobiera scenę, do której należy obiekt.
+     * @return Wskaźnik sceny albo nullptr, gdy obiekt nie jest jeszcze podpięty.
+     */
+    Scene* OwnerScene() const { return scene_; }
+
   protected:
+    /**
+     * @brief Następny poziom kontekstu: rodzic, a dla obiektu najwyższego poziomu - scena.
+     * @details Obiekt jeszcze niepodpięty (np. w konstruktorze) widzi tylko rodziców i silnik.
+     * @return Poziom wyżej w łańcuchu kontekstu.
+     */
+    const Contextable* ContextParent() const override {
+        if (parent_) return parent_;
+        if (sceneContext_) return sceneContext_;
+        return ContextRoot();
+    }
+
+    /**
+     * @brief Wywoływana raz, gdy obiekt zostaje podpięty do sceny.
+     * @details W tym momencie znani są już rodzic, przodkowie i scena, więc to miejsce na
+     * odczyt kontekstu przy starcie (odpowiednik getContext przy inicjalizacji komponentu
+     * Svelte). Rodzic dostaje OnMount() przed swoimi dziećmi.
+     */
+    virtual void OnMount() {}
+
     /**
      * @brief Przelicza punkt lokalny (względem pozycji obiektu) na punkt ekranowy.
      * @param local Punkt lokalny.
@@ -222,6 +270,31 @@ class Entity : public Updatable, public Drawable, public Transformable {
     }
 
   private:
-    Entity* parent_ = nullptr;                      /**< Rodzic albo nullptr. */
-    std::vector<std::unique_ptr<Entity>> children_; /**< Dzieci obiektu. */
+    friend class Scene;
+
+    /**
+     * @brief Podpina obiekt i jego poddrzewo do sceny, wywołując OnMount() (raz na obiekt).
+     * @param scene Scena właściciela.
+     * @param sceneContext Ta sama scena jako poziom kontekstu (Scene jest tu typem niepełnym,
+     * więc rzutowanie na Contextable wykonuje Scene).
+     */
+    void Attach(Scene& scene, const Contextable& sceneContext) {
+        scene_ = &scene;
+        sceneContext_ = &sceneContext;
+        if (!mounted_) {
+            mounted_ = true;
+            OnMount();
+        }
+        // po indeksie: OnMount() może dodać dzieci (Spawn podepnie je od razu)
+        for (std::size_t i = 0; i < children_.size(); ++i)
+            if (!children_[i]->mounted_) children_[i]->Attach(scene, sceneContext);
+    }
+
+    Entity* parent_ = nullptr;                  /**< Rodzic albo nullptr. */
+    Scene* scene_ = nullptr;                    /**< Scena właściciela albo nullptr. */
+    const Contextable* sceneContext_ = nullptr; /**< Scena jako poziom kontekstu. */
+    bool mounted_ = false;                      /**< Czy OnMount() już się wykonało. */
+    /** Dzieci obiektu. Pola są niszczone przed klasami bazowymi, więc dzieci znikają przed
+     *  kontekstem z Contextable i mogą bezpiecznie trzymać do niego referencje. */
+    std::vector<std::unique_ptr<Entity>> children_;
 };

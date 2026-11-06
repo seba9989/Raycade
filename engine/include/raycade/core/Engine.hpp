@@ -28,6 +28,10 @@
  * W każdej klatce Run() wykonuje kolejno: globalne OnUpdate(), aktualizację aktywnej
  * sceny, czyszczenie ekranu, rysowanie sceny, globalne OnDraw() i zamianę buforów.
  *
+ * Silnik jest korzeniem łańcucha kontekstu (Contextable): wartości z
+ * Engine::Get().ProvideContext<T>() widzą wszystkie sceny i obiekty. Można je udostępnić przed
+ * Init(); są usuwane w Shutdown(), przed zamknięciem okna.
+ *
  * @code{.cpp}
  * Engine& engine = Engine::Get().Title("Gra").Window(800, 600).Fps(60).Init();
  * if (!engine.Ready()) return 1;
@@ -43,7 +47,7 @@
  *     .Run();
  * @endcode
  */
-class Engine {
+class Engine : public Contextable {
   public:
     /**
      * @brief Zwraca jedyną instancję silnika (singleton Meyersa).
