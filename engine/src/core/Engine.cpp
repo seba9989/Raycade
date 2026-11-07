@@ -28,27 +28,38 @@ void RaylibLog(int level, const char* text, va_list args) {
     std::string message(size > 0 ? static_cast<std::size_t>(size) : 0, '\0');
     if (size > 0) std::vsnprintf(message.data(), message.size() + 1, text, args);
 
-    const char* name = "INFO";
+    LogLevel engineLevel = LogLevel::Info;
     switch (level) {
     case LOG_TRACE:
-        name = "TRACE";
-        break;
     case LOG_DEBUG:
-        name = "DEBUG";
+        engineLevel = LogLevel::Debug;
         break;
     case LOG_WARNING:
-        name = "UWAGA";
+        engineLevel = LogLevel::Warning;
         break;
     case LOG_ERROR:
-        name = "BLAD";
-        break;
     case LOG_FATAL:
-        name = "KRYTYCZNY";
+        engineLevel = LogLevel::Error;
         break;
     default:
         break;
     }
-    Engine::Get().Log(std::string("[raylib] ") + name + ": " + message);
+    Engine::Get().Log(engineLevel, "[raylib] " + message);
+}
+
+/** @brief Znacznik poziomu na początku wpisu w logu (bez polskich znaków - konsola Windows). */
+const char* LevelName(LogLevel level) {
+    switch (level) {
+    case LogLevel::Debug:
+        return "[DEBUG] ";
+    case LogLevel::Info:
+        return "[INFO] ";
+    case LogLevel::Warning:
+        return "[UWAGA] ";
+    case LogLevel::Error:
+        return "[BLAD] ";
+    }
+    return "";
 }
 
 } // namespace
@@ -171,14 +182,11 @@ void Engine::UpdateScaling() {
 }
 
 Engine& Engine::VSync(bool value) {
-    vsync_ = value;
-    if (initialized_) {
-        if (value)
-            ::SetWindowState(FLAG_VSYNC_HINT);
-        else
-            ::ClearWindowState(FLAG_VSYNC_HINT);
-    }
-    return *this;
+    return WindowFlag(FLAG_VSYNC_HINT, value, "VSync", false);
+}
+
+bool Engine::IsVSync() const {
+    return (windowFlags_ & FLAG_VSYNC_HINT) != 0;
 }
 
 Engine& Engine::Fps(int fps) {
@@ -197,7 +205,6 @@ Engine& Engine::Init() {
     // flagi okna muszą być ustawione przed InitWindow
     unsigned int flags = windowFlags_;
     if (fullscreen_) flags |= FLAG_FULLSCREEN_MODE;
-    if (vsync_) flags |= FLAG_VSYNC_HINT;
     ::SetConfigFlags(flags);
 
     if (fullscreen_)
@@ -206,7 +213,7 @@ Engine& Engine::Init() {
         ::InitWindow(width_, height_, title_.c_str());
 
     if (!::IsWindowReady()) {
-        Log("BLAD: nie udalo sie utworzyc okna");
+        Log(LogLevel::Error, "nie udalo sie utworzyc okna");
         return *this;
     }
 
@@ -222,7 +229,7 @@ Engine& Engine::Init() {
     ApplyIcon();
     if (scaling_ != Scaling::None) CreateTarget();
     Log("Silnik zainicjalizowany (podwojne buforowanie, V-Sync: " +
-        std::string(vsync_ ? "tak" : "nie") + ")");
+        std::string(IsVSync() ? "tak" : "nie") + ")");
     return *this;
 }
 
@@ -298,7 +305,8 @@ void Engine::Shutdown() {
         ::StopAutomationEventRecording();
         ::UnloadAutomationEventList(recordList_);
         recording_ = false;
-        Log("UWAGA: nagrywanie przerwane przy zamykaniu - nagranie nie zostalo zapisane");
+        Log(LogLevel::Warning,
+            "nagrywanie przerwane przy zamykaniu - nagranie nie zostalo zapisane");
     }
     if (replaying_) {
         ::UnloadAutomationEventList(replayList_);
@@ -313,7 +321,7 @@ void Engine::Shutdown() {
 
 Scene& Engine::CreateScene(const std::string& name) {
     auto [it, created] = scenes_.try_emplace(name);
-    if (!created) Log("UWAGA: scena \"" + name + "\" juz istnieje");
+    if (!created) Log(LogLevel::Warning, "scena \"" + name + "\" juz istnieje");
     if (active_.empty()) active_ = name;
     return it->second;
 }
@@ -326,7 +334,7 @@ Engine& Engine::CreateScene(const std::string& name, const std::function<void(::
 Engine& Engine::RegisterScene(std::string name, std::function<void(::Scene&)> setup) {
     // przed main() plik logu nie jest jeszcze otwarty - komunikat trafi tylko na stderr
     if (registered_.contains(name)) {
-        Log("UWAGA: scena \"" + name + "\" zarejestrowana ponownie - pominieto");
+        Log(LogLevel::Warning, "scena \"" + name + "\" zarejestrowana ponownie - pominieto");
         return *this;
     }
     registered_.emplace(std::move(name), std::move(setup));
@@ -343,7 +351,7 @@ Scene* Engine::Load(const std::string& name) {
 
     const auto setup = registered_.find(name);
     if (setup == registered_.end()) {
-        Log("BLAD: nie ma sceny \"" + name + "\"");
+        Log(LogLevel::Error, "nie ma sceny \"" + name + "\"");
         return nullptr;
     }
 
@@ -371,7 +379,7 @@ void Engine::LoadStartScene() {
 
     active_ = registered_.begin()->first;
     if (registered_.size() > 1)
-        Log("UWAGA: brak StartScene(), startowa scena: \"" + active_ + "\"");
+        Log(LogLevel::Warning, "brak StartScene(), startowa scena: \"" + active_ + "\"");
     Load(active_);
 }
 
@@ -382,16 +390,20 @@ Scene& Engine::Scene(const std::string& name) {
 
 Engine& Engine::SwitchScene(const std::string& name) {
     if (!scenes_.contains(name) && !registered_.contains(name)) {
-        Log("BLAD: nie ma sceny \"" + name + "\"");
+        Log(LogLevel::Error, "nie ma sceny \"" + name + "\"");
         return *this;
     }
-    if (name != active_) pending_ = name;
+    // powrót na aktywną scenę anuluje wcześniejsze przełączenie z tej samej klatki
+    if (name == active_)
+        pending_.clear();
+    else
+        pending_ = name;
     return *this;
 }
 
 Engine& Engine::LoadScene(const std::string& name) {
     if (!initialized_) {
-        Log("BLAD: LoadScene(\"" + name + "\") przed Init()");
+        Log(LogLevel::Error, "LoadScene(\"" + name + "\") przed Init()");
         return *this;
     }
     Load(name);
@@ -400,11 +412,12 @@ Engine& Engine::LoadScene(const std::string& name) {
 
 Engine& Engine::UnloadScene(const std::string& name) {
     if (!scenes_.contains(name) && !registered_.contains(name)) {
-        Log("BLAD: nie ma sceny \"" + name + "\"");
+        Log(LogLevel::Error, "nie ma sceny \"" + name + "\"");
         return *this;
     }
     if (name == active_ && !registered_.contains(name)) {
-        Log("BLAD: aktywnej sceny \"" + name + "\" nie da sie zwolnic (brak rejestracji)");
+        Log(LogLevel::Error,
+            "aktywnej sceny \"" + name + "\" nie da sie zwolnic (brak rejestracji)");
         return *this;
     }
     unload_.insert(name);
@@ -413,7 +426,8 @@ Engine& Engine::UnloadScene(const std::string& name) {
 
 Engine& Engine::ReloadScene(const std::string& name) {
     if (!registered_.contains(name)) {
-        Log("BLAD: sceny \"" + name + "\" nie da sie wczytac ponownie (brak rejestracji)");
+        Log(LogLevel::Error,
+            "sceny \"" + name + "\" nie da sie wczytac ponownie (brak rejestracji)");
         return *this;
     }
     reload_.insert(name);
@@ -455,16 +469,15 @@ void Engine::ApplySceneChanges() {
     if (!active_.empty() && !scenes_.contains(active_)) Load(active_);
 }
 
-Engine& Engine::Clear(RenderTexture2D& target, Color color) {
-    ::BeginTextureMode(target);
-    ::ClearBackground(color);
-    ::EndTextureMode();
+Engine& Engine::Clear(const RenderTarget& target, Color color) {
+    target.Clear(color);
     return *this;
 }
 
-Engine& Engine::Log(const std::string& message) {
-    std::cerr << message << '\n';
-    if (log_.is_open()) log_ << message << std::endl;
+Engine& Engine::Log(LogLevel level, const std::string& message) {
+    const std::string line = LevelName(level) + message;
+    std::cerr << line << '\n';
+    if (log_.is_open()) log_ << line << std::endl;
     return *this;
 }
 
@@ -474,7 +487,8 @@ Engine& Engine::Log(const std::string& message) {
 
 bool Engine::RequireWindow(const char* function) {
     if (initialized_) return true;
-    Log(std::string("UWAGA: ") + function + "() wymaga otwartego okna (po Init()) - pominieto");
+    Log(LogLevel::Warning,
+        std::string(function) + "() wymaga otwartego okna (po Init()) - pominieto");
     return false;
 }
 
@@ -731,7 +745,7 @@ Engine& Engine::WindowFlag(unsigned int flag, bool value, const char* name, bool
         windowFlags_ &= ~flag;
     if (!initialized_) return *this;
     if (onlyBeforeInit) {
-        Log(std::string("UWAGA: ") + name + "() dziala tylko przed Init() - pominieto");
+        Log(LogLevel::Warning, std::string(name) + "() dziala tylko przed Init() - pominieto");
         return *this;
     }
     if (value)
@@ -783,7 +797,7 @@ void Engine::ApplyIcon() {
     if (icon_.empty()) return;
     Image image = ::LoadImage(icon_.c_str());
     if (image.data == nullptr) {
-        Log("BLAD: nie udalo sie wczytac ikony \"" + icon_ + "\"");
+        Log(LogLevel::Error, "nie udalo sie wczytac ikony \"" + icon_ + "\"");
         return;
     }
     // SetWindowIcon wymaga formatu R8G8B8A8
@@ -852,7 +866,7 @@ bool Engine::SaveText(const std::string& path, const std::string& text) const {
 Engine& Engine::StartRecording() {
     if (!RequireWindow("StartRecording") || recording_) return *this;
     if (replaying_) {
-        Log("UWAGA: nie mozna nagrywac podczas odtwarzania - pominieto");
+        Log(LogLevel::Warning, "nie mozna nagrywac podczas odtwarzania - pominieto");
         return *this;
     }
     recordList_ = ::LoadAutomationEventList(nullptr); // pusta lista o pełnej pojemności
@@ -868,8 +882,9 @@ bool Engine::StopRecording(const std::string& path) {
     if (!recording_) return false;
     ::StopAutomationEventRecording();
     const bool saved = ::ExportAutomationEventList(recordList_, path.c_str());
-    Log("Nagranie: " + std::to_string(recordList_.count) + " zdarzen -> \"" + path + "\"" +
-        (saved ? "" : " (BLAD zapisu)"));
+    Log(saved ? LogLevel::Info : LogLevel::Error, "Nagranie: " + std::to_string(recordList_.count) +
+                                                      " zdarzen -> \"" + path + "\"" +
+                                                      (saved ? "" : " - zapis nie powiodl sie"));
     ::UnloadAutomationEventList(recordList_);
     recordList_ = {};
     recording_ = false;
@@ -879,13 +894,13 @@ bool Engine::StopRecording(const std::string& path) {
 bool Engine::Replay(const std::string& path) {
     if (!RequireWindow("Replay")) return false;
     if (recording_) {
-        Log("UWAGA: nie mozna odtwarzac podczas nagrywania - pominieto");
+        Log(LogLevel::Warning, "nie mozna odtwarzac podczas nagrywania - pominieto");
         return false;
     }
     AutomationEventList list = ::LoadAutomationEventList(path.c_str());
     if (list.count == 0) {
         ::UnloadAutomationEventList(list);
-        Log("BLAD: brak zdarzen w nagraniu \"" + path + "\"");
+        Log(LogLevel::Error, "brak zdarzen w nagraniu \"" + path + "\"");
         return false;
     }
     if (replaying_) ::UnloadAutomationEventList(replayList_);

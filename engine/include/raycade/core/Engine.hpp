@@ -23,6 +23,14 @@
 #include "Shapes.hpp"       // IWYU pragma: export
 #include "ui/TextField.hpp" // IWYU pragma: export
 
+/** @brief Poziom komunikatu w logu silnika (Engine::Log()). */
+enum class LogLevel {
+    Debug,   /**< Szczegóły diagnostyczne (m.in. TRACE i DEBUG z raylib). */
+    Info,    /**< Zwykła informacja, np. wczytanie sceny. */
+    Warning, /**< Coś pominięto, ale program działa dalej. */
+    Error    /**< Operacja się nie udała. */
+};
+
 /**
  * @brief Sposób dopasowania obrazu gry do okna (Engine::ScaleMode()).
  * @details Przy trybie innym niż None gra rysuje zawsze w stałej rozdzielczości
@@ -49,6 +57,16 @@ enum class Scaling {
  * Silnik jest korzeniem łańcucha kontekstu (Contextable): wartości z
  * Engine::Get().ProvideContext<T>() widzą wszystkie sceny i obiekty. Można je udostępnić przed
  * Init(); są usuwane w Shutdown(), przed zamknięciem okna.
+ *
+ * Obsługa błędów jest jednolita w obrębie rodzaju metody:
+ * - konfiguracja i polecenia (settery, SwitchScene(), LoadScene(), Maximize() itd.) zwracają
+ *   Engine& i niepoprawne wywołanie tylko zapisują w logu (LogLevel::Warning albo Error),
+ *   żeby nie przerywać łańcucha wywołań,
+ * - operacje na plikach i nagraniach zwracają wynik: `bool` (SaveText(), StopRecording(),
+ *   Replay()) albo `std::optional` (LoadText()),
+ * - Init() zapisuje błąd w logu, a wynik podaje IsReady(),
+ * - wyjątek (std::out_of_range) rzuca tylko Scene(), bo musi zwrócić referencję do sceny,
+ *   której nie ma.
  *
  * @code{.cpp}
  * Engine& engine = Engine::Get().Title("Gra").Window(800, 600).Fps(60).Init();
@@ -194,7 +212,7 @@ class Engine : public Contextable {
     Engine& VSync(bool value = true);
 
     /** @brief Sprawdza, czy włączona jest synchronizacja pionowa. */
-    bool IsVSync() const { return vsync_; }
+    bool IsVSync() const;
 
     /**
      * @brief Pozwala użytkownikowi zmieniać rozmiar okna myszą.
@@ -980,12 +998,12 @@ class Engine : public Contextable {
     }
 
     /**
-     * @brief Czyści teksturę renderowaną.
+     * @brief Czyści teksturę renderowaną (np. zawartość shapes::Surface).
      * @param target Tekstura docelowa.
      * @param color Kolor czyszczenia.
      * @return Ten sam silnik.
      */
-    Engine& Clear(RenderTexture2D& target, Color color);
+    Engine& Clear(const RenderTarget& target, Color color);
 
     /**
      * @brief Czyści bitmapę w pamięci RAM.
@@ -1011,10 +1029,20 @@ class Engine : public Contextable {
 
     /**
      * @brief Zapisuje komunikat do stderr i opcjonalnego pliku logu.
+     * @details Każdy wpis zaczyna się znacznikiem poziomu, np. `[UWAGA] ...`. Komunikaty raylib
+     * trafiają tu z tym samym znacznikiem i dopiskiem `[raylib]`.
+     * @param level Poziom komunikatu.
      * @param message Treść komunikatu.
      * @return Ten sam silnik.
      */
-    Engine& Log(const std::string& message);
+    Engine& Log(LogLevel level, const std::string& message);
+
+    /**
+     * @brief Zapisuje komunikat informacyjny (LogLevel::Info).
+     * @param message Treść komunikatu.
+     * @return Ten sam silnik.
+     */
+    Engine& Log(const std::string& message) { return Log(LogLevel::Info, message); }
 
     /** @} */
 
@@ -1059,7 +1087,6 @@ class Engine : public Contextable {
     int width_ = 800;                       /**< Szerokość okna w trybie okienkowym. */
     int height_ = 600;                      /**< Wysokość okna w trybie okienkowym. */
     bool fullscreen_ = false;               /**< Czy używać trybu pełnoekranowego. */
-    bool vsync_ = false;                    /**< Czy włączyć synchronizację pionową. */
     int fps_ = 60;                          /**< Docelowa liczba klatek na sekundę. */
     Color background_ = BLACK;              /**< Kolor czyszczenia ekranu w każdej klatce. */
     ::Input input_;                         /**< Stan i ustawienia urządzeń wejścia. */
