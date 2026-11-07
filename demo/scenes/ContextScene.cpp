@@ -201,7 +201,7 @@ SCENE("kontekst") {
         ::DrawText("kafelek bez panelu: Theme sceny", 140, 370, 18, GRAY);
         ::DrawText("LPM na kafelku - zmiana Theme calego panelu", 60, 430, 16, GRAY);
 
-        ::DrawText("SetContext(gracz): poscigowcy znajduja gracza", 540, 70, 20, DARKGRAY);
+        ::DrawText("SetContext(gracz): poscigowcy znajduja gracza", 540, 70, 18, DARKGRAY);
         ::DrawRectangleLinesEx(Player::kArena, 1.0f, LIGHTGRAY);
         ::DrawText("strzalki - ruch gracza", 540, 420, 16, GRAY);
 
