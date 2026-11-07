@@ -223,9 +223,7 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
         events.dragStart = pointer.drag == this;
         if (focused && input.IsKeyboardCaptured()) {
             // obiekt z fokusem jako jedyny widzi przejętą przez siebie klawiaturę
-            Input own = input;
-            own.captured_ = false;
-            HandleEvents(dt, own, events);
+            HandleEvents(dt, input.Uncaptured(), events);
         } else {
             HandleEvents(dt, input, events);
         }

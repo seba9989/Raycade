@@ -249,7 +249,7 @@ int Engine::Run() {
         const bool captured = scene && scene->IsKeyboardCaptured();
         // Escape w polu tekstowym ma zdjąć fokus, a nie zamknąć okno (raylib sprawdza klawisz
         // wyjścia sam, niezależnie od przejęcia klawiatury)
-        if (captured != input_.captured_) ::SetExitKey(captured ? KEY_NULL : exitKey_);
+        if (captured != input_.IsKeyboardCaptured()) ::SetExitKey(captured ? KEY_NULL : exitKey_);
         input_.captured_ = captured;
 
         PollSystemEvents();
@@ -481,17 +481,14 @@ bool Engine::RequireWindow(const char* function) {
 Engine& Engine::ExitKey(int key) {
     exitKey_ = key;
     // przy przejętej klawiaturze klawisz wyjścia jest wyłączony - wróci po utracie fokusu
-    if (initialized_ && !input_.captured_) ::SetExitKey(key);
+    if (initialized_ && !input_.IsKeyboardCaptured()) ::SetExitKey(key);
     return *this;
 }
 
 Engine& Engine::MousePosition(Vector2 position) {
     if (!RequireWindow("MousePosition")) return *this;
     // pozycja podawana jest we współrzędnych gry; raylib oczekuje pikseli okna
-    if (target_.IsValid()) {
-        position.x = position.x / input_.scale_.x - input_.offset_.x;
-        position.y = position.y / input_.scale_.y - input_.offset_.y;
-    }
+    if (target_.IsValid()) position = input_.GameToWindow(position);
     ::SetMousePosition(static_cast<int>(position.x), static_cast<int>(position.y));
     return *this;
 }

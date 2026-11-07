@@ -603,8 +603,7 @@ class Engine : public Contextable {
      * @return Ten sam silnik.
      */
     Engine& BindAction(const std::string& action, std::vector<InputBinding> bindings) {
-        input_.actions_->actions[action] = std::move(bindings);
-        input_.actions_->analogDown.erase(action);
+        input_.BindAction(action, std::move(bindings));
         return *this;
     }
 
@@ -620,8 +619,8 @@ class Engine : public Contextable {
     Engine& BindAxis(const std::string& axis, std::vector<InputBinding> negative,
                      std::vector<InputBinding> positive, std::vector<InputBinding> analog = {},
                      float deadzone = 0.15f) {
-        input_.actions_->axes[axis] =
-            InputAxis{std::move(negative), std::move(positive), std::move(analog), deadzone};
+        input_.BindAxis(axis, std::move(negative), std::move(positive), std::move(analog),
+                        deadzone);
         return *this;
     }
 
@@ -631,9 +630,7 @@ class Engine : public Contextable {
      * @return Ten sam silnik.
      */
     Engine& Unbind(const std::string& name) {
-        input_.actions_->actions.erase(name);
-        input_.actions_->axes.erase(name);
-        input_.actions_->analogDown.erase(name);
+        input_.Unbind(name);
         return *this;
     }
 

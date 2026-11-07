@@ -321,11 +321,53 @@ class Input {
 
     /**
      * @name Akcje i osie
-     * Powiązania ustawia się przez Engine::BindAction() i Engine::BindAxis(). Akcje respektują
-     * wyłączniki urządzeń i przejęcie klawiatury przez pole tekstowe. Nieznana nazwa daje
-     * false albo 0.
+     * Powiązania ustawia się przez BindAction() i BindAxis() (zwykle przez skróty
+     * Engine::BindAction() i Engine::BindAxis()). Obiekty sceny dostają Input jako `const`,
+     * więc mogą powiązania tylko odczytywać. Akcje respektują wyłączniki urządzeń i przejęcie
+     * klawiatury przez pole tekstowe. Nieznana nazwa daje false albo 0.
      */
     /** @{ */
+
+    /**
+     * @brief Ustawia źródła akcji (zastępuje poprzednie).
+     * @param action Nazwa akcji.
+     * @param bindings Źródła z przestrzeni nazw bind.
+     * @return Ten sam obiekt.
+     */
+    Input& BindAction(const std::string& action, std::vector<InputBinding> bindings) {
+        actions_->actions[action] = std::move(bindings);
+        actions_->analogDown.erase(action);
+        return *this;
+    }
+
+    /**
+     * @brief Ustawia oś: źródła na minus, na plus i osie analogowe pada.
+     * @param axis Nazwa osi.
+     * @param negative Źródła dające -1 (np. A, strzałka w lewo).
+     * @param positive Źródła dające +1 (np. D, strzałka w prawo).
+     * @param analog Osie pada: bind::PadAxis(GAMEPAD_AXIS_*, kierunek); kierunek -1 odwraca oś.
+     * @param deadzone Wychylenia analogowe mniejsze od tej wartości są pomijane.
+     * @return Ten sam obiekt.
+     */
+    Input& BindAxis(const std::string& axis, std::vector<InputBinding> negative,
+                    std::vector<InputBinding> positive, std::vector<InputBinding> analog = {},
+                    float deadzone = 0.15f) {
+        actions_->axes[axis] =
+            InputAxis{std::move(negative), std::move(positive), std::move(analog), deadzone};
+        return *this;
+    }
+
+    /**
+     * @brief Usuwa akcję albo oś o podanej nazwie.
+     * @param name Nazwa akcji lub osi.
+     * @return Ten sam obiekt.
+     */
+    Input& Unbind(const std::string& name) {
+        actions_->actions.erase(name);
+        actions_->axes.erase(name);
+        actions_->analogDown.erase(name);
+        return *this;
+    }
 
     /**
      * @brief Sprawdza, czy któreś źródło akcji jest wciśnięte.
@@ -382,8 +424,7 @@ class Input {
         for (const InputBinding& b : definition->positive)
             if (BindingDown(b)) value += 1.0f;
         for (const InputBinding& b : definition->analog) {
-            const float v =
-                gamepad_ ? ::GetGamepadAxisMovement(b.gamepad, b.code) * b.direction : 0.0f;
+            const float v = GamepadAxis(b.gamepad, b.code) * b.direction;
             if (std::fabs(v) > definition->deadzone) value += v;
         }
         return std::clamp(value, -1.0f, 1.0f);
@@ -416,12 +457,25 @@ class Input {
     /** @} */
 
   private:
+    // Przyjaciele korzystają wyłącznie z prywatnych metod poniżej, nie z pól:
+    // Engine - Transform(), UpdateActionState() i ustawienie captured_ co klatkę,
+    // Entity - Uncaptured(), Scene - SystemKeyPressed()/SystemKeyDown().
     friend class Engine;
     friend class Entity;
     friend class Scene;
 
     /** @brief Klawiatura włączona i nieprzejęta przez obiekt z fokusem. */
     bool KeyboardActive() const { return keyboard_ && !captured_; }
+
+    /**
+     * @brief Naciśnięcie klawisza systemowego - działa także przy przejętej klawiaturze.
+     * @details Dla klawiszy, które silnik obsługuje zawsze, np. Tab przenoszący fokus
+     * (inaczej z pola tekstowego nie dałoby się przejść dalej). Respektuje Keyboard(false).
+     */
+    bool SystemKeyPressed(int key) const { return keyboard_ && ::IsKeyPressed(key); }
+
+    /** @brief Jak SystemKeyPressed(), ale stan wciśnięcia. */
+    bool SystemKeyDown(int key) const { return keyboard_ && ::IsKeyDown(key); }
 
     /** @brief Szuka wpisu w mapie akcji albo osi. */
     template <typename Map>
@@ -440,8 +494,7 @@ class Input {
         case InputBinding::Kind::PadButton:
             return GamepadDown(b.gamepad, b.code);
         case InputBinding::Kind::PadAxis:
-            return gamepad_ &&
-                   ::GetGamepadAxisMovement(b.gamepad, b.code) * b.direction > b.threshold;
+            return GamepadAxis(b.gamepad, b.code) * b.direction > b.threshold;
         }
         return false;
     }
@@ -507,6 +560,25 @@ class Input {
         scale_ = scale;
         ::SetMouseOffset(static_cast<int>(offset.x), static_cast<int>(offset.y));
         ::SetMouseScale(scale.x, scale.y);
+    }
+
+    /**
+     * @brief Przelicza punkt z układu gry na piksele okna (odwrotność Transform()).
+     * @param point Punkt we współrzędnych gry.
+     * @return Punkt w pikselach okna.
+     */
+    Vector2 GameToWindow(Vector2 point) const {
+        return {point.x / scale_.x - offset_.x, point.y / scale_.y - offset_.y};
+    }
+
+    /**
+     * @brief Kopia stanu wejścia z klawiaturą nieprzejętą.
+     * @details Dla obiektu z fokusem, który sam przejął klawiaturę i jako jedyny ma ją widzieć.
+     */
+    Input Uncaptured() const {
+        Input copy = *this;
+        copy.captured_ = false;
+        return copy;
     }
 
     Vector2 offset_{0, 0};  /**< Przesunięcie okno → gra. */
