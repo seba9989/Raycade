@@ -370,6 +370,58 @@ class Engine : public Contextable {
     /** @{ */
 
     /**
+     * @brief Ustawia globalną logikę wykonywaną ze stałym krokiem czasu.
+     * @details Patrz FixedStep() i Scene::OnFixedUpdate(). Wykonuje się przed krokiem
+     * stałym aktywnej sceny.
+     * @param update Funkcja otrzymująca stały krok w sekundach.
+     * @return Ten sam silnik.
+     */
+    Engine& OnFixedUpdate(std::function<void(float step)> update) {
+        fixedUpdate_ = std::move(update);
+        return *this;
+    }
+
+    /**
+     * @brief Ustawia długość kroku stałego (OnFixedUpdate() silnika i scen).
+     * @details Logika ze zmiennym dt (OnUpdate()) daje inne wyniki przy 30 i przy 144 FPS,
+     * np. skok o innej wysokości albo pocisk przelatujący przez cienką ścianę. Krok stały
+     * liczy fizykę zawsze tym samym dt: silnik zbiera czas klatek i wykonuje tyle kroków, ile
+     * się w nim zmieściło (najwyżej MaxFixedSteps() na klatkę - przy wolnym komputerze gra
+     * zwalnia, zamiast się zawiesić). Resztę czasu podaje FixedAlpha().
+     * @param seconds Krok w sekundach (domyślnie 1/60); 0 wyłącza krok stały.
+     * @return Ten sam silnik.
+     */
+    Engine& FixedStep(float seconds) {
+        fixedStep_ = seconds > 0.0f ? seconds : 0.0f;
+        fixedAccumulator_ = 0.0f;
+        return *this;
+    }
+
+    /** @brief Podaje długość kroku stałego w sekundach (0 - wyłączony). */
+    float FixedStep() const { return fixedStep_; }
+
+    /**
+     * @brief Ustawia największą liczbę kroków stałych w jednej klatce.
+     * @param steps Liczba kroków (domyślnie 5, co najmniej 1).
+     * @return Ten sam silnik.
+     */
+    Engine& MaxFixedSteps(int steps) {
+        maxFixedSteps_ = steps < 1 ? 1 : steps;
+        return *this;
+    }
+
+    /** @brief Podaje największą liczbę kroków stałych w jednej klatce. */
+    int MaxFixedSteps() const { return maxFixedSteps_; }
+
+    /**
+     * @brief Podaje, jaka część kroku stałego upłynęła od ostatniego wykonanego kroku.
+     * @details Do płynnego rysowania przy kroku stałym dłuższym od klatki: pozycję rysuje się
+     * jako `poprzednia + (bieżąca - poprzednia) * FixedAlpha()`.
+     * @return Wartość z przedziału [0, 1].
+     */
+    float FixedAlpha() const { return fixedStep_ > 0.0f ? fixedAccumulator_ / fixedStep_ : 0.0f; }
+
+    /**
      * @brief Ustawia globalną funkcję aktualizacji.
      * @param update Funkcja wywoływana co klatkę z czasem dt w sekundach.
      * @return Ten sam silnik.
@@ -1156,7 +1208,11 @@ class Engine : public Contextable {
     Rectangle destination_{};            /**< Gdzie w oknie rysujemy teksturę gry. */
     std::string logFile_ = "engine.log"; /**< Ścieżka pliku logu; pusta wyłącza zapis. */
 
-    std::function<void(float)> update_;            /**< Globalna logika co klatkę. */
+    std::function<void(float)> update_;      /**< Globalna logika co klatkę. */
+    std::function<void(float)> fixedUpdate_; /**< Globalna logika ze stałym krokiem. */
+    float fixedStep_ = 1.0f / 60.0f;         /**< Długość kroku stałego; 0 - wyłączony. */
+    float fixedAccumulator_ = 0.0f;          /**< Czas zebrany do następnego kroku. */
+    int maxFixedSteps_ = 5;                  /**< Limit kroków stałych na klatkę. */
     std::function<void(PrimitiveRenderer&)> draw_; /**< Globalne rysowanie po scenie. */
 
     std::ofstream log_;        /**< Otwarty plik logu. */

@@ -264,6 +264,19 @@ int Engine::Run() {
         input_.captured_ = captured;
 
         PollSystemEvents();
+        if (fixedStep_ > 0.0f) {
+            fixedAccumulator_ += dt;
+            int steps = 0;
+            while (fixedAccumulator_ >= fixedStep_ && steps < maxFixedSteps_) {
+                if (fixedUpdate_) fixedUpdate_(fixedStep_);
+                if (scene) scene->FixedUpdate(fixedStep_);
+                fixedAccumulator_ -= fixedStep_;
+                ++steps;
+            }
+            // zaległość ponad limit kroków odrzucamy - inaczej rosłaby z każdą klatką
+            if (steps == maxFixedSteps_)
+                fixedAccumulator_ = std::min(fixedAccumulator_, fixedStep_);
+        }
         if (update_) update_(dt);
         if (scene) scene->Update(dt, input_);
 

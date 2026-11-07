@@ -60,6 +60,21 @@ class Scene : public Contextable {
     }
 
     /**
+     * @brief Ustawia logikę sceny wykonywaną ze stałym krokiem czasu (fizyka, kolizje).
+     * @details Wywoływana zero, raz albo kilka razy na klatkę - tak, żeby średnio
+     * wypadało 1 / Engine::FixedStep() wywołań na sekundę niezależnie od liczby klatek.
+     * Wykonuje się przed OnUpdate() sceny. W kroku stałym odczytuje się stan trzymany
+     * (KeyDown(), Axis()); jednorazowe naciśnięcia (KeyPressed()) należą do OnUpdate(), bo
+     * w klatce bez kroku stałego zostałyby zgubione.
+     * @param update Funkcja otrzymująca stały krok w sekundach.
+     * @return Ta sama scena.
+     */
+    Scene& OnFixedUpdate(std::function<void(float step)> update) {
+        fixedUpdate_ = std::move(update);
+        return *this;
+    }
+
+    /**
      * @brief Ustawia dodatkowe rysowanie wykonywane po obiektach sceny.
      * @details Rysuje w układzie okna (bez kamery) - miejsce na podpisy i HUD.
      * @param draw Funkcja otrzymująca renderer.
@@ -129,6 +144,15 @@ class Scene : public Contextable {
     /** @} */
 
     /**
+     * @brief Wykonuje jeden krok stały sceny (OnFixedUpdate()).
+     * @details Wywoływana przez silnik w pętli kroku stałego.
+     * @param step Stały krok w sekundach.
+     */
+    void FixedUpdate(float step) {
+        if (fixedUpdate_) fixedUpdate_(step);
+    }
+
+    /**
      * @brief Aktualizuje logikę sceny i jej obiekty.
      * @param dt Czas od poprzedniej klatki w sekundach.
      * @param input Stan wejścia.
@@ -176,6 +200,7 @@ class Scene : public Contextable {
      *  więc obiekty znikają przed kontekstem sceny. */
     std::vector<std::unique_ptr<Entity>> entities_;
     std::function<void(float)> update_;            /**< Logika sceny co klatkę. */
+    std::function<void(float)> fixedUpdate_;       /**< Logika sceny ze stałym krokiem. */
     std::function<void(PrimitiveRenderer&)> draw_; /**< Rysowanie w układzie okna, po obiektach. */
     std::function<void(PrimitiveRenderer&)> drawWorld_; /**< Rysowanie w układzie świata. */
 };
