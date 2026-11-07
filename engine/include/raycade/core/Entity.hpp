@@ -535,7 +535,8 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
      */
     void Attach(const SceneLinks& links) {
         links_ = &links;
-        // jedyny dynamic_cast na obiekt - przy dodaniu do sceny, a nie co klatkę
+        // dynamic_cast raz przy dodaniu do sceny, a nie co klatkę (drugi jest w Pointer(),
+        // tylko w klatce kliknięcia)
         if (Focusable* focusable = dynamic_cast<Focusable*>(this))
             focusable->AttachFocus(*links.focus, this);
         if (!mounted_) {

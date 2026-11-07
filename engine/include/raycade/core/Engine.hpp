@@ -581,7 +581,9 @@ class Engine : public Contextable {
     bool MousePressed(int button) const { return input_.MousePressed(button); }
 
     /**
-     * @brief Pobiera pozycję kursora w oknie.
+     * @brief Pobiera pozycję kursora.
+     * @details We współrzędnych gry: przy ScaleMode() innym niż None są one przeliczone
+     * z pikseli okna na rozdzielczość gry (ViewSize()).
      * @return Współrzędne kursora albo {0, 0}, gdy mysz jest wyłączona.
      */
     Vector2 MousePosition() const { return input_.MousePosition(); }
@@ -670,8 +672,8 @@ class Engine : public Contextable {
     /** @{ */
 
     /**
-     * @brief Przenosi kursor w podane miejsce okna.
-     * @param position Nowa pozycja kursora.
+     * @brief Przenosi kursor w podane miejsce.
+     * @param position Nowa pozycja kursora we współrzędnych gry (jak MousePosition()).
      * @return Ten sam silnik.
      */
     Engine& MousePosition(Vector2 position);

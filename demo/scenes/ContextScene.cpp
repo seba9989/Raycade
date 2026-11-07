@@ -48,6 +48,10 @@ struct BestScore {
  */
 class Tile : public Entity {
   public:
+    Tile() {
+        OnClick([](Tile& self) { self.NextColor(); });
+    }
+
     bool Contains(Vector2 point) const override {
         const auto local = TryToLocal(point);
         return local && ::CheckCollisionPointRec(*local, {0, 0, kSize, kSize});
@@ -56,8 +60,16 @@ class Tile : public Entity {
   protected:
     void OnMount() override { theme_ = Context<Theme>(); }
 
-    void Tick(float, const Input& input) override {
-        if (!IsHovered() || !input.MousePressed(MOUSE_BUTTON_LEFT) || !theme_) return;
+    void Draw(PrimitiveRenderer& renderer) const override {
+        const Color color = theme_ ? kPalette[static_cast<std::size_t>(theme_->color)] : GRAY;
+        renderer.Paint(color).Fill().Rect({0, 0}, {kSize, kSize});
+        if (IsHovered()) renderer.Paint(BLACK).Fill(false).Rect({-2, -2}, {kSize + 4, kSize + 4});
+    }
+
+  private:
+    /** @brief Przełącza wspólny Theme na następny kolor i dolicza punkt. */
+    void NextColor() {
+        if (!theme_) return;
         // zmiana wspólnego Theme - przemalowują się wszystkie kafelki, które go widzą
         theme_->color = (theme_->color + 1) % static_cast<int>(kPalette.size());
         if (Score* score = Context<Score>()) {
@@ -67,13 +79,6 @@ class Tile : public Entity {
         }
     }
 
-    void Draw(PrimitiveRenderer& renderer) const override {
-        const Color color = theme_ ? kPalette[static_cast<std::size_t>(theme_->color)] : GRAY;
-        renderer.Paint(color).Fill().Rect({0, 0}, {kSize, kSize});
-        if (IsHovered()) renderer.Paint(BLACK).Fill(false).Rect({-2, -2}, {kSize + 4, kSize + 4});
-    }
-
-  private:
     static constexpr float kSize = 60.0f; /**< Bok kafelka. */
     Theme* theme_ = nullptr;              /**< Najbliższy Theme, ustalony w OnMount(). */
 };

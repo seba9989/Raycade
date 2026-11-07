@@ -4,7 +4,7 @@ PROJECT_BRIEF          = "Silnik 2D na raylib z kaskadowym API"
 OUTPUT_LANGUAGE        = Polish
 OUTPUT_DIRECTORY       = doxygen
 
-INPUT                  = engine demo
+INPUT                  = engine demo KONWENCJE.md
 # nagłówek zbiorczy "raycade" nie ma rozszerzenia
 EXTENSION_MAPPING      = no_extension=C++
 FILE_PATTERNS          = *.hpp *.cpp raycade

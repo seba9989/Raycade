@@ -82,7 +82,6 @@
  * Wynik trafia do `doxygen/html/index.html`.
  */
 
-#include "raycade/core/Engine.hpp"
 #include <string>
 
 #include <raycade>
@@ -120,7 +119,8 @@ int main() {
         .OnDraw([&](PrimitiveRenderer&) {
             const std::string hud = "Scena: " + engine.ActiveScene() +
                                     "   [1-7] zmiana sceny (lista w menu)   [F11] pelny ekran";
-            ::DrawText(hud.c_str(), 20, 668, 18, DARKGRAY);
+            const int bottom = static_cast<int>(engine.ViewSize().y);
+            ::DrawText(hud.c_str(), 20, bottom - 32, 18, DARKGRAY);
         })
         .Run();
 }
