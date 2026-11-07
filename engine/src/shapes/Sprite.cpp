@@ -99,9 +99,11 @@ void Sprite::Draw(PrimitiveRenderer& renderer) const {
     const int columns =
         std::max(1, static_cast<int>(static_cast<float>(sheet_->Width()) / frame.x));
     const int index = SheetFrame();
-    const Rectangle source{static_cast<float>(index % columns) * frame.x,
-                           static_cast<float>(index / columns) * frame.y,
-                           flipX_ ? -frame.x : frame.x, flipY_ ? -frame.y : frame.y};
+    const Rectangle source{
+        static_cast<float>(index % columns) * frame.x,
+        static_cast<float>(index / columns) * frame.y, flipX_ ? -frame.x : frame.x,
+        flipY_ ? -frame.y : frame.y
+    };
     renderer.Blit(*sheet_, source, {-origin_.x, -origin_.y}, color_);
 }
 

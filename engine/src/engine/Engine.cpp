@@ -98,8 +98,9 @@ Engine& Engine::Init() {
     else if (monitor_)
         Log(LogLevel::Warning, "nie ma monitora " + std::to_string(*monitor_) + " - pominieto");
     if (windowPosition_)
-        ::SetWindowPosition(static_cast<int>(windowPosition_->x),
-                            static_cast<int>(windowPosition_->y));
+        ::SetWindowPosition(
+            static_cast<int>(windowPosition_->x), static_cast<int>(windowPosition_->y)
+        );
     if (opacity_) ::SetWindowOpacity(*opacity_);
     if (minSize_) ::SetWindowMinSize(minSize_->first, minSize_->second);
     if (maxSize_) ::SetWindowMaxSize(maxSize_->first, maxSize_->second);

@@ -26,13 +26,17 @@ std::optional<ShaderProgram> Checked(ShaderProgram shader) {
 
 } // namespace
 
-std::optional<ShaderProgram> ShaderProgram::Load(const std::string& vertexPath,
-                                                 const std::string& fragmentPath) {
+std::optional<ShaderProgram> ShaderProgram::Load(
+    const std::string& vertexPath,
+    const std::string& fragmentPath
+) {
     return Checked(ShaderProgram{::LoadShader(OrNull(vertexPath), OrNull(fragmentPath))});
 }
 
-std::optional<ShaderProgram> ShaderProgram::FromCode(const std::string& vertexCode,
-                                                     const std::string& fragmentCode) {
+std::optional<ShaderProgram> ShaderProgram::FromCode(
+    const std::string& vertexCode,
+    const std::string& fragmentCode
+) {
     return Checked(ShaderProgram{::LoadShaderFromMemory(OrNull(vertexCode), OrNull(fragmentCode))});
 }
 

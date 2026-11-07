@@ -10,8 +10,9 @@ void Scene::Update(float dt, const Input& input) {
     // Tab działa także przy przejętej klawiaturze - inaczej z pola tekstowego nie dałoby
     // się przejść dalej
     if (tabNavigation_ && input.SystemKeyPressed(KEY_TAB))
-        MoveFocus(input.SystemKeyDown(KEY_LEFT_SHIFT) || input.SystemKeyDown(KEY_RIGHT_SHIFT) ? -1
-                                                                                              : 1);
+        MoveFocus(
+            input.SystemKeyDown(KEY_LEFT_SHIFT) || input.SystemKeyDown(KEY_RIGHT_SHIFT) ? -1 : 1
+        );
 
     // trafienia myszą liczone raz, przed zmianami w tej klatce (patrz Entity::Pointer)
     const PointerFrame pointer = Entity::Pointer(entities_, input, camera_);

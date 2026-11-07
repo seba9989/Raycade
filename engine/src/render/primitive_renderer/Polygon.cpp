@@ -39,8 +39,10 @@ PrimitiveRenderer& PrimitiveRenderer::Polygon(std::span<const LineSegment> edges
  * zgadzają. Krawędzie poziome nie przecinają linii rastra w jednym punkcie, więc są pomijane.
  */
 void PrimitiveRenderer::ScanlineFill(std::span<const Point2D> vertices) {
-    const auto [minIt, maxIt] = std::minmax_element(
-        vertices.begin(), vertices.end(), [](Point2D a, Point2D b) { return a.Y() < b.Y(); });
+    const auto [minIt, maxIt] =
+        std::minmax_element(vertices.begin(), vertices.end(), [](Point2D a, Point2D b) {
+            return a.Y() < b.Y();
+        });
     const int firstRow = static_cast<int>(std::floor(minIt->Y()));
     const int lastRow = static_cast<int>(std::ceil(maxIt->Y()));
 

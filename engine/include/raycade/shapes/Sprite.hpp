@@ -107,8 +107,14 @@ class Sprite : public Entity {
      * @return Ten sam obiekt.
      */
     template <typename Self>
-    Self& Animation(this Self& self, const std::string& name, int first, int count, float fps,
-                    bool loop = true) {
+    Self& Animation(
+        this Self& self,
+        const std::string& name,
+        int first,
+        int count,
+        float fps,
+        bool loop = true
+    ) {
         self.animations_[name] = {first, count, fps, loop};
         return self;
     }

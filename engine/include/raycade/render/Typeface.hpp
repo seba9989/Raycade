@@ -46,8 +46,11 @@ class Typeface {
      * zawsze.
      * @return Czcionka albo brak wartości, gdy pliku nie da się wczytać.
      */
-    static std::optional<Typeface> Load(const std::string& path, int size = 32,
-                                        const std::string& extraCharacters = "");
+    static std::optional<Typeface> Load(
+        const std::string& path,
+        int size = 32,
+        const std::string& extraCharacters = ""
+    );
 
     /**
      * @brief Udostępnia wspólny font domyślny (do użycia, gdy nie wybrano innej czcionki).
@@ -95,8 +98,13 @@ class Typeface {
      * @param spacing Odstęp między znakami w pikselach.
      * @param color Kolor.
      */
-    void Draw(const std::string& text, Vector2 position, float size, float spacing,
-              Color color) const;
+    void Draw(
+        const std::string& text,
+        Vector2 position,
+        float size,
+        float spacing,
+        Color color
+    ) const;
 
     /** @brief Udostępnia font raylib (font domyślny dla pustego Typeface). */
     const ::Font& Raw() const;
@@ -127,8 +135,10 @@ struct DefaultTypeface {
  * @param context Wartość z kontekstu (`Context<DefaultTypeface>()`) albo nullptr.
  * @return Czcionka do pomiaru i rysowania.
  */
-inline const Typeface& ResolveTypeface(const std::shared_ptr<const Typeface>& own,
-                                       const DefaultTypeface* context) {
+inline const Typeface& ResolveTypeface(
+    const std::shared_ptr<const Typeface>& own,
+    const DefaultTypeface* context
+) {
     if (own) return *own;
     if (context && context->typeface) return *context->typeface;
     return Typeface::Default();

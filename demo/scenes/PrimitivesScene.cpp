@@ -99,8 +99,10 @@ SCENE("prymitywy") {
         .Positions([] {
             std::vector<Point2D> positions;
             for (int i = 0; i < 300; ++i)
-                positions.push_back({static_cast<float>(::GetRandomValue(0, 150)),
-                                     static_cast<float>(::GetRandomValue(0, 120))});
+                positions.push_back(
+                    {static_cast<float>(::GetRandomValue(0, 150)),
+                     static_cast<float>(::GetRandomValue(0, 120))}
+                );
             return positions;
         }())
         .Paint(MAROON);
@@ -136,7 +138,8 @@ SCENE("prymitywy") {
                     [angle = 0.0f](shapes::Circle& self, float dt) mutable {
                         angle += 4 * dt;
                         self.Position({18 * std::cos(angle), 18 * std::sin(angle)});
-                    });
+                    }
+                );
             });
     });
 
@@ -145,10 +148,12 @@ SCENE("prymitywy") {
     const std::vector<Point2D> zigzag{{340, 240}, {370, 270}, {400, 240}, {430, 270}, {460, 240}};
     const std::vector<Point2D> diamond{{400, 285}, {430, 305}, {400, 325}, {370, 305}};
     // łamana zamknięta ze zbioru odcinków - może się przecinać (Polygon() by jej nie narysował)
-    const std::vector<LineSegment> bowTie{{{340, 340}, {460, 380}},
-                                          {{460, 380}, {460, 340}},
-                                          {{460, 340}, {340, 380}},
-                                          {{340, 380}, {340, 340}}};
+    const std::vector<LineSegment> bowTie{
+        {{340, 340}, {460, 380}},
+        {{460, 380}, {460, 340}},
+        {{460, 340}, {340, 380}},
+        {{340, 380}, {340, 340}}
+    };
     // odcinki rysowane metodą LineSegment::Draw - te same nachylenia dwoma algorytmami
     const std::vector<LineSegment> library{{{830, 510}, {980, 545}}, {{830, 525}, {865, 600}}};
     const std::vector<LineSegment> incremental{{{845, 510}, {995, 545}}, {{845, 525}, {880, 600}}};
@@ -173,8 +178,10 @@ SCENE("prymitywy") {
 
         ::DrawText("lamane: Point2D / LineSegment", 335, 388, 10, GRAY);
         ::DrawText("Draw(): raylib / przyrostowy", 830, 608, 10, GRAY);
-        ::DrawText("strzalki - prostokat, L - warstwa, PPM - odcinek, "
-                   "SPACJA - algorytm, LPM - klik",
-                   20, 630, 18, GRAY);
+        ::DrawText(
+            "strzalki - prostokat, L - warstwa, PPM - odcinek, "
+            "SPACJA - algorytm, LPM - klik",
+            20, 630, 18, GRAY
+        );
     });
 }

@@ -148,14 +148,16 @@ void PrimitiveRenderer::CircleSymmetric(Vector2 center, float radius) {
             rows.Add(cy + x, cx - y, cx + y);
             rows.Add(cy - x, cx - y, cx + y);
         } else {
-            pixels.insert(pixels.end(), {{cx + x, cy + y},
-                                         {cx - x, cy + y},
-                                         {cx + x, cy - y},
-                                         {cx - x, cy - y},
-                                         {cx + y, cy + x},
-                                         {cx - y, cy + x},
-                                         {cx + y, cy - x},
-                                         {cx - y, cy - x}});
+            pixels.insert(
+                pixels.end(), {{cx + x, cy + y},
+                               {cx - x, cy + y},
+                               {cx + x, cy - y},
+                               {cx - x, cy - y},
+                               {cx + y, cy + x},
+                               {cx - y, cy + x},
+                               {cx + y, cy - x},
+                               {cx - y, cy - x}}
+            );
         }
         if (d < 0) {
             d += 2 * x + 3; // punkt E: środek wewnątrz okręgu
@@ -209,8 +211,10 @@ void PrimitiveRenderer::EllipseSymmetric(Vector2 center, Vector2 radius) {
             rows.Add(cy + y, cx - x, cx + x);
             rows.Add(cy - y, cx - x, cx + x);
         } else {
-            pixels.insert(pixels.end(),
-                          {{cx + x, cy + y}, {cx - x, cy + y}, {cx + x, cy - y}, {cx - x, cy - y}});
+            pixels.insert(
+                pixels.end(),
+                {{cx + x, cy + y}, {cx - x, cy + y}, {cx + x, cy - y}, {cx - x, cy - y}}
+            );
         }
     };
 

@@ -88,9 +88,13 @@ void Engine::UpdateScaling() {
         if (scaling_ == Scaling::PixelPerfect && scale >= 1.0f) scale = std::floor(scale);
         const float width = viewWidth * scale;
         const float height = viewHeight * scale;
-        destination_ = {std::floor((screenWidth - width) / 2),
-                        std::floor((screenHeight - height) / 2), width, height};
+        destination_ = {
+            std::floor((screenWidth - width) / 2), std::floor((screenHeight - height) / 2), width,
+            height
+        };
     }
-    input_.Transform({-destination_.x, -destination_.y},
-                     {viewWidth / destination_.width, viewHeight / destination_.height});
+    input_.Transform(
+        {-destination_.x, -destination_.y},
+        {viewWidth / destination_.width, viewHeight / destination_.height}
+    );
 }

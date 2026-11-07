@@ -728,11 +728,16 @@ class Engine : public Contextable {
      * @param deadzone Wychylenia analogowe mniejsze od tej wartości są pomijane.
      * @return Ten sam silnik.
      */
-    Engine& BindAxis(const std::string& axis, std::vector<InputBinding> negative,
-                     std::vector<InputBinding> positive, std::vector<InputBinding> analog = {},
-                     float deadzone = 0.15f) {
-        input_.BindAxis(axis, std::move(negative), std::move(positive), std::move(analog),
-                        deadzone);
+    Engine& BindAxis(
+        const std::string& axis,
+        std::vector<InputBinding> negative,
+        std::vector<InputBinding> positive,
+        std::vector<InputBinding> analog = {},
+        float deadzone = 0.15f
+    ) {
+        input_.BindAxis(
+            axis, std::move(negative), std::move(positive), std::move(analog), deadzone
+        );
         return *this;
     }
 
@@ -1144,8 +1149,11 @@ class Engine : public Contextable {
      * @param recursive Czy przeszukiwać podkatalogi.
      * @return Pełne ścieżki (pusta lista, gdy katalogu nie ma).
      */
-    std::vector<std::string> ListDirectory(const std::string& path, const std::string& filter = "",
-                                           bool recursive = false) const;
+    std::vector<std::string> ListDirectory(
+        const std::string& path,
+        const std::string& filter = "",
+        bool recursive = false
+    ) const;
 
     /**
      * @brief Tworzy katalog razem z brakującymi katalogami nadrzędnymi.
@@ -1313,8 +1321,8 @@ class Engine : public Contextable {
     std::optional<Vector2> windowPosition_; /**< Pozycja okna do ustawienia przy Init(). */
     std::optional<int> monitor_;            /**< Monitor do ustawienia przy Init(). */
     unsigned int gestures_ = 0b1111111111;  /**< Rozpoznawane gesty (domyślnie wszystkie). */
-    std::optional<float> opacity_; /**< Przezroczystość okna do ustawienia przy Init(). */
-    unsigned int windowFlags_ = 0; /**< Flagi okna (FLAG_*) z Resizable() itd. */
+    std::optional<float> opacity_;          /**< Przezroczystość okna do ustawienia przy Init(). */
+    unsigned int windowFlags_ = 0;          /**< Flagi okna (FLAG_*) z Resizable() itd. */
     std::optional<std::pair<int, int>> minSize_; /**< Minimalny rozmiar okna. */
     std::optional<std::pair<int, int>> maxSize_; /**< Maksymalny rozmiar okna. */
     std::string icon_;                           /**< Ścieżka ikony do ustawienia przy Init(). */
@@ -1338,11 +1346,11 @@ class Engine : public Contextable {
     std::shared_ptr<ShaderProgram> postShader_; /**< Shader całego obrazu gry. */
     std::string logFile_ = "engine.log";        /**< Ścieżka pliku logu; pusta wyłącza zapis. */
 
-    std::function<void(float)> update_;      /**< Globalna logika co klatkę. */
-    std::function<void(float)> fixedUpdate_; /**< Globalna logika ze stałym krokiem. */
-    float fixedStep_ = 1.0f / 60.0f;         /**< Długość kroku stałego; 0 - wyłączony. */
-    float fixedAccumulator_ = 0.0f;          /**< Czas zebrany do następnego kroku. */
-    int maxFixedSteps_ = 5;                  /**< Limit kroków stałych na klatkę. */
+    std::function<void(float)> update_;            /**< Globalna logika co klatkę. */
+    std::function<void(float)> fixedUpdate_;       /**< Globalna logika ze stałym krokiem. */
+    float fixedStep_ = 1.0f / 60.0f;               /**< Długość kroku stałego; 0 - wyłączony. */
+    float fixedAccumulator_ = 0.0f;                /**< Czas zebrany do następnego kroku. */
+    int maxFixedSteps_ = 5;                        /**< Limit kroków stałych na klatkę. */
     std::function<void(PrimitiveRenderer&)> draw_; /**< Globalne rysowanie po scenie. */
 
     std::ofstream log_;        /**< Otwarty plik logu. */

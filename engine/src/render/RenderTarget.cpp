@@ -74,8 +74,9 @@ void RenderTarget::Release() {
 
 RenderTarget& RenderTarget::Smooth(bool smooth) {
     if (IsValid())
-        ::SetTextureFilter(target_.texture,
-                           smooth ? TEXTURE_FILTER_BILINEAR : TEXTURE_FILTER_POINT);
+        ::SetTextureFilter(
+            target_.texture, smooth ? TEXTURE_FILTER_BILINEAR : TEXTURE_FILTER_POINT
+        );
     return *this;
 }
 
@@ -154,9 +155,12 @@ const RenderTarget& RenderTarget::Clear(Color color) const {
 }
 
 void RenderTarget::Draw(Vector2 position, Color tint) const {
-    Draw(Rectangle{position.x, position.y, static_cast<float>(Width()),
-                   static_cast<float>(Height())},
-         tint);
+    Draw(
+        Rectangle{
+            position.x, position.y, static_cast<float>(Width()), static_cast<float>(Height())
+        },
+        tint
+    );
 }
 
 void RenderTarget::Draw(Rectangle destination, Color tint) const {

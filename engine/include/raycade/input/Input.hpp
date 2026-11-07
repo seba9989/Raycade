@@ -373,9 +373,13 @@ class Input {
      * @param deadzone Wychylenia analogowe mniejsze od tej wartości są pomijane.
      * @return Ten sam obiekt.
      */
-    Input& BindAxis(const std::string& axis, std::vector<InputBinding> negative,
-                    std::vector<InputBinding> positive, std::vector<InputBinding> analog = {},
-                    float deadzone = 0.15f);
+    Input& BindAxis(
+        const std::string& axis,
+        std::vector<InputBinding> negative,
+        std::vector<InputBinding> positive,
+        std::vector<InputBinding> analog = {},
+        float deadzone = 0.15f
+    );
 
     /**
      * @brief Usuwa akcję albo oś o podanej nazwie.

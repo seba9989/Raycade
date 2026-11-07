@@ -94,10 +94,13 @@ std::shared_ptr<const Bitmap> MakeWheelSheet() {
     PrimitiveRenderer renderer;
     renderer.Target(sheet);
     for (int i = 0; i < 8; ++i) {
-        const Vector2 center{(static_cast<float>(i % 4) + 0.5f) * kFrame,
-                             (static_cast<float>(i / 4) + 0.5f) * kFrame};
-        const Vector2 spoke{18 * std::cos(static_cast<float>(i) * PI / 4.0f),
-                            18 * std::sin(static_cast<float>(i) * PI / 4.0f)};
+        const Vector2 center{
+            (static_cast<float>(i % 4) + 0.5f) * kFrame, (static_cast<float>(i / 4) + 0.5f) * kFrame
+        };
+        const Vector2 spoke{
+            18 * std::cos(static_cast<float>(i) * PI / 4.0f),
+            18 * std::sin(static_cast<float>(i) * PI / 4.0f)
+        };
         renderer.Paint(ORANGE).Fill().Circle(center, 20);
         renderer.Paint(DARKBROWN).Fill(false).Circle(center, 20);
         renderer.Line(center, Vector2{center.x + spoke.x, center.y + spoke.y});
@@ -112,7 +115,8 @@ void SpawnBall(Scene& scene, Vector2 position) {
     const Color colors[] = {RED, BLUE, DARKGREEN, PURPLE, ORANGE, MAROON};
 
     scene.Spawn<Ball>().Position(position).Paint(colors[engine.RandomValue(0, 5)]).velocity = {
-        engine.RandomFloat(-250, 250), engine.RandomFloat(-300, -50)};
+        engine.RandomFloat(-250, 250), engine.RandomFloat(-300, -50)
+    };
 }
 
 } // namespace
@@ -225,9 +229,11 @@ SCENE("efekty") {
         SpawnBall(scene, {kField.x + 80.0f + static_cast<float>(i) * 140, kField.y + 60});
 
     // ---------------- tekst ----------------
-    title({40, 650},
-          hasFont ? "Zażółć gęślą jaźń - czcionka z assets/font.ttf"
-                  : "Brak assets/font.ttf - font raylib nie ma polskich liter (zamiast nich \"?\")")
+    title(
+        {40, 650},
+        hasFont ? "Zażółć gęślą jaźń - czcionka z assets/font.ttf"
+                : "Brak assets/font.ttf - font raylib nie ma polskich liter (zamiast nich \"?\")"
+    )
         .FontSize(18)
         .Paint(hasFont ? DARKGREEN : MAROON);
 
@@ -269,9 +275,11 @@ SCENE("efekty") {
             SpawnBall(scene, inField ? mouse : Vector2{kField.x + kField.width / 2, kField.y + 40});
         }
         const Balls* balls = scene.Context<Balls>();
-        counter.Content("Piłki: " + std::to_string(balls->list.size()) +
-                        "   usunięte: " + std::to_string(balls->removed) +
-                        "   kroki stałe: " + std::to_string(std::lround(1.0f / e.FixedStep())) +
-                        "/s   FPS: " + std::to_string(e.CurrentFps()));
+        counter.Content(
+            "Piłki: " + std::to_string(balls->list.size()) +
+            "   usunięte: " + std::to_string(balls->removed) +
+            "   kroki stałe: " + std::to_string(std::lround(1.0f / e.FixedStep())) +
+            "/s   FPS: " + std::to_string(e.CurrentFps())
+        );
     });
 }

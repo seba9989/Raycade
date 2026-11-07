@@ -177,8 +177,10 @@ class TextField : public Entity, public Focusable {
     static std::vector<int> Decode(const std::string& text);
 
     /** @brief Zamienia fragment kodów znaków na UTF-8. */
-    static std::string Encode(std::vector<int>::const_iterator begin,
-                              std::vector<int>::const_iterator end);
+    static std::string Encode(
+        std::vector<int>::const_iterator begin,
+        std::vector<int>::const_iterator end
+    );
 
     /** @brief Tekst ze schowka (pusty bez okna). */
     static std::string Clipboard();
@@ -204,16 +206,16 @@ class TextField : public Entity, public Focusable {
     /** @brief Ustawia kursor najbliżej miejsca kliknięcia. */
     void PlaceCaret(const Input& input);
 
-    std::vector<int> codepoints_;          /**< Tekst jako kody znaków Unicode. */
-    std::size_t caret_ = 0;                /**< Pozycja kursora (w znakach). */
-    mutable std::size_t firstVisible_ = 0; /**< Pierwszy widoczny znak. */
-    std::string placeholder_;              /**< Napis w pustym polu. */
-    Vector2 size_{260, 40};                /**< Rozmiar pola. */
-    float fontSize_ = 20.0f;               /**< Wielkość czcionki. */
-    float spacing_ = -1.0f;                /**< Odstęp między znakami; < 0 - domyślny. */
-    std::shared_ptr<const Typeface> font_; /**< Czcionka albo nullptr. */
-    std::size_t maxLength_ = 0;            /**< Limit znaków (0 - brak). */
-    double blinkStart_ = 0.0;              /**< Początek cyklu migania kursora. */
+    std::vector<int> codepoints_;                    /**< Tekst jako kody znaków Unicode. */
+    std::size_t caret_ = 0;                          /**< Pozycja kursora (w znakach). */
+    mutable std::size_t firstVisible_ = 0;           /**< Pierwszy widoczny znak. */
+    std::string placeholder_;                        /**< Napis w pustym polu. */
+    Vector2 size_{260, 40};                          /**< Rozmiar pola. */
+    float fontSize_ = 20.0f;                         /**< Wielkość czcionki. */
+    float spacing_ = -1.0f;                          /**< Odstęp między znakami; < 0 - domyślny. */
+    std::shared_ptr<const Typeface> font_;           /**< Czcionka albo nullptr. */
+    std::size_t maxLength_ = 0;                      /**< Limit znaków (0 - brak). */
+    double blinkStart_ = 0.0;                        /**< Początek cyklu migania kursora. */
     std::function<void(const std::string&)> change_; /**< Zmiana tekstu. */
     std::function<void(const std::string&)> submit_; /**< Enter. */
 };

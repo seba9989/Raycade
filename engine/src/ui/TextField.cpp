@@ -138,8 +138,10 @@ void TextField::PlaceCaret(const Input& input) {
     blinkStart_ = ::GetTime();
 }
 
-std::string TextField::Encode(std::vector<int>::const_iterator begin,
-                              std::vector<int>::const_iterator end) {
+std::string TextField::Encode(
+    std::vector<int>::const_iterator begin,
+    std::vector<int>::const_iterator end
+) {
     std::string result;
     for (auto it = begin; it != end; ++it) {
         int size = 0;

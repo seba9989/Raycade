@@ -63,11 +63,13 @@ SCENE("figury") {
     // wielokąt zbudowany ze zbioru odcinków (LineSegment)
     scene.Spawn<shapes::Polygon>()
         .Position({340, 360})
-        .Edges({{{0, 50}, {60, 0}},
-                {{60, 0}, {120, 50}},
-                {{120, 50}, {120, 120}},
-                {{120, 120}, {0, 120}},
-                {{0, 120}, {0, 50}}})
+        .Edges(
+            {{{0, 50}, {60, 0}},
+             {{60, 0}, {120, 50}},
+             {{120, 50}, {120, 120}},
+             {{120, 120}, {0, 120}},
+             {{0, 120}, {0, 50}}}
+        )
         .Incremental()
         .Paint(DARKGREEN);
 
@@ -125,8 +127,9 @@ SCENE("figury") {
                     r.Paint(color).FloodFill(seed);
             });
         })
-        .OnKeyPressed(KEY_R,
-                      [paintContours](shapes::Canvas& self) { self.Clear().Edit(paintContours); });
+        .OnKeyPressed(KEY_R, [paintContours](shapes::Canvas& self) {
+            self.Clear().Edit(paintContours);
+        });
 
     // ---------------- podpisy ----------------
     scene.OnDraw([](PrimitiveRenderer&) {
@@ -137,8 +140,10 @@ SCENE("figury") {
         ::DrawText("Wielokaty: kontur / scanline / z odcinkow", 20, 330, 18, DARKGRAY);
         ::DrawText("lamana wiazana - nie rysuje sie", 170, 560, 14, GRAY);
         ::DrawText("Wypelnianie przez spojnosc", 560, 304, 18, DARKGRAY);
-        ::DrawText("LPM - flood fill, Shift+LPM - boundary fill, R - wyczysc plotno, "
-                   "czerwony - wlasny algorytm, niebieski - raylib",
-                   20, 630, 14, GRAY);
+        ::DrawText(
+            "LPM - flood fill, Shift+LPM - boundary fill, R - wyczysc plotno, "
+            "czerwony - wlasny algorytm, niebieski - raylib",
+            20, 630, 14, GRAY
+        );
     });
 }

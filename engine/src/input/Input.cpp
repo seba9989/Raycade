@@ -40,8 +40,9 @@ Input& Input::Unbind(const std::string& name) {
 bool Input::ActionDown(const std::string& action) const {
     const auto* bindings = Find(actions_->actions, action);
     if (!bindings) return false;
-    return std::any_of(bindings->begin(), bindings->end(),
-                       [&](const InputBinding& b) { return BindingDown(b); });
+    return std::any_of(bindings->begin(), bindings->end(), [&](const InputBinding& b) {
+        return BindingDown(b);
+    });
 }
 
 bool Input::ActionPressed(const std::string& action) const {
@@ -129,8 +130,9 @@ bool Input::BindingReleased(const InputBinding& b) const {
 }
 
 bool Input::AnalogDown(const std::vector<InputBinding>& bindings) const {
-    return std::any_of(bindings.begin(), bindings.end(),
-                       [&](const InputBinding& b) { return IsEdgeTracked(b) && BindingDown(b); });
+    return std::any_of(bindings.begin(), bindings.end(), [&](const InputBinding& b) {
+        return IsEdgeTracked(b) && BindingDown(b);
+    });
 }
 
 void Input::Transform(Vector2 offset, Vector2 scale) {
@@ -146,9 +148,13 @@ Input Input::Uncaptured() const {
     return copy;
 }
 
-Input& Input::BindAxis(const std::string& axis, std::vector<InputBinding> negative,
-                       std::vector<InputBinding> positive, std::vector<InputBinding> analog,
-                       float deadzone) {
+Input& Input::BindAxis(
+    const std::string& axis,
+    std::vector<InputBinding> negative,
+    std::vector<InputBinding> positive,
+    std::vector<InputBinding> analog,
+    float deadzone
+) {
     actions_->axes[axis] =
         InputAxis{std::move(negative), std::move(positive), std::move(analog), deadzone};
     return *this;

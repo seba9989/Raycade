@@ -97,7 +97,8 @@ PrimitiveRenderer& PrimitiveRenderer::Rect(Point2D position, Vector2 size) {
         const float right = position.X() + size.x - 1.0f;
         const float bottom = position.Y() + size.y - 1.0f;
         const Point2D corners[] = {
-            position, {right, position.Y()}, {right, bottom}, {position.X(), bottom}};
+            position, {right, position.Y()}, {right, bottom}, {position.X(), bottom}
+        };
         return Polyline(corners, true);
     }
     if (target_) {

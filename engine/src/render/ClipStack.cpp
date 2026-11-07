@@ -49,10 +49,12 @@ std::array<int, 2> BufferSize(const Level& level) {
 
 /** @brief Mnoży macierz raylib (kolumnowo, jak w shaderze) przez punkt jednorodny. */
 std::array<float, 4> Apply(const Matrix& m, const std::array<float, 4>& v) {
-    return {m.m0 * v[0] + m.m4 * v[1] + m.m8 * v[2] + m.m12 * v[3],
-            m.m1 * v[0] + m.m5 * v[1] + m.m9 * v[2] + m.m13 * v[3],
-            m.m2 * v[0] + m.m6 * v[1] + m.m10 * v[2] + m.m14 * v[3],
-            m.m3 * v[0] + m.m7 * v[1] + m.m11 * v[2] + m.m15 * v[3]};
+    return {
+        m.m0 * v[0] + m.m4 * v[1] + m.m8 * v[2] + m.m12 * v[3],
+        m.m1 * v[0] + m.m5 * v[1] + m.m9 * v[2] + m.m13 * v[3],
+        m.m2 * v[0] + m.m6 * v[1] + m.m10 * v[2] + m.m14 * v[3],
+        m.m3 * v[0] + m.m7 * v[1] + m.m11 * v[2] + m.m15 * v[3]
+    };
 }
 
 /** @brief Włącza scissor z podanym prostokątem albo go wyłącza (nullptr). */
@@ -86,7 +88,8 @@ void ClipStack::Push(Rectangle area) {
         {{area.x, area.y},
          {area.x + area.width, area.y},
          {area.x, area.y + area.height},
-         {area.x + area.width, area.y + area.height}}};
+         {area.x + area.width, area.y + area.height}}
+    };
     for (const auto& [x, y] : corners) {
         const auto clip = Apply(projection, Apply(view, Apply(transform, {x, y, 0.0f, 1.0f})));
         const float w = clip[3] != 0.0f ? clip[3] : 1.0f;

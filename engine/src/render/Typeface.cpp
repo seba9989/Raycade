@@ -9,8 +9,11 @@
 #include <cmath>
 #include <utility>
 
-std::optional<Typeface> Typeface::Load(const std::string& path, int size,
-                                       const std::string& extraCharacters) {
+std::optional<Typeface> Typeface::Load(
+    const std::string& path,
+    int size,
+    const std::string& extraCharacters
+) {
     // raylib wczytuje tylko podane znaki - bez listy byłoby samo ASCII 32-126
     std::string characters;
     for (char c = 32; c < 127; ++c)
@@ -78,8 +81,13 @@ Vector2 Typeface::Measure(const std::string& text, float size, float spacing) co
     return ::MeasureTextEx(Raw(), text.c_str(), size, spacing);
 }
 
-void Typeface::Draw(const std::string& text, Vector2 position, float size, float spacing,
-                    Color color) const {
+void Typeface::Draw(
+    const std::string& text,
+    Vector2 position,
+    float size,
+    float spacing,
+    Color color
+) const {
     if (text.empty()) return;
     ::DrawTextEx(Raw(), text.c_str(), position, size, spacing, color);
 }

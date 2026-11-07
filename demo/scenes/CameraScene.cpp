@@ -96,7 +96,8 @@ class Coin : public shapes::Circle {
             ++coins;
             Engine& engine = Engine::Get();
             self.Position(
-                {engine.RandomFloat(-kWorld, kWorld), engine.RandomFloat(-kWorld, kWorld)});
+                {engine.RandomFloat(-kWorld, kWorld), engine.RandomFloat(-kWorld, kWorld)}
+            );
         });
     }
 };
@@ -116,11 +117,13 @@ SCENE("kamera") {
     for (int i = 0; i < 8; ++i) {
         const float angle = static_cast<float>(i) * PI / 4.0f;
         scene.Spawn<Crate>().Position(
-            {std::cos(angle) * 350.0f - 30, std::sin(angle) * 350.0f - 30});
+            {std::cos(angle) * 350.0f - 30, std::sin(angle) * 350.0f - 30}
+        );
     }
     for (int i = 0; i < 12; ++i)
         scene.Spawn<Coin>().Position(
-            {engine.RandomFloat(-kWorld, kWorld), engine.RandomFloat(-kWorld, kWorld)});
+            {engine.RandomFloat(-kWorld, kWorld), engine.RandomFloat(-kWorld, kWorld)}
+        );
 
     auto& player = scene.Spawn<Walker>();
     player.Position({0, 0}).Paint(DARKBLUE).Fill().Radius(20);
@@ -176,17 +179,23 @@ SCENE("kamera") {
     scene.OnDraw([&engine, &camera](PrimitiveRenderer&) {
         const Vector2 mouse = camera.ScreenToWorld(engine.MousePosition());
         char info[160];
-        std::snprintf(info, sizeof info,
-                      "zoom %.2f   obrot %.0f st.   podazanie: %s   kursor w swiecie: (%.0f, %.0f)",
-                      camera.Zoom(), camera.Rotation() * RAD2DEG,
-                      camera.IsFollowing() ? "tak" : "nie", mouse.x, mouse.y);
+        std::snprintf(
+            info, sizeof info,
+            "zoom %.2f   obrot %.0f st.   podazanie: %s   kursor w swiecie: (%.0f, %.0f)",
+            camera.Zoom(), camera.Rotation() * RAD2DEG, camera.IsFollowing() ? "tak" : "nie",
+            mouse.x, mouse.y
+        );
         ::DrawRectangle(0, 0, 850, 70, Fade(RAYWHITE, 0.85f));
         ::DrawText("Kamera 2D", 20, 12, 22, DARKGRAY);
         ::DrawText(info, 20, 42, 16, DARKGRAY);
         ::DrawText(("Monety: " + std::to_string(coins)).c_str(), 870, 160, 20, DARKGRAY);
-        ::DrawText("WASD/strzalki - ruch   kolko - zoom   Q/E - obrot   F - podazanie   R - reset",
-                   20, 618, 16, DARKGRAY);
-        ::DrawText("przeciagnij skrzynie, kliknij monete - trafienia dzialaja przy kazdym zoomie",
-                   20, 640, 16, DARKGRAY);
+        ::DrawText(
+            "WASD/strzalki - ruch   kolko - zoom   Q/E - obrot   F - podazanie   R - reset", 20,
+            618, 16, DARKGRAY
+        );
+        ::DrawText(
+            "przeciagnij skrzynie, kliknij monete - trafienia dzialaja przy kazdym zoomie", 20, 640,
+            16, DARKGRAY
+        );
     });
 }

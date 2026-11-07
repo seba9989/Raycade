@@ -8,8 +8,9 @@ namespace shapes {
 
 bool Lines::Contains(Vector2 point) const {
     for (std::size_t i = 0; i + 1 < vertices_.size(); i += 2)
-        if (::CheckCollisionPointLine(point, World(vertices_[i]), World(vertices_[i + 1]),
-                                      kHitDistance))
+        if (::CheckCollisionPointLine(
+                point, World(vertices_[i]), World(vertices_[i + 1]), kHitDistance
+            ))
             return true;
     return false;
 }

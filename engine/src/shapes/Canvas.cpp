@@ -14,9 +14,10 @@ void Canvas::EditPixels(const std::function<void(PrimitiveRenderer&)>& paint) {
 
 bool Canvas::Contains(Vector2 point) const {
     const auto local = TryToLocal(point);
-    return local &&
-           ::CheckCollisionPointRec(*local, {0.0f, 0.0f, static_cast<float>(bitmap_.Width()),
-                                             static_cast<float>(bitmap_.Height())});
+    return local && ::CheckCollisionPointRec(
+                        *local, {0.0f, 0.0f, static_cast<float>(bitmap_.Width()),
+                                 static_cast<float>(bitmap_.Height())}
+                    );
 }
 
 void Canvas::Draw(PrimitiveRenderer& renderer) const {

@@ -103,12 +103,14 @@ std::vector<const Entity*> Entity::TopFirst(const std::vector<std::unique_ptr<En
     order.reserve(entities.size());
     for (const auto& entity : entities)
         order.push_back(entity.get());
-    std::stable_sort(order.begin(), order.end(),
-                     [](const Entity* a, const Entity* b) { return a->Layer() > b->Layer(); });
+    std::stable_sort(order.begin(), order.end(), [](const Entity* a, const Entity* b) {
+        return a->Layer() > b->Layer();
+    });
     // w tej samej warstwie później dodany jest rysowany wyżej
     for (auto begin = order.begin(); begin != order.end();) {
-        auto end = std::find_if(begin, order.end(),
-                                [&](const Entity* e) { return e->Layer() != (*begin)->Layer(); });
+        auto end = std::find_if(begin, order.end(), [&](const Entity* e) {
+            return e->Layer() != (*begin)->Layer();
+        });
         std::reverse(begin, end);
         begin = end;
     }
@@ -135,8 +137,11 @@ Vector2 Entity::ScreenPosition() const {
     return camera ? camera->WorldToScreen(WorldPosition()) : WorldPosition();
 }
 
-PointerFrame Entity::Pointer(const std::vector<std::unique_ptr<Entity>>& roots, const Input& input,
-                             const SceneCamera& camera) {
+PointerFrame Entity::Pointer(
+    const std::vector<std::unique_ptr<Entity>>& roots,
+    const Input& input,
+    const SceneCamera& camera
+) {
     PointerFrame frame;
     if (!input.IsMouseEnabled()) return frame;
     frame.pressed = input.MousePressed(MOUSE_BUTTON_LEFT); // także w puste miejsce

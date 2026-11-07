@@ -53,12 +53,16 @@ std::optional<std::vector<unsigned char>> Engine::LoadData(const std::string& pa
 
 bool Engine::SaveData(const std::string& path, std::span<const unsigned char> data) const {
     // raylib przyjmuje void* bez const, ale danych nie zmienia
-    return ::SaveFileData(path.c_str(), const_cast<unsigned char*>(data.data()),
-                          static_cast<int>(data.size()));
+    return ::SaveFileData(
+        path.c_str(), const_cast<unsigned char*>(data.data()), static_cast<int>(data.size())
+    );
 }
 
-std::vector<std::string> Engine::ListDirectory(const std::string& path, const std::string& filter,
-                                               bool recursive) const {
+std::vector<std::string> Engine::ListDirectory(
+    const std::string& path,
+    const std::string& filter,
+    bool recursive
+) const {
     if (!::DirectoryExists(path.c_str())) return {};
     const FilePathList files =
         ::LoadDirectoryFilesEx(path.c_str(), filter.empty() ? nullptr : filter.c_str(), recursive);

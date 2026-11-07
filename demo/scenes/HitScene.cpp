@@ -124,8 +124,9 @@ SCENE("trafienia") {
         .Label("Klik: 0")
         .Position({380, 110})
         .Paint(DARKGREEN)
-        .OnClick(
-            [count = 0](Button& self) mutable { self.Label("Klik: " + std::to_string(++count)); });
+        .OnClick([count = 0](Button& self) mutable {
+            self.Label("Klik: " + std::to_string(++count));
+        });
     // ozdobna ramka bez zdarzeń nad przyciskiem - przepuszcza kliknięcia
     scene.Spawn<shapes::Rect>().Position({370, 100}).Size({220, 70}).Paint(GOLD).Layer(1);
 
@@ -133,14 +134,16 @@ SCENE("trafienia") {
         .Label("Lewy: 0")
         .Position({380, 260})
         .Paint(DARKBLUE)
-        .OnClick(
-            [count = 0](Button& self) mutable { self.Label("Lewy: " + std::to_string(++count)); });
+        .OnClick([count = 0](Button& self) mutable {
+            self.Label("Lewy: " + std::to_string(++count));
+        });
     scene.Spawn<Button>()
         .Label("Prawy: 0")
         .Position({380, 330})
         .Paint(DARKBLUE)
-        .OnClick(
-            [count = 0](Button& self) mutable { self.Label("Prawy: " + std::to_string(++count)); });
+        .OnClick([count = 0](Button& self) mutable {
+            self.Label("Prawy: " + std::to_string(++count));
+        });
     // okno nad prawą połową przycisków: puste OnClick blokuje kliknięcia pod spodem
     scene.Spawn<Button>()
         .Label("Okno")

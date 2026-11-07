@@ -403,8 +403,9 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
      * @param entities Obiekty jednego poziomu drzewa.
      * @return Wskaźniki od najwyższej warstwy, w warstwie od ostatnio dodanego.
      */
-    static std::vector<const Entity*>
-    TopFirst(const std::vector<std::unique_ptr<Entity>>& entities);
+    static std::vector<const Entity*> TopFirst(
+        const std::vector<std::unique_ptr<Entity>>& entities
+    );
 
     /**
      * @brief Wybiera odbiorcę zdarzenia myszy (patrz @ref entity_trafienia).
@@ -429,8 +430,11 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
      * @param camera Kamera sceny.
      * @return Najwyższy trafiony obiekt i odbiorcy zdarzeń.
      */
-    static PointerFrame Pointer(const std::vector<std::unique_ptr<Entity>>& roots,
-                                const Input& input, const SceneCamera& camera);
+    static PointerFrame Pointer(
+        const std::vector<std::unique_ptr<Entity>>& roots,
+        const Input& input,
+        const SceneCamera& camera
+    );
 
     /** @brief Sprawdza, czy obiekt to podany obiekt albo jego przodek. */
     bool IsSelfOrAncestorOf(const Entity* entity) const;

@@ -281,8 +281,12 @@ class PrimitiveRenderer {
      * @param tint Kolor mnożący piksele (WHITE - bez zmian, Fade(WHITE, 0.5f) - półprzezroczysty).
      * @return Ten sam renderer.
      */
-    PrimitiveRenderer& Blit(const Bitmap& bitmap, Rectangle source, Point2D position,
-                            Color tint = WHITE);
+    PrimitiveRenderer& Blit(
+        const Bitmap& bitmap,
+        Rectangle source,
+        Point2D position,
+        Color tint = WHITE
+    );
 
     /** @} */
 

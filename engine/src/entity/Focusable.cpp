@@ -26,7 +26,8 @@ std::vector<const Focusable*> Focusable::TabOrder(const FocusState& state) {
     std::vector<const Focusable*> order;
     for (const Focusable* f : state.members)
         if (f->tabIndex_ >= 0) order.push_back(f);
-    std::ranges::stable_sort(
-        order, {}, [](const Focusable* f) { return f->tabIndex_ == 0 ? INT_MAX : f->tabIndex_; });
+    std::ranges::stable_sort(order, {}, [](const Focusable* f) {
+        return f->tabIndex_ == 0 ? INT_MAX : f->tabIndex_;
+    });
     return order;
 }

@@ -51,8 +51,10 @@ class ShaderProgram {
      * @return Shader albo brak wartości przy błędzie kompilacji lub braku pliku (przyczynę
      * raylib zapisuje w logu) - tak jak Bitmap::Load() i Typeface::Load().
      */
-    static std::optional<ShaderProgram> Load(const std::string& vertexPath,
-                                             const std::string& fragmentPath);
+    static std::optional<ShaderProgram> Load(
+        const std::string& vertexPath,
+        const std::string& fragmentPath
+    );
 
     /**
      * @brief Kompiluje shader z kodu GLSL w napisach.
@@ -60,8 +62,10 @@ class ShaderProgram {
      * @param fragmentCode Kod shadera fragmentów albo pusty napis (domyślny).
      * @return Shader albo brak wartości przy błędzie kompilacji.
      */
-    static std::optional<ShaderProgram> FromCode(const std::string& vertexCode,
-                                                 const std::string& fragmentCode);
+    static std::optional<ShaderProgram> FromCode(
+        const std::string& vertexCode,
+        const std::string& fragmentCode
+    );
 
     /** @brief Zwalnia shader z karty graficznej. */
     ~ShaderProgram();
