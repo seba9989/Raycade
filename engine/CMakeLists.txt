@@ -6,6 +6,7 @@ add_library(raycade STATIC
     src/render/ClipStack.cpp
     src/render/RenderTarget.cpp
     src/render/ShaderProgram.cpp
+    src/render/Typeface.cpp
     src/render/primitive_renderer/Fill.cpp
     src/render/primitive_renderer/Polygon.cpp
     src/render/primitive_renderer/Primitives.cpp
@@ -27,6 +28,7 @@ add_library(raycade STATIC
     src/shapes/Rect.cpp
     src/shapes/Sprite.cpp
     src/shapes/Surface.cpp
+    src/shapes/Text.cpp
     src/shapes/Triangle.cpp
     src/ui/TextField.cpp
     src/scene/Scene.cpp

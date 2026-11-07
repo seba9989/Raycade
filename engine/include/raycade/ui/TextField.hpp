@@ -6,12 +6,14 @@
 
 #include <raycade/entity/Entity.hpp>
 #include <raycade/entity/Focusable.hpp>
+#include <raycade/render/Typeface.hpp>
 
 #include <raylib.h>
 
 #include <algorithm>
 #include <cmath>
 #include <functional>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -73,6 +75,21 @@ class TextField : public Entity, public Focusable {
         self.size_ = size;
         return self;
     }
+
+    /**
+     * @brief Ustawia czcionkę pola (np. z polskimi znakami - patrz Typeface).
+     * @details Bez niej pole używa DefaultTypeface z kontekstu, a na końcu fontu raylib, który
+     * nie ma polskich liter: wpisane "ą" zostanie zapisane w Text(), ale wyświetli się jako "?".
+     * @param typeface Czcionka (współdzielona) albo nullptr.
+     * @return Ten sam obiekt.
+     */
+    template <typename Self> Self& Font(this Self& self, std::shared_ptr<const Typeface> typeface) {
+        static_cast<TextField&>(self).font_ = std::move(typeface);
+        return self;
+    }
+
+    /** @brief Podaje czcionkę ustawioną na polu (nullptr - z kontekstu albo domyślna). */
+    const std::shared_ptr<const Typeface>& Font() const { return font_; }
 
     /** @brief Ustawia wielkość czcionki (domyślnie 20). */
     template <typename Self> Self& FontSize(this Self& self, int size) {
@@ -158,6 +175,9 @@ class TextField : public Entity, public Focusable {
     /** @brief Szerokość fragmentu tekstu w pikselach. */
     int Width(std::size_t from, std::size_t to) const;
 
+    /** @brief Czcionka do użycia: własna, z kontekstu albo domyślna. */
+    const Typeface& Face() const { return ResolveTypeface(font_, Context<DefaultTypeface>()); }
+
     /** @brief Szerokość obszaru na tekst. */
     int InnerWidth() const { return static_cast<int>(size_.x) - 2 * kPadding; }
 
@@ -176,6 +196,7 @@ class TextField : public Entity, public Focusable {
     std::string placeholder_;                        /**< Napis w pustym polu. */
     Vector2 size_{260, 40};                          /**< Rozmiar pola. */
     int fontSize_ = 20;                              /**< Wielkość czcionki. */
+    std::shared_ptr<const Typeface> font_;           /**< Czcionka albo nullptr. */
     std::size_t maxLength_ = 0;                      /**< Limit znaków (0 - brak). */
     double blinkStart_ = 0.0;                        /**< Początek cyklu migania kursora. */
     std::function<void(const std::string&)> change_; /**< Zmiana tekstu. */

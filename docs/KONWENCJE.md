@@ -11,7 +11,7 @@ warstwy wcześniejsze na liście:
 | Katalog    | Zawartość                                                      | Zależy od               |
 |------------|----------------------------------------------------------------|-------------------------|
 | `math/`    | AffineMatrix2D, Point2D, LineSegment, algorytmy geometrii      | -                       |
-| `render/`  | Bitmap, RenderTarget, ClipStack, ShaderProgram, PrimitiveRenderer | math                 |
+| `render/`  | Bitmap, RenderTarget, ClipStack, ShaderProgram, Typeface, PrimitiveRenderer | math       |
 | `input/`   | Input, akcje i osie                                            | -                       |
 | `entity/`  | Entity i klasy bazowe (Transformable, Drawable, Updatable...)  | math, render, input     |
 | `shapes/`  | kształty z przestrzeni nazw `shapes`                           | entity                  |
@@ -104,8 +104,9 @@ Odczyt wejścia w silniku przechodzi wyłącznie przez klasę `Input`.
 
 - Identyfikatory są po angielsku.
 - Komentarze i dokumentacja Doxygen są po polsku, z polskimi znakami.
-- Tekst wyświetlany w oknie i zapisywany w logu jest po polsku **bez** polskich znaków:
-  domyślny font raylib nie ma tych glifów, a konsola Windows bez `/utf-8` pokazałaby krzaki.
+- Tekst zapisywany w logu jest po polsku **bez** polskich znaków: konsola Windows bez
+  `/utf-8` pokazałaby krzaki. Tekst w oknie też, chyba że jest rysowany czcionką wczytaną
+  przez `Typeface::Load()` (ma polskie litery) - domyślny font raylib ich nie ma.
 - Nazwy scen są po polsku (`"prymitywy"`), nazwy plików po angielsku (`PrimitivesScene.cpp`).
 
 ## Logi

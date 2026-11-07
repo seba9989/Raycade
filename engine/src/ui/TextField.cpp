@@ -53,15 +53,18 @@ void TextField::Draw(PrimitiveRenderer& renderer) const {
     if (IsFocused()) renderer.Rect({1, 1}, {size_.x - 2, size_.y - 2});
 
     const int textY = static_cast<int>((size_.y - static_cast<float>(fontSize_)) / 2);
+    const float size = static_cast<float>(fontSize_);
+    const Vector2 textPosition{static_cast<float>(kPadding), static_cast<float>(textY)};
+    const Typeface& face = Face();
     if (codepoints_.empty() && !IsFocused()) {
-        ::DrawText(placeholder_.c_str(), kPadding, textY, fontSize_, GRAY);
+        face.Draw(placeholder_, textPosition, size, Typeface::DefaultSpacing(size), GRAY);
         return;
     }
     KeepCaretVisible();
     const std::size_t end = VisibleEnd();
     const std::string visible =
         Encode(codepoints_.begin() + Offset(firstVisible_), codepoints_.begin() + Offset(end));
-    ::DrawText(visible.c_str(), kPadding, textY, fontSize_, color_);
+    face.Draw(visible, textPosition, size, Typeface::DefaultSpacing(size), color_);
 
     // kursor miga co pół sekundy, ale zaraz po pisaniu jest zawsze widoczny
     const bool blinkOn = std::fmod(::GetTime() - blinkStart_, 1.0) < 0.5;
@@ -104,7 +107,9 @@ int TextField::Width(std::size_t from, std::size_t to) const {
     if (to <= from) return 0;
     const std::string part =
         Encode(codepoints_.begin() + Offset(from), codepoints_.begin() + Offset(to));
-    return ::MeasureText(part.c_str(), fontSize_);
+    const float size = static_cast<float>(fontSize_);
+    return static_cast<int>(
+        std::lround(Face().Measure(part, size, Typeface::DefaultSpacing(size)).x));
 }
 
 void TextField::KeepCaretVisible() const {

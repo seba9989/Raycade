@@ -27,6 +27,7 @@
  * | @ref shapes::Canvas   | bitmapę w RAM (flood/boundary fill)   | `Size()`, `Background()`, `Clear()`, `Content()`, `Pixels()` |
  * | @ref shapes::Surface  | dzieci rysowane do tekstury GPU       | `Size()`, `Background()`, `Tint()`, `Smooth()`, `Target()`  |
  * | @ref shapes::Sprite   | klatkę z arkusza, z animacją          | `Sheet()`, `Animation()`, `Play()`, `Pause()`, `Stop()`, `Frame()`, `Fps()`, `Speed()`, `FlipX()`, `FlipY()`, `Origin()`, `OnFinish()` |
+ * | @ref shapes::Text     | napis z czcionką (polskie znaki)      | `Content()`, `FontSize()`, `Spacing()`, `Font()`, `Size()`  |
  * | @ref shapes::Group    | nic - grupuje i przesuwa dzieci       | -                                                           |
  *
  * Pole tekstowe ui::TextField nie jest kształtem geometrycznym, dlatego leży w przestrzeni
@@ -66,5 +67,6 @@
 #include <raycade/shapes/Rect.hpp>
 #include <raycade/shapes/Sprite.hpp>
 #include <raycade/shapes/Surface.hpp>
+#include <raycade/shapes/Text.hpp>
 #include <raycade/shapes/Triangle.hpp>
 // IWYU pragma: end_exports
