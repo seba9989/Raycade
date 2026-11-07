@@ -24,8 +24,10 @@
  * @section struktura Struktura projektu
  * - `engine/` - biblioteka statyczna Raycade (cel CMake `raycade::raycade`):
  *   nagłówek zbiorczy `engine/umbrella/raycade`, pozostałe publiczne nagłówki
- *   w `engine/include/raycade/`, implementacja w `engine/src/`.
+ *   w `engine/include/raycade/` w katalogach-warstwach (`math`, `render`, `input`, `entity`,
+ *   `shapes`, `ui`, `scene`), implementacja w `engine/src/` w tym samym układzie.
  * - `demo/` - program demonstracyjny: ten plik i sceny z laboratoriów (`demo/scenes/`).
+ * - `docs/` - konfiguracja Doxygena i @ref konwencje "konwencje kodu".
  *
  * Gra dołącza jeden nagłówek `#include <raycade>`. Inny projekt CMake może użyć
  * biblioteki bez demo:
