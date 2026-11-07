@@ -69,16 +69,20 @@ void PrimitiveRenderer::LineIncremental(Vector2 from, Vector2 to) {
     if (std::fabs(dx) >= std::fabs(dy)) { // |m| <= 1 -> krok po x
         if (from.x > to.x) std::swap(from, to);
         const float m = (to.y - from.y) / (to.x - from.x);
-        float y = from.y;
-        for (int x = Round(from.x); x <= Round(to.x); ++x) {
+        // pierwszy piksel ma x = Round(from.x), więc y liczymy dla tego x, a nie dla from.x -
+        // inaczej przy ułamkowym początku cały odcinek jest przesunięty o (x - from.x) * m
+        const int firstX = Round(from.x);
+        float y = from.y + (static_cast<float>(firstX) - from.x) * m;
+        for (int x = firstX; x <= Round(to.x); ++x) {
             Plot(x, Round(y));
             y += m;
         }
     } else { // |m| > 1 -> krok po y
         if (from.y > to.y) std::swap(from, to);
         const float mInverse = (to.x - from.x) / (to.y - from.y);
-        float x = from.x;
-        for (int y = Round(from.y); y <= Round(to.y); ++y) {
+        const int firstY = Round(from.y);
+        float x = from.x + (static_cast<float>(firstY) - from.y) * mInverse;
+        for (int y = firstY; y <= Round(to.y); ++y) {
             Plot(Round(x), y);
             x += mInverse;
         }
