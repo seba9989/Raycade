@@ -70,3 +70,10 @@ PrimitiveRenderer& PrimitiveRenderer::Blit(const Bitmap& bitmap, Point2D positio
     ::DrawTextureV(bitmap.Texture(), position, WHITE);
     return *this;
 }
+
+PrimitiveRenderer& PrimitiveRenderer::Blit(const Bitmap& bitmap, Rectangle source, Point2D position,
+                                           Color tint) {
+    if (bitmap.IsEmpty()) return *this;
+    ::DrawTextureRec(bitmap.Texture(), source, position, tint);
+    return *this;
+}

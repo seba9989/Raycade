@@ -5,6 +5,8 @@
 
 #include <raycade/render/Bitmap.hpp>
 
+#include <algorithm>
+#include <cmath>
 #include <utility>
 
 /**
@@ -18,6 +20,26 @@ Bitmap::Bitmap(int width, int height, Color background)
 Bitmap::Bitmap(Image image) : image_(image) {
     if (image_.data != nullptr && image_.format != PIXELFORMAT_UNCOMPRESSED_R8G8B8A8)
         ::ImageFormat(&image_, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
+}
+
+std::optional<Bitmap> Bitmap::Load(const std::string& path) {
+    Image image = ::LoadImage(path.c_str());
+    if (image.data == nullptr) return std::nullopt;
+    return Bitmap{image};
+}
+
+bool Bitmap::Save(const std::string& path) const {
+    return !IsEmpty() && ::ExportImage(image_, path.c_str());
+}
+
+Bitmap Bitmap::Region(Rectangle area) const {
+    // obcięcie do bitmapy - ImageFromImage nie sprawdza zakresu
+    const float left = std::max(0.0f, std::floor(area.x));
+    const float top = std::max(0.0f, std::floor(area.y));
+    const float right = std::min(static_cast<float>(Width()), std::floor(area.x + area.width));
+    const float bottom = std::min(static_cast<float>(Height()), std::floor(area.y + area.height));
+    if (IsEmpty() || right <= left || bottom <= top) return {};
+    return Bitmap{::ImageFromImage(image_, {left, top, right - left, bottom - top})};
 }
 
 Bitmap::~Bitmap() {

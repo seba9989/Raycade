@@ -270,6 +270,18 @@ class PrimitiveRenderer {
      */
     PrimitiveRenderer& Blit(const Bitmap& bitmap, Point2D position);
 
+    /**
+     * @brief Wyświetla na ekranie fragment bitmapy (np. klatkę z arkusza animacji).
+     * @param bitmap Bitmapa źródłowa.
+     * @param source Fragment w pikselach bitmapy; ujemna szerokość / wysokość odbija obraz
+     * w poziomie / pionie.
+     * @param position Lewy górny róg na ekranie.
+     * @param tint Kolor mnożący piksele (WHITE - bez zmian, Fade(WHITE, 0.5f) - półprzezroczysty).
+     * @return Ten sam renderer.
+     */
+    PrimitiveRenderer& Blit(const Bitmap& bitmap, Rectangle source, Point2D position,
+                            Color tint = WHITE);
+
     /** @} */
 
   private:

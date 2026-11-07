@@ -6,12 +6,16 @@
 
 #include <raylib.h>
 
+#include <optional>
+#include <string>
+
 /**
  * @brief Obraz rastrowy w pamięci RAM z teksturą aktualizowaną przy rysowaniu.
  * @details W odróżnieniu od ekranu z bitmapy można odczytywać kolory pikseli, czego wymagają
  * algorytmy wypełniania przez spójność (boundary fill, flood fill). Na ekran trafia jako
  * tekstura, wysyłana na kartę graficzną dopiero przy wywołaniu Texture() i tylko wtedy,
  * gdy zawartość się zmieniła.
+ * Bitmapę z pliku (PNG, BMP, JPG...) wczytuje Load(), a zapisuje Save().
  * @code{.cpp}
  * Bitmap bitmap{400, 300, WHITE};
  * renderer.Target(bitmap).Paint(BLACK).Circle({200, 150}, 80).TargetScreen();
@@ -38,6 +42,36 @@ class Bitmap {
      * @param image Obraz, np. z LoadImage(); nie wolno go już zwalniać samodzielnie.
      */
     explicit Bitmap(Image image);
+
+    /**
+     * @brief Wczytuje bitmapę z pliku graficznego.
+     * @details Obsługiwane formaty zależą od kompilacji raylib (domyślnie m.in. PNG, BMP, JPG,
+     * GIF - pierwsza klatka, TGA, QOI). Nie wymaga otwartego okna.
+     * @code{.cpp}
+     * auto sheet = Bitmap::Load(engine.AssetPath("hero.png"));
+     * if (!sheet) engine.Log(LogLevel::Error, "brak hero.png");
+     * @endcode
+     * @param path Ścieżka pliku.
+     * @return Bitmapa albo brak wartości, gdy pliku nie da się wczytać.
+     */
+    static std::optional<Bitmap> Load(const std::string& path);
+
+    /**
+     * @brief Zapisuje bitmapę do pliku; format wynika z rozszerzenia (np. ".png").
+     * @param path Ścieżka pliku.
+     * @return true, gdy zapis się udał.
+     */
+    bool Save(const std::string& path) const;
+
+    /**
+     * @brief Kopiuje prostokątny fragment bitmapy (np. jedną klatkę z arkusza).
+     * @param area Fragment w pikselach; część wystająca poza bitmapę jest obcinana.
+     * @return Nowa bitmapa (pusta, gdy fragment leży całkiem poza bitmapą).
+     */
+    Bitmap Region(Rectangle area) const;
+
+    /** @brief Sprawdza, czy bitmapa nie ma pikseli (0 x 0). */
+    bool IsEmpty() const { return image_.data == nullptr || Width() <= 0 || Height() <= 0; }
 
     /** @brief Zwalnia obraz i ewentualną teksturę. */
     ~Bitmap();
