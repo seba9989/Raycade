@@ -50,7 +50,7 @@ class RenderTarget {
     RenderTarget& operator=(RenderTarget&& other) noexcept;
 
     /** @brief Czy tekstura istnieje. */
-    bool Valid() const { return target_.id != 0; }
+    bool IsValid() const { return target_.id != 0; }
     /** @brief Szerokość tekstury w pikselach. */
     int Width() const { return target_.texture.width; }
     /** @brief Wysokość tekstury w pikselach. */
@@ -104,7 +104,7 @@ class RenderTarget {
     void Draw(Rectangle destination, Color tint = WHITE) const;
 
     /** @brief Czy trwa rysowanie do tej tekstury (jest na szczycie stosu). */
-    bool Active() const;
+    bool IsActive() const;
 
     /** @brief Liczba zagnieżdżonych celów (0 - rysowanie na ekran). */
     static int Depth();

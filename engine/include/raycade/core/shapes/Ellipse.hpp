@@ -31,6 +31,12 @@ class Ellipse : public Entity {
         return self;
     }
 
+    /** @brief Podaje promienie {poziomy, pionowy}. */
+    Vector2 Radius() const { return radius_; }
+
+    /** @brief Sprawdza, czy elipsę rysuje własny algorytm z symetrią. */
+    bool IsSymmetric() const { return symmetric_; }
+
     /** @copydoc Updatable::Contains */
     bool Contains(Vector2 point) const override {
         const auto local = TryToLocal(point);

@@ -35,6 +35,12 @@ class Lines : public Entity {
         return self;
     }
 
+    /** @brief Podaje pary końców odcinków. */
+    const std::vector<Point2D>& Vertices() const { return vertices_; }
+
+    /** @brief Sprawdza, czy odcinki rysuje algorytm przyrostowy. */
+    bool IsIncremental() const { return incremental_; }
+
     /** @copydoc Updatable::Contains */
     bool Contains(Vector2 point) const override {
         for (std::size_t i = 0; i + 1 < vertices_.size(); i += 2)

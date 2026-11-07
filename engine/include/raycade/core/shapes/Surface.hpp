@@ -79,9 +79,18 @@ class Surface : public Entity {
      */
     template <typename Self> Self& Smooth(this Self& self, bool value = true) {
         self.smooth_ = value;
-        if (self.target_.Valid()) self.target_.Smooth(value);
+        if (self.target_.IsValid()) self.target_.Smooth(value);
         return self;
     }
+
+    /** @brief Podaje kolor tła tekstury. */
+    Color Background() const { return background_; }
+
+    /** @brief Podaje kolor mnożący teksturę. */
+    Color Tint() const { return tint_; }
+
+    /** @brief Sprawdza, czy tekstura jest wygładzana. */
+    bool IsSmooth() const { return smooth_; }
 
     /** @copydoc Updatable::Contains */
     bool Contains(Vector2 point) const override {
@@ -102,7 +111,7 @@ class Surface : public Entity {
      */
     void RenderContent(PrimitiveRenderer& renderer) const override {
         if (size_.x < 1 || size_.y < 1) return;
-        if (!target_.Valid()) {
+        if (!target_.IsValid()) {
             target_ = RenderTarget{static_cast<int>(size_.x), static_cast<int>(size_.y)};
             target_.Smooth(smooth_);
         }

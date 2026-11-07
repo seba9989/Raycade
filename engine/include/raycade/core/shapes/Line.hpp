@@ -41,6 +41,15 @@ class Line : public Entity {
         return self;
     }
 
+    /** @brief Podaje początek odcinka (względem pozycji obiektu). */
+    Point2D From() const { return from_; }
+
+    /** @brief Podaje koniec odcinka (względem pozycji obiektu). */
+    Point2D To() const { return to_; }
+
+    /** @brief Sprawdza, czy odcinek rysuje algorytm przyrostowy. */
+    bool IsIncremental() const { return incremental_; }
+
     /** @copydoc Updatable::Contains */
     bool Contains(Vector2 point) const override {
         return ::CheckCollisionPointLine(point, World(from_), World(to_), kHitDistance);

@@ -33,7 +33,7 @@ struct FocusState {
  * class MenuButton : public shapes::Rect, public Focusable {
  *   protected:
  *     void Tick(float, const Input& input) override {
- *         if (Focused() && input.KeyPressed(KEY_ENTER)) Activate();
+ *         if (IsFocused() && input.KeyPressed(KEY_ENTER)) Activate();
  *     }
  * };
  *
@@ -51,7 +51,7 @@ struct FocusState {
  *   (na początku następnej klatki, a przy kliknięciu - w tej samej),
  * - obiekt z fokusem, którego CapturesKeyboard() zwraca true (np. ui::TextField), dostaje
  *   klawiaturę na wyłączność: inne obiekty, OnUpdate sceny i silnika oraz akcje z klawiatury
- *   widzą ją wtedy jak puszczoną (Input::KeyboardCaptured()).
+ *   widzą ją wtedy jak puszczoną (Input::IsKeyboardCaptured()).
  *
  * Każda scena ma własny fokus.
  */
@@ -86,12 +86,12 @@ class Focusable {
     template <typename Self> Self& Blur(this Self& self) {
         Focusable& focusable = self;
         focusable.wantsFocus_ = false;
-        if (focusable.Focused()) focusable.state_->focused = nullptr;
+        if (focusable.IsFocused()) focusable.state_->focused = nullptr;
         return self;
     }
 
     /** @brief Sprawdza, czy obiekt ma teraz fokus. */
-    bool Focused() const { return state_ && state_->focused == this; }
+    bool IsFocused() const { return state_ && state_->focused == this; }
 
     /**
      * @brief Ustawia miejsce obiektu w kolejności Taba (jak tabindex w HTML).

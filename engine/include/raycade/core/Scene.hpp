@@ -22,7 +22,7 @@
  * @details Silnik aktualizuje i rysuje wyłącznie aktywną scenę. Obiekty dodane
  * przez Spawn() są korzeniami drzew i mogą tworzyć własne dzieci.
  *
- * Kontekst sceny (ProvideContext<T>(), SetContext(), GetContext<T>() z Contextable) widzą
+ * Kontekst sceny (ProvideContext<T>(), SetContext(), Context<T>() z Contextable) widzą
  * wszystkie obiekty sceny. Wartości należą do sceny: znikają przy UnloadScene() i powstają od nowa
  * przy ponownym wczytaniu - patrz @ref entity_kontekst.
  */
@@ -87,10 +87,10 @@ class Scene : public Contextable {
      * @details Domyślna kamera niczego nie zmienia. Patrz SceneCamera.
      * @return Kamera tej sceny.
      */
-    SceneCamera& GetCamera() { return camera_; }
+    SceneCamera& Camera() { return camera_; }
 
     /** @brief Udostępnia kamerę sceny tylko do odczytu. */
-    const SceneCamera& GetCamera() const { return camera_; }
+    const SceneCamera& Camera() const { return camera_; }
 
     /**
      * @name Fokus klawiatury
@@ -111,7 +111,7 @@ class Scene : public Contextable {
     }
 
     /** @brief Czy obiekt z fokusem przejął klawiaturę (np. pole tekstowe). */
-    bool KeyboardCaptured() const { return focus_.focused && focus_.focused->CapturesKeyboard(); }
+    bool IsKeyboardCaptured() const { return focus_.focused && focus_.focused->CapturesKeyboard(); }
 
     /**
      * @brief Włącza lub wyłącza przechodzenie fokusu klawiszem Tab (domyślnie włączone).
@@ -122,6 +122,9 @@ class Scene : public Contextable {
         tabNavigation_ = value;
         return *this;
     }
+
+    /** @brief Sprawdza, czy Tab przenosi fokus (TabNavigation()). */
+    bool IsTabNavigation() const { return tabNavigation_; }
 
     /** @} */
 

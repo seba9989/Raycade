@@ -114,6 +114,18 @@ class TextField : public Entity, public Focusable {
     /** @brief Pozycja kursora (w znakach, nie bajtach). */
     std::size_t Caret() const { return caret_; }
 
+    /** @brief Podaje napis wyświetlany w pustym polu. */
+    const std::string& Placeholder() const { return placeholder_; }
+
+    /** @brief Podaje rozmiar pola. */
+    Vector2 Size() const { return size_; }
+
+    /** @brief Podaje wielkość czcionki. */
+    int FontSize() const { return fontSize_; }
+
+    /** @brief Podaje limit znaków (0 - brak limitu). */
+    std::size_t MaxLength() const { return maxLength_; }
+
     /** @brief Pole z fokusem przejmuje klawiaturę. */
     bool CapturesKeyboard() const override { return true; }
 
@@ -125,8 +137,8 @@ class TextField : public Entity, public Focusable {
 
   protected:
     void Tick(float, const Input& input) override {
-        if (!Focused()) return;
-        if (Hovered() && input.MousePressed(MOUSE_BUTTON_LEFT)) PlaceCaret(input);
+        if (!IsFocused()) return;
+        if (IsHovered() && input.MousePressed(MOUSE_BUTTON_LEFT)) PlaceCaret(input);
 
         bool changed = false;
         for (int c = input.NextCharPressed(); c != 0; c = input.NextCharPressed())
@@ -161,12 +173,12 @@ class TextField : public Entity, public Focusable {
 
     void Draw(PrimitiveRenderer& renderer) const override {
         renderer.Paint(RAYWHITE).Fill().Rect({0, 0}, size_);
-        renderer.Paint(Focused() ? SKYBLUE : (Hovered() ? GRAY : LIGHTGRAY)).Fill(false);
+        renderer.Paint(IsFocused() ? SKYBLUE : (IsHovered() ? GRAY : LIGHTGRAY)).Fill(false);
         renderer.Rect({0, 0}, size_);
-        if (Focused()) renderer.Rect({1, 1}, {size_.x - 2, size_.y - 2});
+        if (IsFocused()) renderer.Rect({1, 1}, {size_.x - 2, size_.y - 2});
 
         const int textY = static_cast<int>((size_.y - static_cast<float>(fontSize_)) / 2);
-        if (codepoints_.empty() && !Focused()) {
+        if (codepoints_.empty() && !IsFocused()) {
             ::DrawText(placeholder_.c_str(), kPadding, textY, fontSize_, GRAY);
             return;
         }
@@ -178,7 +190,7 @@ class TextField : public Entity, public Focusable {
 
         // kursor miga co pół sekundy, ale zaraz po pisaniu jest zawsze widoczny
         const bool blinkOn = std::fmod(::GetTime() - blinkStart_, 1.0) < 0.5;
-        if (Focused() && blinkOn) {
+        if (IsFocused() && blinkOn) {
             const float x = static_cast<float>(kPadding + Width(firstVisible_, caret_));
             renderer.Paint(color_).Fill().Rect({x, static_cast<float>(textY)},
                                                {2, static_cast<float>(fontSize_)});

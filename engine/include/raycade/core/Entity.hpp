@@ -133,7 +133,7 @@ struct PointerFrame {
  * w kolejności od najwyżej narysowanego: obiekty ekranu (ScreenSpace()) nad obiektami świata,
  * wyższa warstwa nad niższą, dziecko nad rodzicem, a w tej samej warstwie - później dodany
  * nad wcześniejszym. Dla obiektów świata kursor jest najpierw przeliczany przez kamerę sceny.
- * - Hovered(), OnMouseEnter i OnMouseLeave dotyczą najwyższego trafionego obiektu i jego
+ * - IsHovered(), OnMouseEnter i OnMouseLeave dotyczą najwyższego trafionego obiektu i jego
  *   przodków (jak :hover w CSS) - obiekt zasłonięty przez inny nie jest najechany.
  * - OnClick, OnMouseUp, OnScroll i przeciąganie dostaje jeden obiekt: pierwszy z takim
  *   zdarzeniem, szukając od najwyższego trafionego w górę jego przodków. Obiekt bez tego
@@ -157,7 +157,7 @@ struct PointerFrame {
  * samo.
  *
  * @section entity_kontekst Kontekst (jak setContext/getContext w Svelte)
- * ProvideContext<T>() udostępnia wartość całemu poddrzewu obiektu, a GetContext<T>() w potomku
+ * ProvideContext<T>() udostępnia wartość całemu poddrzewu obiektu, a Context<T>() w potomku
  * zwraca najbliższą wartość typu T: z samego obiektu, jego przodków, sceny
  * (Scene::ProvideContext()) albo silnika (Engine::ProvideContext()). Kluczem jest typ.
  * @code{.cpp}
@@ -168,7 +168,7 @@ struct PointerFrame {
  *     .Children([](shapes::Group& menu) { menu.Spawn<Button>(); });
  *
  * // w Button::OnMount() albo Button::Tick():
- * if (const Theme* theme = GetContext<Theme>()) Paint(theme->accent);
+ * if (const Theme* theme = Context<Theme>()) Paint(theme->accent);
  * @endcode
  * W konstruktorze obiekt nie zna jeszcze rodzica ani sceny - kontekst odczytuje się
  * w OnMount() albo później (Tick(), Draw(), zdarzenia).
@@ -221,7 +221,7 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
         events.released = pointer.release == this;
         events.scrolled = pointer.scroll == this;
         events.dragStart = pointer.drag == this;
-        if (focused && input.KeyboardCaptured()) {
+        if (focused && input.IsKeyboardCaptured()) {
             // obiekt z fokusem jako jedyny widzi przejętą przez siebie klawiaturę
             Input own = input;
             own.captured_ = false;
@@ -494,7 +494,7 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
     static PointerFrame Pointer(const std::vector<std::unique_ptr<Entity>>& roots,
                                 const Input& input, const SceneCamera& camera) {
         PointerFrame frame;
-        if (!input.MouseEnabled()) return frame;
+        if (!input.IsMouseEnabled()) return frame;
         frame.pressed = input.MousePressed(MOUSE_BUTTON_LEFT); // także w puste miejsce
         std::vector<const Entity*> hits;
         const Vector2 mouse = input.MousePosition();

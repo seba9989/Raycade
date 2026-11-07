@@ -77,6 +77,11 @@ class Canvas : public Entity {
      */
     Bitmap& Pixels() { return bitmap_; }
 
+    /** @brief Podaje rozmiar bitmapy płótna. */
+    Vector2 Size() const {
+        return {static_cast<float>(bitmap_.Width()), static_cast<float>(bitmap_.Height())};
+    }
+
     /** @copydoc Updatable::Contains */
     bool Contains(Vector2 point) const override {
         const auto local = TryToLocal(point);

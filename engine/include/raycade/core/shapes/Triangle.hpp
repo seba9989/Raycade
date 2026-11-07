@@ -4,6 +4,8 @@
  */
 #pragma once
 
+#include <array>
+
 #include "../Entity.hpp"
 
 namespace shapes {
@@ -24,6 +26,9 @@ class Triangle : public Entity {
         self.c_ = c;
         return self;
     }
+
+    /** @brief Podaje trzy wierzchołki. */
+    std::array<Point2D, 3> Vertices() const { return {a_, b_, c_}; }
 
     /** @copydoc Updatable::Contains */
     bool Contains(Vector2 point) const override {

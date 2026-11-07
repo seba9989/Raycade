@@ -61,7 +61,7 @@ class HudButton : public Entity {
 
   protected:
     void Draw(PrimitiveRenderer& renderer) const override {
-        renderer.Paint(Hovered() ? ::ColorBrightness(color_, 0.3f) : color_)
+        renderer.Paint(IsHovered() ? ::ColorBrightness(color_, 0.3f) : color_)
             .Fill()
             .Rect({0, 0}, kSize);
         ::DrawText(label_.c_str(), 10, 8, 20, WHITE);
@@ -83,7 +83,7 @@ class Crate : public shapes::Rect {
   protected:
     void Draw(PrimitiveRenderer& renderer) const override {
         shapes::Rect::Draw(renderer);
-        if (Hovered()) renderer.Paint(BLACK).Fill(false).Rect({-3, -3}, {66, 66});
+        if (IsHovered()) renderer.Paint(BLACK).Fill(false).Rect({-3, -3}, {66, 66});
     }
 };
 
@@ -124,10 +124,10 @@ SCENE("kamera") {
 
     auto& player = scene.Spawn<Walker>();
     player.Position({0, 0}).Paint(DARKBLUE).Fill().Radius(20);
-    ResetCamera(scene.GetCamera(), player);
+    ResetCamera(scene.Camera(), player);
 
     // --- HUD: obiekty ekranu, kamera ich nie przesuwa ---
-    SceneCamera& camera = scene.GetCamera();
+    SceneCamera& camera = scene.Camera();
     scene.Spawn<HudButton>()
         .ScreenSpace()
         .Label("Zoom +")
@@ -149,13 +149,13 @@ SCENE("kamera") {
 
     // --- sterowanie kamerą ---
     scene.OnUpdate([&engine, &camera, &player](float dt) {
-        const Input& input = engine.GetInput();
+        const Input& input = engine.Input();
         if (const float wheel = input.MouseWheel(); wheel != 0.0f)
             camera.Zoom(std::clamp(camera.Zoom() * std::pow(1.15f, wheel), 0.25f, 4.0f));
         if (input.KeyDown(KEY_Q)) camera.Rotation(camera.Rotation() - 1.5f * dt);
         if (input.KeyDown(KEY_E)) camera.Rotation(camera.Rotation() + 1.5f * dt);
         if (input.KeyPressed(KEY_F)) {
-            if (camera.Following())
+            if (camera.IsFollowing())
                 camera.StopFollowing();
             else
                 camera.Follow(player, 4.0f);
@@ -179,7 +179,7 @@ SCENE("kamera") {
         std::snprintf(info, sizeof info,
                       "zoom %.2f   obrot %.0f st.   podazanie: %s   kursor w swiecie: (%.0f, %.0f)",
                       camera.Zoom(), camera.Rotation() * RAD2DEG,
-                      camera.Following() ? "tak" : "nie", mouse.x, mouse.y);
+                      camera.IsFollowing() ? "tak" : "nie", mouse.x, mouse.y);
         ::DrawRectangle(0, 0, 850, 70, Fade(RAYWHITE, 0.85f));
         ::DrawText("Kamera 2D", 20, 12, 22, DARKGRAY);
         ::DrawText(info, 20, 42, 16, DARKGRAY);

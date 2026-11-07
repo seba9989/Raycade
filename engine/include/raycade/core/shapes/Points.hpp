@@ -25,6 +25,9 @@ class Points : public Entity {
         return self;
     }
 
+    /** @brief Podaje pozycje punktów (względem pozycji obiektu). */
+    const std::vector<Point2D>& Positions() const { return positions_; }
+
     /** @copydoc Updatable::Contains */
     bool Contains(Vector2 point) const override {
         for (const Point2D position : positions_)

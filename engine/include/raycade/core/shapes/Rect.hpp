@@ -21,6 +21,9 @@ class Rect : public Entity {
         return self;
     }
 
+    /** @brief Podaje szerokość i wysokość. */
+    Vector2 Size() const { return size_; }
+
     /** @copydoc Updatable::Contains */
     bool Contains(Vector2 point) const override {
         const auto local = TryToLocal(point);

@@ -14,7 +14,7 @@ namespace shapes {
 /**
  * @brief Wielokąt (łamana zwyczajna zamknięta) o wierzchołkach lokalnych względem obiektu.
  * @details Łamana wiązana (przecinające się krawędzie niesąsiednie) nie jest rysowana -
- * można to sprawdzić przez Simple(). Fill() wypełnia wielokąt algorytmem scanline
+ * można to sprawdzić przez IsSimple(). Fill() wypełnia wielokąt algorytmem scanline
  * z kontrolą parzystości.
  */
 class Polygon : public Entity {
@@ -53,11 +53,17 @@ class Polygon : public Entity {
      * @brief Sprawdza, czy wielokąt jest łamaną zwyczajną.
      * @return Wynik IsSimplePolygon() dla bieżących wierzchołków.
      */
-    bool Simple() const { return IsSimplePolygon(vertices_); }
+    bool IsSimple() const { return IsSimplePolygon(vertices_); }
+
+    /** @brief Podaje wierzchołki wielokąta. */
+    const std::vector<Point2D>& Vertices() const { return vertices_; }
+
+    /** @brief Sprawdza, czy kontur rysuje algorytm przyrostowy. */
+    bool IsIncremental() const { return incremental_; }
 
     /** @copydoc Updatable::Contains */
     bool Contains(Vector2 point) const override {
-        if (!Simple()) return false;
+        if (!IsSimple()) return false;
         const std::vector<Vector2> world = WorldVertices(vertices_);
         return ::CheckCollisionPointPoly(point, world.data(), static_cast<int>(world.size()));
     }

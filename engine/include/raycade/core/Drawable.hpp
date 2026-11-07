@@ -86,6 +86,12 @@ class Drawable {
         return self;
     }
 
+    /** @brief Podaje kolor figury ustawiony przez Paint(). */
+    Color Paint() const { return color_; }
+
+    /** @brief Sprawdza, czy figura jest wypełniona (Fill()). */
+    bool IsFilled() const { return filled_; }
+
     /**
      * @brief Ustawia obiekty od najniższej warstwy, zachowując kolejność dodania.
      * @param objects Obiekty o wspólnym rodzicu.

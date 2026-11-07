@@ -38,7 +38,7 @@ class Button : public Entity {
 
   protected:
     void Draw(PrimitiveRenderer& renderer) const override {
-        renderer.Paint(Hovered() ? ::ColorBrightness(color_, 0.3f) : color_)
+        renderer.Paint(IsHovered() ? ::ColorBrightness(color_, 0.3f) : color_)
             .Fill()
             .Rect({0, 0}, size_);
         ::DrawText(label_.c_str(), 12, static_cast<int>(size_.y / 2) - 9, 18, WHITE);
@@ -71,13 +71,13 @@ class Card : public Entity {
     void Draw(PrimitiveRenderer& renderer) const override {
         renderer.Paint(color_).Fill().Rect({0, 0}, kSize);
         // grubsza ramka tylko na karcie, którą naprawdę widać pod kursorem
-        if (Hovered()) {
+        if (IsHovered()) {
             renderer.Paint(BLACK).Fill(false);
             for (float i = 0; i < 3; ++i)
                 renderer.Rect({-i, -i}, {kSize.x + 2 * i, kSize.y + 2 * i});
         }
         ::DrawText(title_.c_str(), 10, 10, 20, WHITE);
-        ::DrawText(Dragging() ? "przeciagana" : "", 10, 60, 16, WHITE);
+        ::DrawText(IsDragging() ? "przeciagana" : "", 10, 60, 16, WHITE);
     }
 
   private:
@@ -88,7 +88,7 @@ class Card : public Entity {
 /**
  * @brief Robot złożony z kształtów; zdarzenia ma tylko on, nie jego części.
  * @details Kliknięcie w głowę albo tułów trafia najpierw w tę część, a ponieważ część nie ma
- * OnClick ani OnDrag, zdarzenie idzie do rodzica - robota. Hovered() robota jest prawdą,
+ * OnClick ani OnDrag, zdarzenie idzie do rodzica - robota. IsHovered() robota jest prawdą,
  * gdy kursor jest nad którąkolwiek częścią.
  */
 class Robot : public shapes::Group {
@@ -104,7 +104,7 @@ class Robot : public shapes::Group {
     }
 
   protected:
-    void Tick(float, const Input&) override { body_->Paint(Hovered() ? ORANGE : GRAY); }
+    void Tick(float, const Input&) override { body_->Paint(IsHovered() ? ORANGE : GRAY); }
 
   private:
     shapes::Rect* body_ = nullptr; /**< Tułów - zmienia kolor pod kursorem. */

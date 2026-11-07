@@ -23,7 +23,7 @@ class ContextStore {
     /**
      * @brief Tworzy wartość typu T, którą magazyn przechowuje.
      * @details Jeśli magazyn ma już własną wartość typu T, nowa jest do niej przypisywana
-     * w tym samym miejscu pamięci. Wskaźniki zapamiętane wcześniej przez GetContext() (np.
+     * w tym samym miejscu pamięci. Wskaźniki zapamiętane wcześniej przez Context() (np.
      * w OnMount()) pozostają więc ważne i od razu widzą nową wartość. Dotyczy to typów
      * z przypisaniem przenoszącym; pozostałe oraz wartości z Reference() są zastępowane.
      * @tparam T Typ wartości, będący jednocześnie kluczem.
@@ -89,7 +89,7 @@ Contextable* ContextRoot();
 /**
  * @brief Klasa bazowa obiektów udostępniających kontekst: Entity, Scene i Engine.
  * @details Każdy obiekt ma własny magazyn (tworzony dopiero przy pierwszym ProvideContext()) i
- * wskazuje następny poziom przez ContextParent(). GetContext<T>() idzie tym łańcuchem i zwraca
+ * wskazuje następny poziom przez ContextParent(). Context<T>() idzie tym łańcuchem i zwraca
  * wartość najbliższą obiektowi, więc niższy poziom przesłania wyższy:
  *
  *     Entity → rodzic → ... → Scene → Engine
@@ -97,7 +97,7 @@ Contextable* ContextRoot();
  * - ProvideContext<T>(args...) - tworzy nową wartość, którą obiekt przechowuje,
  * - SetContext(object) - udostępnia istniejący obiekt przez referencję (jak setContext
  *   w Svelte),
- * - GetContext<T>() - zwraca najbliższą wartość albo nullptr (jak getContext w Svelte).
+ * - Context<T>() - zwraca najbliższą wartość albo nullptr (jak getContext w Svelte).
  *
  * Settery używają jawnego parametru obiektu (C++23), więc zwracają konkretny typ i można je
  * łączyć w łańcuch: `scene.Spawn<Menu>().ProvideContext<Theme>().Position({0, 0})`.
@@ -137,7 +137,7 @@ class Contextable {
      * @tparam T Szukany typ.
      * @return Wskaźnik wartości albo nullptr, gdy nikt jej nie udostępnił.
      */
-    template <typename T> T* GetContext() const {
+    template <typename T> T* Context() const {
         for (const Contextable* level = this; level; level = level->ContextParent())
             if (level->context_)
                 if (T* value = level->context_->template Find<T>()) return value;

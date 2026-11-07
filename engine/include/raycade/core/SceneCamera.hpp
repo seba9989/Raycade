@@ -17,10 +17,10 @@
  *
  * Kamera dotyczy obiektów świata. Obiekty oznaczone Entity::ScreenSpace() (np. HUD, menu)
  * są rysowane w układzie okna, nad światem. Trafienia myszą scena przelicza przez kamerę
- * sama, więc OnClick, OnDrag i Hovered() działają także po przesunięciu i przybliżeniu.
+ * sama, więc OnClick, OnDrag i IsHovered() działają także po przesunięciu i przybliżeniu.
  * @code{.cpp}
  * auto& player = scene.Spawn<game::Player>().Position({0, 0});
- * scene.GetCamera()
+ * scene.Camera()
  *     .Offset({500, 350})   // środek okna 1000x700
  *     .Zoom(2.0f)
  *     .Follow(player, 5.0f); // płynne podążanie
@@ -107,7 +107,7 @@ class SceneCamera {
     }
 
     /** @brief Sprawdza, czy kamera podąża za obiektem. */
-    bool Following() const { return static_cast<bool>(follow_); }
+    bool IsFollowing() const { return static_cast<bool>(follow_); }
 
     /**
      * @brief Przelicza punkt okna (np. kursor) na punkt świata.

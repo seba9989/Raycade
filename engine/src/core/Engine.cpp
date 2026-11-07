@@ -102,7 +102,7 @@ Engine& Engine::ScaleMode(Scaling mode) {
     if (initialized_) {
         if (mode == Scaling::None)
             ReleaseTarget();
-        else if (!target_.Valid())
+        else if (!target_.IsValid())
             CreateTarget();
         else
             UpdateScaling(); // nowy tryb działa od razu, a nie od następnej klatki
@@ -148,7 +148,7 @@ void Engine::ReleaseTarget() {
  * róg obrazu, a skala to rozdzielczość gry / rozmiar obrazu w oknie.
  */
 void Engine::UpdateScaling() {
-    if (!target_.Valid()) return;
+    if (!target_.IsValid()) return;
     const float screenWidth = static_cast<float>(::GetScreenWidth());
     const float screenHeight = static_cast<float>(::GetScreenHeight());
     const float viewWidth = static_cast<float>(viewWidth_);
@@ -227,7 +227,7 @@ Engine& Engine::Init() {
 }
 
 int Engine::Run() {
-    if (!Init().Ready()) return 1;
+    if (!Init().IsReady()) return 1;
     LoadStartScene();
     double previous = ::GetTime();
     loadSeconds_ = 0.0;
@@ -240,13 +240,13 @@ int Engine::Run() {
         previous = now;
         loadSeconds_ = 0.0;
         const auto found = scenes_.find(active_);
-        Scene* scene = found != scenes_.end() ? &found->second : nullptr;
+        ::Scene* scene = found != scenes_.end() ? &found->second : nullptr;
 
         // rozmiar okna mógł się zmienić (pełny ekran, zmiana rozmiaru) - przed odczytem myszy
-        if (target_.Valid()) UpdateScaling();
+        if (target_.IsValid()) UpdateScaling();
         // pole tekstowe z fokusem (z poprzedniej klatki) zabiera klawiaturę reszcie gry,
         // także globalnemu OnUpdate - np. cyfry nie przełączają wtedy scen
-        const bool captured = scene && scene->KeyboardCaptured();
+        const bool captured = scene && scene->IsKeyboardCaptured();
         // Escape w polu tekstowym ma zdjąć fokus, a nie zamknąć okno (raylib sprawdza klawisz
         // wyjścia sam, niezależnie od przejęcia klawiatury)
         if (captured != input_.captured_) ::SetExitKey(captured ? KEY_NULL : exitKey_);
@@ -257,7 +257,7 @@ int Engine::Run() {
         if (scene) scene->Update(dt, input_);
 
         // dopiero teraz: OnUpdate albo scena mogły w tej klatce włączyć lub wyłączyć skalowanie
-        const bool scaled = target_.Valid();
+        const bool scaled = target_.IsValid();
         // przy skalowaniu gra rysuje do tekstury w swojej rozdzielczości, a nie na ekran;
         // RenderTarget, bo tekstury obiektów (shapes::Surface) muszą wracać do niej, nie na ekran
         if (scaled)
@@ -318,12 +318,12 @@ Scene& Engine::CreateScene(const std::string& name) {
     return it->second;
 }
 
-Engine& Engine::CreateScene(const std::string& name, const std::function<void(Scene&)>& setup) {
+Engine& Engine::CreateScene(const std::string& name, const std::function<void(::Scene&)>& setup) {
     setup(CreateScene(name));
     return *this;
 }
 
-Engine& Engine::RegisterScene(std::string name, std::function<void(Scene&)> setup) {
+Engine& Engine::RegisterScene(std::string name, std::function<void(::Scene&)> setup) {
     // przed main() plik logu nie jest jeszcze otwarty - komunikat trafi tylko na stderr
     if (registered_.contains(name)) {
         Log("UWAGA: scena \"" + name + "\" zarejestrowana ponownie - pominieto");
@@ -335,7 +335,7 @@ Engine& Engine::RegisterScene(std::string name, std::function<void(Scene&)> setu
 
 /**
  * @details Scena jest wstawiana do mapy przed wykonaniem konfiguracji, więc konfiguracja
- * może bezpiecznie wywołać GetScene() albo SwitchScene() na samą siebie. Węzły std::map nie
+ * może bezpiecznie wywołać Scene() albo SwitchScene() na samą siebie. Węzły std::map nie
  * zmieniają adresu, dlatego referencje do innych scen pozostają ważne.
  */
 Scene* Engine::Load(const std::string& name) {
@@ -347,7 +347,7 @@ Scene* Engine::Load(const std::string& name) {
         return nullptr;
     }
 
-    Scene& scene = scenes_.try_emplace(name).first->second;
+    ::Scene& scene = scenes_.try_emplace(name).first->second;
     const double start = ::GetTime();
     setup->second(scene);
     const double elapsed = ::GetTime() - start;
@@ -375,9 +375,9 @@ void Engine::LoadStartScene() {
     Load(active_);
 }
 
-Scene& Engine::GetScene(const std::string& name) {
-    if (Scene* scene = Load(name)) return *scene;
-    throw std::out_of_range("Engine::GetScene: nie ma sceny \"" + name + "\"");
+Scene& Engine::Scene(const std::string& name) {
+    if (::Scene* scene = Load(name)) return *scene;
+    throw std::out_of_range("Engine::Scene: nie ma sceny \"" + name + "\"");
 }
 
 Engine& Engine::SwitchScene(const std::string& name) {
@@ -488,7 +488,7 @@ Engine& Engine::ExitKey(int key) {
 Engine& Engine::MousePosition(Vector2 position) {
     if (!RequireWindow("MousePosition")) return *this;
     // pozycja podawana jest we współrzędnych gry; raylib oczekuje pikseli okna
-    if (target_.Valid()) {
+    if (target_.IsValid()) {
         position.x = position.x / input_.scale_.x - input_.offset_.x;
         position.y = position.y / input_.scale_.y - input_.offset_.y;
     }
@@ -519,11 +519,11 @@ Engine& Engine::LockCursor(bool value) {
     return *this;
 }
 
-bool Engine::CursorHidden() const {
+bool Engine::IsCursorHidden() const {
     return initialized_ && ::IsCursorHidden();
 }
 
-bool Engine::CursorOnScreen() const {
+bool Engine::IsCursorOnScreen() const {
     return initialized_ && ::IsCursorOnScreen();
 }
 
@@ -553,23 +553,23 @@ int Engine::RenderHeight() const {
     return initialized_ ? ::GetRenderHeight() : 0;
 }
 
-bool Engine::WindowResized() const {
+bool Engine::IsWindowResized() const {
     return initialized_ && ::IsWindowResized();
 }
 
-bool Engine::WindowFocused() const {
+bool Engine::IsWindowFocused() const {
     return initialized_ && ::IsWindowFocused();
 }
 
-bool Engine::WindowHidden() const {
+bool Engine::IsWindowHidden() const {
     return initialized_ && ::IsWindowHidden();
 }
 
-bool Engine::WindowMinimized() const {
+bool Engine::IsWindowMinimized() const {
     return initialized_ && ::IsWindowMinimized();
 }
 
-bool Engine::WindowMaximized() const {
+bool Engine::IsWindowMaximized() const {
     return initialized_ && ::IsWindowMaximized();
 }
 

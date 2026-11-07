@@ -52,7 +52,7 @@ enum class Scaling {
  *
  * @code{.cpp}
  * Engine& engine = Engine::Get().Title("Gra").Window(800, 600).Fps(60).Init();
- * if (!engine.Ready()) return 1;
+ * if (!engine.IsReady()) return 1;
  *
  * engine.CreateScene("menu", [&](Scene& scene) { // pierwsza scena staje się aktywna
  *     scene.Spawn<shapes::Circle>().Position({400, 300}).Radius(20).Paint(ORANGE).Fill();
@@ -91,6 +91,9 @@ class Engine : public Contextable {
      */
     Engine& Title(std::string title);
 
+    /** @brief Podaje tytuł okna. */
+    const std::string& Title() const { return title_; }
+
     /**
      * @brief Ustawia rozmiar okna i wyłącza tryb pełnoekranowy.
      * @param width Szerokość w pikselach.
@@ -116,6 +119,9 @@ class Engine : public Contextable {
      */
     Engine& ScaleMode(Scaling mode);
 
+    /** @brief Podaje tryb dopasowania obrazu do okna. */
+    Scaling ScaleMode() const { return scaling_; }
+
     /**
      * @brief Wybiera filtr skalowania obrazu.
      * @details Domyślnie wyłączony: piksele pozostają ostre, co dobrze pokazuje własne
@@ -124,6 +130,9 @@ class Engine : public Contextable {
      * @return Ten sam silnik.
      */
     Engine& SmoothScaling(bool value = true);
+
+    /** @brief Sprawdza, czy skalowany obraz jest wygładzany. */
+    bool IsSmoothScaling() const { return smoothScaling_; }
 
     /**
      * @brief Ustawia kolor pasów wokół obrazu w trybach Fit i PixelPerfect.
@@ -135,6 +144,9 @@ class Engine : public Contextable {
         return *this;
     }
 
+    /** @brief Podaje kolor pasów wokół obrazu. */
+    Color Letterbox() const { return letterbox_; }
+
     /**
      * @brief Podaje rozmiar obszaru, w którym rysuje gra.
      * @return Rozdzielczość gry przy włączonym skalowaniu, w przeciwnym razie rozmiar okna.
@@ -145,7 +157,7 @@ class Engine : public Contextable {
      * @brief Sprawdza, czy włączony jest tryb pełnoekranowy.
      * @return Stan ustawienia Fullscreen().
      */
-    bool FullscreenEnabled() const { return fullscreen_; }
+    bool IsFullscreen() const { return fullscreen_; }
 
     /**
      * @brief Włącza lub wyłącza tryb pełnoekranowy.
@@ -165,6 +177,12 @@ class Engine : public Contextable {
     Engine& Fps(int fps);
 
     /**
+     * @brief Podaje docelową liczbę klatek na sekundę.
+     * @details Zmierzoną liczbę klatek podaje CurrentFps().
+     */
+    int Fps() const { return fps_; }
+
+    /**
      * @brief Włącza lub wyłącza synchronizację pionową (V-Sync).
      * @details Wielokrotne buforowanie: raylib (przez GLFW) zawsze tworzy okno z podwójnym
      * buforem ramki - rysujemy w tylnym buforze, a EndDrawing() zamienia go z przednim.
@@ -174,6 +192,9 @@ class Engine : public Contextable {
      * @return Ten sam silnik.
      */
     Engine& VSync(bool value = true);
+
+    /** @brief Sprawdza, czy włączona jest synchronizacja pionowa. */
+    bool IsVSync() const { return vsync_; }
 
     /**
      * @brief Pozwala użytkownikowi zmieniać rozmiar okna myszą.
@@ -246,6 +267,9 @@ class Engine : public Contextable {
         return *this;
     }
 
+    /** @brief Podaje kolor tła. */
+    Color Background() const { return background_; }
+
     /** @} */
 
     /** @name Konfiguracja wejścia i logów */
@@ -299,6 +323,9 @@ class Engine : public Contextable {
      * @return Ten sam silnik.
      */
     Engine& ExitKey(int key);
+
+    /** @brief Podaje klawisz zamykający okno. */
+    int ExitKey() const { return exitKey_; }
 
     /**
      * @brief Ustawia ścieżkę pliku diagnostycznego.
@@ -363,7 +390,7 @@ class Engine : public Contextable {
     /**
      * @brief Otwiera okno i inicjalizuje silnik, jeśli jeszcze nie jest gotowy.
      * @details Błąd utworzenia okna jest zapisywany w logu.
-     * @return Ten sam silnik; wynik można sprawdzić przez Ready().
+     * @return Ten sam silnik; wynik można sprawdzić przez IsReady().
      */
     Engine& Init();
 
@@ -371,7 +398,7 @@ class Engine : public Contextable {
      * @brief Sprawdza wynik inicjalizacji.
      * @return true, gdy okno jest gotowe.
      */
-    bool Ready() const { return initialized_; }
+    bool IsReady() const { return initialized_; }
 
     /**
      * @brief Uruchamia pętlę gry aż do zamknięcia okna, a potem sprząta.
@@ -405,7 +432,7 @@ class Engine : public Contextable {
      * @param setup Funkcja otrzymująca utworzoną scenę.
      * @return Ten sam silnik.
      */
-    Engine& CreateScene(const std::string& name, const std::function<void(Scene&)>& setup);
+    Engine& CreateScene(const std::string& name, const std::function<void(::Scene&)>& setup);
 
     /**
      * @brief Tworzy scenę albo zwraca już istniejącą o tej nazwie.
@@ -413,7 +440,7 @@ class Engine : public Contextable {
      * @param name Nazwa sceny.
      * @return Referencja do sceny.
      */
-    Scene& CreateScene(const std::string& name);
+    ::Scene& CreateScene(const std::string& name);
 
     /**
      * @brief Rejestruje konfigurację sceny wczytywanej leniwie.
@@ -424,7 +451,7 @@ class Engine : public Contextable {
      * @param setup Funkcja konfigurująca scenę.
      * @return Ten sam silnik.
      */
-    Engine& RegisterScene(std::string name, std::function<void(Scene&)> setup);
+    Engine& RegisterScene(std::string name, std::function<void(::Scene&)> setup);
 
     /**
      * @brief Wybiera scenę startową spośród zarejestrowanych scen.
@@ -445,14 +472,14 @@ class Engine : public Contextable {
      * @return Referencja do sceny.
      * @throw std::out_of_range Gdy scena nie istnieje ani nie jest zarejestrowana.
      */
-    Scene& GetScene(const std::string& name);
+    ::Scene& Scene(const std::string& name);
 
     /**
      * @brief Sprawdza, czy scena została już wczytana.
      * @param name Nazwa sceny.
      * @return true, gdy scena istnieje w pamięci.
      */
-    bool SceneLoaded(const std::string& name) const { return scenes_.contains(name); }
+    bool IsSceneLoaded(const std::string& name) const { return scenes_.contains(name); }
 
     /**
      * @brief Wczytuje zarejestrowaną scenę od razu, bez przełączania na nią.
@@ -471,7 +498,7 @@ class Engine : public Contextable {
      * aktywnej sceny bez przełączenia na inną oznacza jej restart. Sceny utworzonej przez
      * CreateScene() (bez rejestracji) nie da się wczytać ponownie, dlatego aktywnej takiej
      * sceny nie można zwolnić.
-     * @warning Po zwolnieniu referencje do sceny i jej obiektów (np. z GetScene()) są
+     * @warning Po zwolnieniu referencje do sceny i jej obiektów (np. z Scene()) są
      * nieważne.
      * @param name Nazwa sceny.
      * @return Ten sam silnik.
@@ -547,7 +574,7 @@ class Engine : public Contextable {
      * MouseWheel(), GamepadAxis()) daje Input.
      * @return Stan wejścia (ten sam, który obiekty dostają w Tick()).
      */
-    const Input& GetInput() const { return input_; }
+    const ::Input& Input() const { return input_; }
 
     /** @} */
 
@@ -657,10 +684,10 @@ class Engine : public Contextable {
     Engine& LockCursor(bool value = true);
 
     /** @brief Sprawdza, czy kursor jest ukryty (także gdy jest zablokowany). */
-    bool CursorHidden() const;
+    bool IsCursorHidden() const;
 
     /** @brief Sprawdza, czy kursor znajduje się nad oknem. */
-    bool CursorOnScreen() const;
+    bool IsCursorOnScreen() const;
 
     /**
      * @brief Włącza wibrację pada.
@@ -700,15 +727,15 @@ class Engine : public Contextable {
     /** @brief Wysokość bufora rysowania w pikselach (z uwzględnieniem DPI). */
     int RenderHeight() const;
     /** @brief Czy rozmiar okna zmienił się w poprzedniej klatce. */
-    bool WindowResized() const;
+    bool IsWindowResized() const;
     /** @brief Czy okno ma fokus. */
-    bool WindowFocused() const;
+    bool IsWindowFocused() const;
     /** @brief Czy okno jest ukryte. */
-    bool WindowHidden() const;
+    bool IsWindowHidden() const;
     /** @brief Czy okno jest zminimalizowane. */
-    bool WindowMinimized() const;
+    bool IsWindowMinimized() const;
     /** @brief Czy okno jest zmaksymalizowane. */
-    bool WindowMaximized() const;
+    bool IsWindowMaximized() const;
     /** @brief Pozycja okna na pulpicie. */
     Vector2 WindowPosition() const;
     /** @brief Skala DPI okna (np. {1.5, 1.5} przy 150%). */
@@ -801,7 +828,7 @@ class Engine : public Contextable {
 
     /**
      * @brief Pobiera zmierzoną liczbę klatek na sekundę.
-     * @details W odróżnieniu od Fps(int), które ustawia wartość docelową.
+     * @details W odróżnieniu od Fps(), które podaje wartość docelową.
      * @return Średnia z ostatnich klatek.
      */
     int CurrentFps() const;
@@ -936,9 +963,9 @@ class Engine : public Contextable {
     bool Replay(const std::string& path);
 
     /** @brief Czy trwa nagrywanie. */
-    bool Recording() const { return recording_; }
+    bool IsRecording() const { return recording_; }
     /** @brief Czy trwa odtwarzanie. */
-    bool Replaying() const { return replaying_; }
+    bool IsReplaying() const { return replaying_; }
 
     /** @} */
 
@@ -1038,11 +1065,11 @@ class Engine : public Contextable {
     bool vsync_ = false;                    /**< Czy włączyć synchronizację pionową. */
     int fps_ = 60;                          /**< Docelowa liczba klatek na sekundę. */
     Color background_ = BLACK;              /**< Kolor czyszczenia ekranu w każdej klatce. */
-    Input input_;                           /**< Stan i ustawienia urządzeń wejścia. */
+    ::Input input_;                         /**< Stan i ustawienia urządzeń wejścia. */
     int exitKey_ = KEY_ESCAPE;              /**< Klawisz zamykający okno. */
     std::optional<Vector2> windowPosition_; /**< Pozycja okna do ustawienia przy Init(). */
-    std::optional<float> opacity_;          /**< Przezroczystość okna do ustawienia przy Init(). */
-    unsigned int windowFlags_ = 0;          /**< Flagi okna (FLAG_*) z Resizable() itd. */
+    std::optional<float> opacity_; /**< Przezroczystość okna do ustawienia przy Init(). */
+    unsigned int windowFlags_ = 0; /**< Flagi okna (FLAG_*) z Resizable() itd. */
     std::optional<std::pair<int, int>> minSize_; /**< Minimalny rozmiar okna. */
     std::optional<std::pair<int, int>> maxSize_; /**< Maksymalny rozmiar okna. */
     std::string icon_;                           /**< Ścieżka ikony do ustawienia przy Init(). */
@@ -1071,12 +1098,12 @@ class Engine : public Contextable {
     std::ofstream log_;        /**< Otwarty plik logu. */
     bool initialized_ = false; /**< Czy okno zostało utworzone. */
 
-    std::map<std::string, Scene> scenes_; /**< Utworzone sceny według nazw. */
-    std::string active_;                  /**< Nazwa aktywnej sceny. */
-    std::string pending_;                 /**< Scena, na którą przełączamy po zakończeniu klatki. */
-    std::string start_;                   /**< Scena startowa wybrana przez StartScene(). */
+    std::map<std::string, ::Scene> scenes_; /**< Utworzone sceny według nazw. */
+    std::string active_;                    /**< Nazwa aktywnej sceny. */
+    std::string pending_; /**< Scena, na którą przełączamy po zakończeniu klatki. */
+    std::string start_;   /**< Scena startowa wybrana przez StartScene(). */
     /** Konfiguracje scen zarejestrowanych makrem SCENE, wykonywane przy pierwszym wejściu. */
-    std::map<std::string, std::function<void(Scene&)>> registered_;
+    std::map<std::string, std::function<void(::Scene&)>> registered_;
     PrimitiveRenderer primitives_; /**< Renderer używany do rysowania scen. */
     /** Czas wczytywania scen w bieżącej klatce, odejmowany od dt następnej. */
     double loadSeconds_ = 0.0;
@@ -1093,7 +1120,7 @@ class Engine : public Contextable {
      * @param name Nazwa sceny.
      * @return Wskaźnik sceny albo nullptr, gdy scena nie istnieje ani nie jest zarejestrowana.
      */
-    Scene* Load(const std::string& name);
+    ::Scene* Load(const std::string& name);
 
     /**
      * @brief Wybiera i wczytuje scenę startową na początku Run().

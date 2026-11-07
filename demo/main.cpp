@@ -95,7 +95,7 @@
 int main() {
     Engine& engine = Engine::Get()
                          .Title("Raycade demo")
-                         .VSync(false)      // V-Sync wyłączony; podwójne buforowanie działa zawsze
+                         .VSync(false) // V-Sync wyłączony; podwójne buforowanie działa zawsze
                          .Window(1000, 700) // albo .Fullscreen()
                          .MinSize(500, 350)
                          .Resolution(1000, 700)
@@ -104,7 +104,7 @@ int main() {
                          .StartScene("menu")
                          .Init();
 
-    if (!engine.Ready()) return 1;
+    if (!engine.IsReady()) return 1;
 
     return engine
         .OnUpdate([&](float) {
@@ -115,7 +115,7 @@ int main() {
             if (engine.KeyPressed(KEY_FIVE)) engine.SwitchScene("kontekst");
             if (engine.KeyPressed(KEY_SIX)) engine.SwitchScene("trafienia");
             if (engine.KeyPressed(KEY_SEVEN)) engine.SwitchScene("kamera");
-            if (engine.KeyPressed(KEY_F11)) engine.Fullscreen(!engine.FullscreenEnabled());
+            if (engine.KeyPressed(KEY_F11)) engine.Fullscreen(!engine.IsFullscreen());
         })
         .OnDraw([&](PrimitiveRenderer&) {
             const std::string hud = "Scena: " + engine.ActiveScene() +

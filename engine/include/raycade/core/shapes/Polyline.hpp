@@ -47,6 +47,15 @@ class Polyline : public Entity {
         return self;
     }
 
+    /** @brief Podaje wierzchołki łamanej. */
+    const std::vector<Point2D>& Vertices() const { return vertices_; }
+
+    /** @brief Sprawdza, czy łamana jest zamknięta. */
+    bool IsClosed() const { return closed_; }
+
+    /** @brief Sprawdza, czy odcinki rysuje algorytm przyrostowy. */
+    bool IsIncremental() const { return incremental_; }
+
     /**
      * @copydoc Updatable::Contains
      * @details Łamana zamknięta jest traktowana jak wielokąt, otwarta - jak zbiór odcinków.

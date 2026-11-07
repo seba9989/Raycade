@@ -71,13 +71,13 @@ void RenderTarget::Release() {
 }
 
 RenderTarget& RenderTarget::Smooth(bool smooth) {
-    if (Valid())
+    if (IsValid())
         ::SetTextureFilter(target_.texture,
                            smooth ? TEXTURE_FILTER_BILINEAR : TEXTURE_FILTER_POINT);
     return *this;
 }
 
-bool RenderTarget::Active() const {
+bool RenderTarget::IsActive() const {
     return !Stack().empty() && Stack().back().target == this;
 }
 
@@ -94,7 +94,7 @@ int RenderTarget::Depth() {
  *    rlgl i zaczyna od jednostkowego, żeby rysunek w teksturze nie dziedziczył pozycji obiektu.
  */
 void RenderTarget::Begin() const {
-    if (!Valid()) return;
+    if (!IsValid()) return;
     Stack().push_back({this, ::rlGetMatrixProjection(), ::rlGetMatrixModelview()});
     ::BeginTextureMode(target_);
     ::rlPushMatrix();
@@ -112,7 +112,7 @@ void RenderTarget::Begin() const {
  *    odłożone w Begin() (a na dnie stosu wraca do zwykłego trybu bez przekształceń).
  */
 void RenderTarget::End() const {
-    if (!Valid() || !Active()) return;
+    if (!IsValid() || !IsActive()) return;
     const Frame frame = Stack().back();
     Stack().pop_back();
 
@@ -132,8 +132,8 @@ void RenderTarget::End() const {
 }
 
 const RenderTarget& RenderTarget::Clear(Color color) const {
-    if (!Valid()) return *this;
-    if (Active()) {
+    if (!IsValid()) return *this;
+    if (IsActive()) {
         ::ClearBackground(color);
         return *this;
     }
@@ -150,7 +150,7 @@ void RenderTarget::Draw(Vector2 position, Color tint) const {
 }
 
 void RenderTarget::Draw(Rectangle destination, Color tint) const {
-    if (!Valid()) return;
+    if (!IsValid()) return;
     // tekstury renderowane są w OpenGL odwrócone w pionie - stąd ujemna wysokość źródła
     const Rectangle source{0, 0, static_cast<float>(Width()), -static_cast<float>(Height())};
     ::DrawTexturePro(target_.texture, source, destination, {0, 0}, 0.0f, tint);

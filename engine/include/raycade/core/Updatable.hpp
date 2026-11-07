@@ -58,10 +58,10 @@ class Updatable {
      * @details Tylko najwyżej narysowany obiekt pod kursorem i jego przodkowie są „najechani”
      * - obiekt zasłonięty przez inny nie jest.
      */
-    bool Hovered() const { return hovered_; }
+    bool IsHovered() const { return hovered_; }
 
     /** @brief Sprawdza, czy obiekt jest właśnie przeciągany (patrz OnDrag()). */
-    bool Dragging() const { return dragging_; }
+    bool IsDragging() const { return dragging_; }
 
     /**
      * @name Zdarzenia

@@ -20,14 +20,14 @@
  * false, zapytania „Up” - true, a pozycje i ruchy - {0, 0}.
  *
  * Gdy obiekt z fokusem przejmuje klawiaturę (np. ui::TextField), wszyscy inni widzą ją jak
- * wyłączoną - KeyboardCaptured() mówi, czy tak jest w tej klatce.
+ * wyłączoną - IsKeyboardCaptured() mówi, czy tak jest w tej klatce.
  *
  * Akcje i osie (ActionPressed(), Axis()) to nazwy zamiast konkretnych klawiszy - patrz
  * Engine::BindAction() i Engine::BindAxis().
  *
  * Klasa tylko odczytuje stan. Sterowanie (pozycja i wygląd kursora, wibracja pada) jest
  * w Engine. Obiekty sceny dostają Input w Tick(), a z dowolnego miejsca jest dostępny przez
- * Engine::Get().GetInput().
+ * Engine::Get().Input().
  */
 class Input {
   public:
@@ -75,19 +75,19 @@ class Input {
     }
 
     /** @brief Sprawdza, czy klawiatura jest włączona. */
-    bool KeyboardEnabled() const { return keyboard_; }
+    bool IsKeyboardEnabled() const { return keyboard_; }
     /**
      * @brief Sprawdza, czy klawiaturę przejął obiekt z fokusem (np. pole tekstowe).
      * @details Wtedy zapytania o klawisze, akcje z klawiatury i wpisywane znaki zwracają
      * „nic nie wciśnięte” - poza samym obiektem z fokusem.
      */
-    bool KeyboardCaptured() const { return captured_; }
+    bool IsKeyboardCaptured() const { return captured_; }
     /** @brief Sprawdza, czy mysz jest włączona. */
-    bool MouseEnabled() const { return mouse_; }
+    bool IsMouseEnabled() const { return mouse_; }
     /** @brief Sprawdza, czy pady są włączone. */
-    bool GamepadEnabled() const { return gamepad_; }
+    bool IsGamepadEnabled() const { return gamepad_; }
     /** @brief Sprawdza, czy dotyk jest włączony. */
-    bool TouchEnabled() const { return touch_; }
+    bool IsTouchEnabled() const { return touch_; }
 
     /** @} */
 
