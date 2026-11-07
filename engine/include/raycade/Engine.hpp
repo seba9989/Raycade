@@ -13,6 +13,7 @@
 #include <memory>
 #include <optional>
 #include <set>
+#include <span>
 #include <string>
 #include <utility>
 #include <vector>
@@ -1062,6 +1063,53 @@ class Engine : public Contextable {
      * @return true, gdy zapis się udał.
      */
     bool SaveText(const std::string& path, const std::string& text) const;
+
+    /**
+     * @brief Wczytuje cały plik binarny (zapis gry, własny format poziomu).
+     * @param path Ścieżka pliku.
+     * @return Bajty pliku albo brak wartości, gdy pliku nie da się odczytać.
+     */
+    std::optional<std::vector<unsigned char>> LoadData(const std::string& path) const;
+
+    /**
+     * @brief Zapisuje bajty do pliku (nadpisując go).
+     * @param path Ścieżka pliku.
+     * @param data Dane do zapisania.
+     * @return true, gdy zapis się udał.
+     */
+    bool SaveData(const std::string& path, std::span<const unsigned char> data) const;
+
+    /**
+     * @brief Listuje pliki w katalogu.
+     * @details Do rozbioru ścieżek (nazwa, rozszerzenie, katalog nadrzędny) służy
+     * std::filesystem::path - silnik nie powiela tych funkcji raylib (patrz
+     * @ref konwencje "konwencje").
+     * @code{.cpp}
+     * for (const std::string& level : engine.ListDirectory(engine.AssetPath("levels"), ".lvl"))
+     *     engine.Log("poziom: " + level);
+     * @endcode
+     * @param path Katalog.
+     * @param filter Rozszerzenia oddzielone średnikami (np. ".png;.jpg"); "DIR" dołącza
+     * katalogi; pusty napis - wszystkie pliki.
+     * @param recursive Czy przeszukiwać podkatalogi.
+     * @return Pełne ścieżki (pusta lista, gdy katalogu nie ma).
+     */
+    std::vector<std::string> ListDirectory(const std::string& path, const std::string& filter = "",
+                                           bool recursive = false) const;
+
+    /**
+     * @brief Tworzy katalog razem z brakującymi katalogami nadrzędnymi.
+     * @param path Ścieżka katalogu.
+     * @return true, gdy katalog istnieje po wywołaniu.
+     */
+    bool MakeDirectory(const std::string& path) const;
+
+    /**
+     * @brief Zmienia katalog roboczy programu (względem niego liczą się ścieżki względne).
+     * @param path Nowy katalog roboczy.
+     * @return true, gdy zmiana się udała.
+     */
+    bool ChangeDirectory(const std::string& path);
 
     /** @} */
 

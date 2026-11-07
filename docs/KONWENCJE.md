@@ -86,6 +86,14 @@ w lambdzie nazywamy `fn`, nie tak samo jak parametr (projekt kompiluje się z `-
 - `Init()` loguje błąd, a wynik podaje `IsReady()`.
 - Wyjątek rzuca tylko `Engine::Scene()`, bo musi zwrócić referencję do sceny, której nie ma.
 
+## Pliki i ścieżki
+
+Odczyt i zapis plików ma silnik: `LoadText()`/`SaveText()`, `LoadData()`/`SaveData()`
+(bajty), `ListDirectory()`, `MakeDirectory()`. Rozbiór ścieżek (nazwa pliku, rozszerzenie,
+katalog nadrzędny, łączenie) robi `std::filesystem::path` z biblioteki standardowej - silnik
+celowo nie opakowuje `GetFileName()`, `GetFileExtension()` i podobnych funkcji raylib, które
+zwracają wskaźniki do wspólnego bufora nadpisywanego przy kolejnym wywołaniu.
+
 ## Wywołania raylib
 
 Funkcje raylib wołamy z prefiksem `::` (np. `::DrawText`), żeby nie myliły się z metodami
