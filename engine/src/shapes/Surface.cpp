@@ -23,7 +23,7 @@ void Surface::RenderContent(PrimitiveRenderer& renderer) const {
     target_.End();
     // tryb mieszania i shader działają na gotowej teksturze - efekt obejmuje całą grupę dzieci
     BeginEffects();
-    target_.Draw(Vector2{0, 0}, tint_);
+    target_.Draw(Vector2{0, 0}, color_);
     EndEffects();
 }
 

@@ -66,9 +66,10 @@ PrimitiveRenderer& PrimitiveRenderer::FloodFill(Point2D seed) {
     return *this;
 }
 
-PrimitiveRenderer& PrimitiveRenderer::Blit(const Bitmap& bitmap, Point2D position) {
-    ::DrawTextureV(bitmap.Texture(), position, WHITE);
-    return *this;
+PrimitiveRenderer& PrimitiveRenderer::Blit(const Bitmap& bitmap, Point2D position, Color tint) {
+    const Rectangle whole{0.0f, 0.0f, static_cast<float>(bitmap.Width()),
+                          static_cast<float>(bitmap.Height())};
+    return Blit(bitmap, whole, position, tint);
 }
 
 PrimitiveRenderer& PrimitiveRenderer::Blit(const Bitmap& bitmap, Rectangle source, Point2D position,

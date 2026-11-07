@@ -36,7 +36,7 @@ class Text : public Entity {
      * @return Ten sam obiekt.
      */
     template <typename Self> Self& Content(this Self& self, std::string content) {
-        static_cast<Text&>(self).content_ = std::move(content);
+        self.content_ = std::move(content);
         return self;
     }
 
@@ -49,7 +49,7 @@ class Text : public Entity {
      * @return Ten sam obiekt.
      */
     template <typename Self> Self& FontSize(this Self& self, float size) {
-        static_cast<Text&>(self).fontSize_ = size;
+        self.fontSize_ = size;
         return self;
     }
 
@@ -62,7 +62,7 @@ class Text : public Entity {
      * @return Ten sam obiekt.
      */
     template <typename Self> Self& Spacing(this Self& self, float spacing) {
-        static_cast<Text&>(self).spacing_ = spacing;
+        self.spacing_ = spacing;
         return self;
     }
 
@@ -75,7 +75,7 @@ class Text : public Entity {
      * @return Ten sam obiekt.
      */
     template <typename Self> Self& Font(this Self& self, std::shared_ptr<const Typeface> typeface) {
-        static_cast<Text&>(self).font_ = std::move(typeface);
+        self.font_ = std::move(typeface);
         return self;
     }
 

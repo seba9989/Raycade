@@ -17,7 +17,7 @@ namespace shapes {
  *
  * Do czego się przydaje:
  * - przycinanie (np. przewijany panel, okno w oknie),
- * - półprzezroczystość całej grupy naraz (Tint() z alfą - bez prześwitywania nakładających się
+ * - półprzezroczystość całej grupy naraz (Paint() z alfą - bez prześwitywania nakładających się
  *   dzieci przez siebie),
  * - jedno przekształcenie całego rysunku (np. obrót gotowego obrazka),
  * - efekty na całym rysunku dzieci: Shader() i Blend() działają na gotowej teksturze.
@@ -27,7 +27,7 @@ namespace shapes {
  * scene.Spawn<shapes::Surface>()
  *     .Size({300, 200})
  *     .Background(Fade(BLACK, 0.2f))
- *     .Tint(Fade(WHITE, 0.7f))
+ *     .Paint(Fade(WHITE, 0.7f)) // kolor mnożący teksturę
  *     .Position({50, 50})
  *     .Children([](shapes::Surface& panel) {
  *         panel.Spawn<shapes::Circle>().Position({290, 100}).Radius(40).Fill(); // ucięte
@@ -36,6 +36,13 @@ namespace shapes {
  */
 class Surface : public Entity {
   public:
+    /**
+     * @brief Pusta powierzchnia z kolorem mnożącym WHITE (tekstura bez zmian).
+     * @details Paint() działa tu jak w shapes::Sprite i shapes::Canvas: mnoży piksele gotowej
+     * tekstury, np. `Paint(Fade(WHITE, 0.5f))` daje półprzezroczystą grupę.
+     */
+    Surface() { Paint(WHITE); }
+
     /**
      * @brief Ustawia rozmiar powierzchni (i jej tekstury).
      * @details Tekstura powstaje przy pierwszym rysowaniu, więc rozmiar można ustawić
@@ -63,16 +70,6 @@ class Surface : public Entity {
     }
 
     /**
-     * @brief Ustawia kolor mnożący przy rysowaniu tekstury (np. Fade(WHITE, 0.5f)).
-     * @param tint Kolor (domyślnie WHITE - bez zmian).
-     * @return Ten sam obiekt.
-     */
-    template <typename Self> Self& Tint(this Self& self, Color tint) {
-        self.tint_ = tint;
-        return self;
-    }
-
-    /**
      * @brief Wybiera filtr tekstury przy obrocie i skalowaniu powierzchni.
      * @param value false - ostre piksele (domyślnie), true - wygładzanie.
      * @return Ten sam obiekt.
@@ -85,9 +82,6 @@ class Surface : public Entity {
 
     /** @brief Podaje kolor tła tekstury. */
     Color Background() const { return background_; }
-
-    /** @brief Podaje kolor mnożący teksturę. */
-    Color Tint() const { return tint_; }
 
     /** @brief Sprawdza, czy tekstura jest wygładzana. */
     bool IsSmooth() const { return smooth_; }
@@ -114,7 +108,6 @@ class Surface : public Entity {
   private:
     Vector2 size_{0, 0};          /**< Rozmiar powierzchni. */
     Color background_ = BLANK;    /**< Tło tekstury. */
-    Color tint_ = WHITE;          /**< Kolor mnożący przy rysowaniu tekstury. */
     bool smooth_ = false;         /**< Filtr tekstury. */
     mutable RenderTarget target_; /**< Tekstura tworzona przy pierwszym rysowaniu. */
 };

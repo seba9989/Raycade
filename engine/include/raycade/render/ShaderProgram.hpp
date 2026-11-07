@@ -6,8 +6,11 @@
 
 #include <raylib.h>
 
+#include <optional>
 #include <string>
 #include <unordered_map>
+
+#include <raycade/render/Shared.hpp> // IWYU pragma: export
 
 class Bitmap;
 
@@ -23,9 +26,11 @@ class Bitmap;
  *
  * Shader wczytuje się po otwarciu okna (wymaga kontekstu OpenGL) - np. w konfiguracji sceny.
  * @code{.cpp}
- * auto wave = std::make_shared<ShaderProgram>(ShaderProgram::Load("", "assets/wave.fs"));
+ * auto wave = Shared(ShaderProgram::Load("", "assets/wave.fs")); // nullptr przy błędzie
  * scene.Spawn<shapes::Surface>().Size({300, 200}).Shader(wave);
- * scene.OnUpdate([wave](float) { wave->Uniform("time", static_cast<float>(GetTime())); });
+ * scene.OnUpdate([wave](float) {
+ *     if (wave) wave->Uniform("time", static_cast<float>(Engine::Get().Time()));
+ * });
  * @endcode
  */
 class ShaderProgram {
@@ -43,18 +48,20 @@ class ShaderProgram {
      * @brief Wczytuje shader z plików GLSL.
      * @param vertexPath Plik shadera wierzchołków albo pusty napis (domyślny shader raylib).
      * @param fragmentPath Plik shadera fragmentów albo pusty napis (domyślny shader raylib).
-     * @return Shader; przy błędzie kompilacji albo braku pliku IsValid() zwraca false, a raylib
-     * zapisuje przyczynę w logu.
+     * @return Shader albo brak wartości przy błędzie kompilacji lub braku pliku (przyczynę
+     * raylib zapisuje w logu) - tak jak Bitmap::Load() i Typeface::Load().
      */
-    static ShaderProgram Load(const std::string& vertexPath, const std::string& fragmentPath);
+    static std::optional<ShaderProgram> Load(const std::string& vertexPath,
+                                             const std::string& fragmentPath);
 
     /**
      * @brief Kompiluje shader z kodu GLSL w napisach.
      * @param vertexCode Kod shadera wierzchołków albo pusty napis (domyślny).
      * @param fragmentCode Kod shadera fragmentów albo pusty napis (domyślny).
-     * @return Shader; przy błędzie kompilacji IsValid() zwraca false.
+     * @return Shader albo brak wartości przy błędzie kompilacji.
      */
-    static ShaderProgram FromCode(const std::string& vertexCode, const std::string& fragmentCode);
+    static std::optional<ShaderProgram> FromCode(const std::string& vertexCode,
+                                                 const std::string& fragmentCode);
 
     /** @brief Zwalnia shader z karty graficznej. */
     ~ShaderProgram();

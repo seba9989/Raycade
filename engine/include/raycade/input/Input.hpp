@@ -479,7 +479,7 @@ class Input {
      * i Released liczy się ze zmiany stanu między klatkami.
      */
     static bool IsEdgeTracked(const InputBinding& b) {
-        return b.kind == InputBinding::Kind::PadAxis || b.kind == InputBinding::Kind::Gesture;
+        return b.kind == InputBinding::Kind::PadAxis || b.kind == InputBinding::Kind::TouchGesture;
     }
 
     /** @brief Czy któraś oś pada albo gest z listy jest teraz aktywny. */

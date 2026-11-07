@@ -123,10 +123,9 @@ SCENE("efekty") {
     scene.ProvideContext<Balls>();
 
     // czcionka z polskimi znakami, jeśli jest w zasobach - dla wszystkich napisów sceny
-    auto font = Typeface::Load(engine.AssetPath("font.ttf"), 32);
-    const bool hasFont = font.has_value();
-    if (font)
-        scene.ProvideContext<DefaultTypeface>(std::make_shared<const Typeface>(std::move(*font)));
+    std::shared_ptr<const Typeface> font = Shared(Typeface::Load(engine.AssetPath("font.ttf"), 32));
+    const bool hasFont = font != nullptr;
+    if (font) scene.ProvideContext<DefaultTypeface>(font);
     const auto title = [&scene](Vector2 position, std::string content) -> shapes::Text& {
         return scene.Spawn<shapes::Text>()
             .Content(std::move(content))
@@ -159,7 +158,7 @@ SCENE("efekty") {
         .Origin({kFrame / 2, kFrame / 2})
         .Position({230, 140})
         .Paint(SKYBLUE)
-        .OnKeyPressed(KEY_X, [](shapes::Sprite& self) { self.FlipX(!self.IsFlippedX()); });
+        .OnKeyPressed(KEY_X, [](shapes::Sprite& self) { self.FlipX(!self.IsFlipX()); });
     title({40, 230}, "drugie: Speed(0.5), Paint(SKYBLUE)").FontSize(16);
 
     // ---------------- przycinanie ----------------
@@ -192,10 +191,9 @@ SCENE("efekty") {
 
     // ---------------- shadery ----------------
     title({690, 30}, "Shader na Surface, G szarosc");
-    auto wave = std::make_shared<ShaderProgram>(ShaderProgram::FromCode("", kWaveShader));
-    auto gray = std::make_shared<ShaderProgram>(ShaderProgram::FromCode("", kGrayShader));
-    if (!wave->IsValid() || !gray->IsValid())
-        engine.Log(LogLevel::Warning, "shader demo nie dziala");
+    auto wave = Shared(ShaderProgram::FromCode("", kWaveShader));
+    auto gray = Shared(ShaderProgram::FromCode("", kGrayShader));
+    if (!wave || !gray) engine.Log(LogLevel::Warning, "shader demo nie dziala");
     scene.Spawn<shapes::Surface>()
         .Size({260, 200})
         .Background(Fade(SKYBLUE, 0.4f))
@@ -259,7 +257,7 @@ SCENE("efekty") {
 
     scene.OnUpdate([&scene, &counter, wave, gray](float) {
         Engine& e = Engine::Get();
-        wave->Uniform("time", static_cast<float>(e.Time()));
+        if (wave) wave->Uniform("time", static_cast<float>(e.Time()));
         if (e.KeyPressed(KEY_G)) e.PostShader(e.PostShader() ? nullptr : gray);
 
         if (e.ActionPressed("nowa pilka")) {

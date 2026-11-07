@@ -18,15 +18,22 @@ const char* OrNull(const std::string& text) {
     return text.empty() ? nullptr : text.c_str();
 }
 
-} // namespace
-
-ShaderProgram ShaderProgram::Load(const std::string& vertexPath, const std::string& fragmentPath) {
-    return ShaderProgram{::LoadShader(OrNull(vertexPath), OrNull(fragmentPath))};
+/** @brief Zwraca shader, gdy się skompilował; nieudany zwalnia od razu (destruktor). */
+std::optional<ShaderProgram> Checked(ShaderProgram shader) {
+    if (!shader.IsValid()) return std::nullopt;
+    return shader;
 }
 
-ShaderProgram ShaderProgram::FromCode(const std::string& vertexCode,
-                                      const std::string& fragmentCode) {
-    return ShaderProgram{::LoadShaderFromMemory(OrNull(vertexCode), OrNull(fragmentCode))};
+} // namespace
+
+std::optional<ShaderProgram> ShaderProgram::Load(const std::string& vertexPath,
+                                                 const std::string& fragmentPath) {
+    return Checked(ShaderProgram{::LoadShader(OrNull(vertexPath), OrNull(fragmentPath))});
+}
+
+std::optional<ShaderProgram> ShaderProgram::FromCode(const std::string& vertexCode,
+                                                     const std::string& fragmentCode) {
+    return Checked(ShaderProgram{::LoadShaderFromMemory(OrNull(vertexCode), OrNull(fragmentCode))});
 }
 
 ShaderProgram::~ShaderProgram() {

@@ -107,7 +107,7 @@ SCENE("figury") {
         .Position({560, 330})
         .Size({420, 280})
         .Background(WHITE)
-        .Content(paintContours)
+        .Edit(paintContours)
         .OnClick([colorIndex = 0](shapes::Canvas& self) mutable {
             // inne niż kolory konturów i pasków - boundary fill traktuje piksel w kolorze
             // wypełnienia jako już wypełniony i na nim się zatrzymuje
@@ -118,15 +118,15 @@ SCENE("figury") {
             const bool boundary = engine.KeyDown(KEY_LEFT_SHIFT) || engine.KeyDown(KEY_RIGHT_SHIFT);
             const Color color = kColors[colorIndex++ % kColors.size()];
 
-            self.Content([&](PrimitiveRenderer& r) {
+            self.Edit([&](PrimitiveRenderer& r) {
                 if (boundary)
                     r.Paint(color).BoundaryFill(seed, BLACK);
                 else
                     r.Paint(color).FloodFill(seed);
             });
         })
-        .OnKeyPressed(
-            KEY_R, [paintContours](shapes::Canvas& self) { self.Clear().Content(paintContours); });
+        .OnKeyPressed(KEY_R,
+                      [paintContours](shapes::Canvas& self) { self.Clear().Edit(paintContours); });
 
     // ---------------- podpisy ----------------
     scene.OnDraw([](PrimitiveRenderer&) {

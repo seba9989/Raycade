@@ -8,16 +8,16 @@ Zasady, których trzyma się API silnika. Nowy kod (także sceny gry) powinien j
 Nagłówki leżą w `engine/include/raycade/` w katalogach-warstwach. Każda warstwa dołącza tylko
 warstwy wcześniejsze na liście:
 
-| Katalog    | Zawartość                                                      | Zależy od               |
-|------------|----------------------------------------------------------------|-------------------------|
-| `math/`    | AffineMatrix2D, Point2D, LineSegment, algorytmy geometrii      | -                       |
-| `render/`  | Bitmap, RenderTarget, ClipStack, ShaderProgram, Typeface, PrimitiveRenderer | math       |
-| `input/`   | Input, akcje i osie                                            | -                       |
-| `entity/`  | Entity i klasy bazowe (Transformable, Drawable, Updatable...)  | math, render, input     |
-| `shapes/`  | kształty z przestrzeni nazw `shapes`                           | entity                  |
-| `ui/`      | elementy interfejsu z przestrzeni nazw `ui`                    | entity                  |
-| `scene/`   | Scene, SceneCamera                                             | entity                  |
-| `Engine.hpp` | pętla, okno, sceny, zasoby                                   | scene, input, render    |
+| Katalog      | Zawartość                                                       | Może dołączać               |
+|--------------|-----------------------------------------------------------------|-----------------------------|
+| `math/`      | AffineMatrix2D, Point2D, LineSegment, algorytmy geometrii       | -                           |
+| `render/`    | Bitmap, RenderTarget, ClipStack, ShaderProgram, Typeface, PrimitiveRenderer | math            |
+| `input/`     | Input, akcje i osie                                             | -                           |
+| `entity/`    | Entity i klasy bazowe (Transformable, Drawable, Updatable...)   | math, render, input         |
+| `shapes/`    | kształty z przestrzeni nazw `shapes`                            | entity i jej zależności     |
+| `ui/`        | elementy interfejsu z przestrzeni nazw `ui`                     | entity i jej zależności     |
+| `scene/`     | Scene, SceneCamera                                              | entity i jej zależności     |
+| `Engine.hpp` | pętla, okno, sceny, zasoby                                      | wszystkie powyższe          |
 
 Nagłówek zbiorczy katalogu leży obok niego (`shapes.hpp` obok `shapes/`, `ui.hpp` obok
 `ui/`). `<raycade>` (w `engine/umbrella/`) dołącza `Engine.hpp`, `shapes.hpp` i `ui.hpp`.
@@ -42,7 +42,8 @@ w `src/`. Katalogi mają nazwy małymi literami, pliki z klasami - PascalCase.
   `IsIncremental()`. Setter takiej flagi to sama nazwa z domyślnym `true`:
   `Fullscreen()`, `Incremental()`, `Fill()`.
 - **Zapytania z argumentem nie mają prefiksu:** `KeyDown(key)`, `FileExists(path)`,
-  `Contains(point)`.
+  `Contains(point)`. Wyjątek: zapytanie o flagę stanu ma prefiks `Is`, tak jak w raylib -
+  `Engine::IsWindowState(FLAG_...)` czyta się jak pytanie o stan, a nie o zdarzenie.
 - **Bez prefiksu `Get`.** Wyjątek to `Engine::Get()` (dostęp do singletonu). Obiekty podrzędne
   pobiera się metodą nazwaną jak obiekt: `engine.Scene("menu")`, `engine.Input()`,
   `scene.Camera()`, `Context<T>()`.
@@ -59,6 +60,10 @@ template <typename Self> Self& Radius(this Self& self, float radius) {
     return self;
 }
 ```
+
+Pola i prywatne metody klasy czyta się wprost przez `self` (`self.radius_`,
+`self.ClampFrame()`), bez rzutowania na klasę bazową - dostęp jest sprawdzany w klasie,
+która definiuje metodę, więc działa też dla prywatnych składowych.
 
 Dzięki temu łańcuch zachowuje typ także w klasie pochodnej
 (`class Ball : public shapes::Circle`). Klasy spoza hierarchii (`Engine`, `Scene`,
@@ -78,11 +83,29 @@ w lambdzie nazywamy `fn`, nie tak samo jak parametr (projekt kompiluje się z `-
 - **Kąty są w radianach** wszędzie w API; przeliczenie na stopnie dla raylib jest w jednym
   miejscu (`SceneCamera::Rotation()`).
 
+## Zasoby
+
+Zasoby wczytywane z pliku albo kompilowane (Bitmap, Typeface, ShaderProgram) mają statyczne
+`Load()` zwracające `std::optional` - brak wartości oznacza błąd, a jego przyczynę zapisuje
+w logu raylib. Obiekty sceny przyjmują zasoby jako `std::shared_ptr` (wiele obiektów może
+używać jednej tekstury czy shadera); zamianę robi `Shared()`:
+
+```cpp
+auto wave = Shared(ShaderProgram::Load("", "assets/wave.fs")); // nullptr przy błędzie
+```
+
+Zasoby tylko do odczytu (Bitmap, Typeface) przekazuje się jako `std::shared_ptr<const T>`,
+a ShaderProgram bez `const`, bo ustawia się w nim uniformy.
+
 ## Obsługa błędów (Engine)
 
 - Konfiguracja i polecenia zwracają `Engine&`, a niepoprawne wywołanie tylko zapisują w logu
   (`LogLevel::Warning` albo `LogLevel::Error`), żeby nie przerywać łańcucha.
 - Operacje na plikach i nagraniach zwracają wynik: `bool` albo `std::optional`.
+  Operacje na plikach (`LoadText()`, `SaveData()`, `ListDirectory()`, `ChangeDirectory()`...)
+  są `const`, bo nie zmieniają stanu silnika, i nie dopisują własnego wpisu o błędzie -
+  przyczynę zapisuje w logu raylib (`[raylib] FILEIO: ...`). Nagrania (`StopRecording()`,
+  `Replay()`) zmieniają stan silnika i same zapisują wynik w logu.
 - `Init()` loguje błąd, a wynik podaje `IsReady()`.
 - Wyjątek rzuca tylko `Engine::Scene()`, bo musi zwrócić referencję do sceny, której nie ma.
 

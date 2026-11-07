@@ -9,6 +9,8 @@
 #include <optional>
 #include <string>
 
+#include <raycade/render/Shared.hpp> // IWYU pragma: export
+
 /**
  * @brief Obraz rastrowy w pamięci RAM z teksturą aktualizowaną przy rysowaniu.
  * @details W odróżnieniu od ekranu z bitmapy można odczytywać kolory pikseli, czego wymagają

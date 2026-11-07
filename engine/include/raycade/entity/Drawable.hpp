@@ -76,7 +76,7 @@ class Drawable {
      * rysunkiem dzieci). Shader niepoprawnie wczytany (ShaderProgram::IsValid() == false) jest
      * pomijany.
      * @code{.cpp}
-     * auto glow = std::make_shared<ShaderProgram>(ShaderProgram::Load("", "assets/glow.fs"));
+     * auto glow = Shared(ShaderProgram::Load("", "assets/glow.fs"));
      * scene.Spawn<shapes::Circle>().Radius(40).Fill().Shader(glow);
      * @endcode
      * @param shader Shader (współdzielony) albo nullptr - bez shadera.

@@ -358,9 +358,13 @@ class Engine : public Contextable {
      * @return Ten sam silnik.
      */
     Engine& Gestures(unsigned int flags) {
+        gestures_ = flags;
         ::SetGesturesEnabled(flags);
         return *this;
     }
+
+    /** @brief Podaje flagi rozpoznawanych gestów (GESTURE_*). */
+    unsigned int Gestures() const { return gestures_; }
 
     /**
      * @brief Ustawia klawisz zamykający okno (domyślnie ESC).
@@ -898,6 +902,13 @@ class Engine : public Contextable {
     Engine& Monitor(int monitor);
 
     /**
+     * @brief Podaje numer monitora okna.
+     * @details Po Init() - monitor, na którym okno faktycznie jest (CurrentMonitor()), przed
+     * Init() - wybrany przez Monitor(int) albo 0.
+     */
+    int Monitor() const { return initialized_ ? CurrentMonitor() : monitor_.value_or(0); }
+
+    /**
      * @brief Ustawia pozycję okna na pulpicie.
      * @param x Pozycja pozioma.
      * @param y Pozycja pionowa.
@@ -1154,7 +1165,7 @@ class Engine : public Contextable {
      * @param path Nowy katalog roboczy.
      * @return true, gdy zmiana się udała.
      */
-    bool ChangeDirectory(const std::string& path);
+    bool ChangeDirectory(const std::string& path) const;
 
     /** @} */
 
@@ -1307,8 +1318,9 @@ class Engine : public Contextable {
     int exitKey_ = KEY_ESCAPE;              /**< Klawisz zamykający okno. */
     std::optional<Vector2> windowPosition_; /**< Pozycja okna do ustawienia przy Init(). */
     std::optional<int> monitor_;            /**< Monitor do ustawienia przy Init(). */
-    std::optional<float> opacity_;          /**< Przezroczystość okna do ustawienia przy Init(). */
-    unsigned int windowFlags_ = 0;          /**< Flagi okna (FLAG_*) z Resizable() itd. */
+    unsigned int gestures_ = 0b1111111111;  /**< Rozpoznawane gesty (domyślnie wszystkie). */
+    std::optional<float> opacity_; /**< Przezroczystość okna do ustawienia przy Init(). */
+    unsigned int windowFlags_ = 0; /**< Flagi okna (FLAG_*) z Resizable() itd. */
     std::optional<std::pair<int, int>> minSize_; /**< Minimalny rozmiar okna. */
     std::optional<std::pair<int, int>> maxSize_; /**< Maksymalny rozmiar okna. */
     std::string icon_;                           /**< Ścieżka ikony do ustawienia przy Init(). */
@@ -1332,11 +1344,11 @@ class Engine : public Contextable {
     std::shared_ptr<ShaderProgram> postShader_; /**< Shader całego obrazu gry. */
     std::string logFile_ = "engine.log";        /**< Ścieżka pliku logu; pusta wyłącza zapis. */
 
-    std::function<void(float)> update_;            /**< Globalna logika co klatkę. */
-    std::function<void(float)> fixedUpdate_;       /**< Globalna logika ze stałym krokiem. */
-    float fixedStep_ = 1.0f / 60.0f;               /**< Długość kroku stałego; 0 - wyłączony. */
-    float fixedAccumulator_ = 0.0f;                /**< Czas zebrany do następnego kroku. */
-    int maxFixedSteps_ = 5;                        /**< Limit kroków stałych na klatkę. */
+    std::function<void(float)> update_;      /**< Globalna logika co klatkę. */
+    std::function<void(float)> fixedUpdate_; /**< Globalna logika ze stałym krokiem. */
+    float fixedStep_ = 1.0f / 60.0f;         /**< Długość kroku stałego; 0 - wyłączony. */
+    float fixedAccumulator_ = 0.0f;          /**< Czas zebrany do następnego kroku. */
+    int maxFixedSteps_ = 5;                  /**< Limit kroków stałych na klatkę. */
     std::function<void(PrimitiveRenderer&)> draw_; /**< Globalne rysowanie po scenie. */
 
     std::ofstream log_;        /**< Otwarty plik logu. */

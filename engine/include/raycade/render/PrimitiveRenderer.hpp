@@ -263,16 +263,18 @@ class PrimitiveRenderer {
     /** @{ */
 
     /**
-     * @brief Wyświetla bitmapę na ekranie jako teksturę.
-     * @param bitmap Bitmapa źródłowa.
+     * @brief Wyświetla na ekranie całą bitmapę jako teksturę.
+     * @details Skrót dla Blit() z fragmentem obejmującym całą bitmapę.
+     * @param bitmap Bitmapa źródłowa; pusta jest pomijana.
      * @param position Lewy górny róg na ekranie.
+     * @param tint Kolor mnożący piksele (WHITE - bez zmian).
      * @return Ten sam renderer.
      */
-    PrimitiveRenderer& Blit(const Bitmap& bitmap, Point2D position);
+    PrimitiveRenderer& Blit(const Bitmap& bitmap, Point2D position, Color tint = WHITE);
 
     /**
      * @brief Wyświetla na ekranie fragment bitmapy (np. klatkę z arkusza animacji).
-     * @param bitmap Bitmapa źródłowa.
+     * @param bitmap Bitmapa źródłowa; pusta jest pomijana.
      * @param source Fragment w pikselach bitmapy; ujemna szerokość / wysokość odbija obraz
      * w poziomie / pionie.
      * @param position Lewy górny róg na ekranie.

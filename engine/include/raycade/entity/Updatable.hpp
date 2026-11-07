@@ -206,10 +206,10 @@ class Updatable {
      */
     virtual void Tick([[maybe_unused]] float dt, [[maybe_unused]] const Input& input) {}
 
-    std::function<void(float)> update_;                       /**< Callback wykonywany co klatkę. */
-    std::function<void()> click_;                             /**< Reakcja na kliknięcie. */
-    std::function<void()> mouseEnter_;                        /**< Reakcja na wejście kursora. */
-    std::function<void()> mouseLeave_;                        /**< Reakcja na wyjście kursora. */
+    std::function<void(float)> update_; /**< Callback wykonywany co klatkę. */
+    std::function<void()> click_;       /**< Reakcja na kliknięcie. */
+    std::function<void()> mouseEnter_;  /**< Reakcja na wejście kursora. */
+    std::function<void()> mouseLeave_;  /**< Reakcja na wyjście kursora. */
     std::vector<std::pair<int, std::function<void()>>> keys_; /**< Reakcje na klawisze. */
     /** Reakcje na puszczenie klawiszy. */
     std::vector<std::pair<int, std::function<void()>>> keysReleased_;

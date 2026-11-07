@@ -15,7 +15,7 @@
  */
 struct InputBinding {
     /** @brief Rodzaj urządzenia. */
-    enum class Kind { Key, Mouse, PadButton, PadAxis, Gesture };
+    enum class Kind { Key, Mouse, PadButton, PadAxis, TouchGesture };
 
     Kind kind = Kind::Key; /**< Rodzaj urządzenia. */
     int code = 0;    /**< KEY_*, MOUSE_BUTTON_*, GAMEPAD_BUTTON_*, GAMEPAD_AXIS_* albo GESTURE_*. */
@@ -68,7 +68,7 @@ inline InputBinding PadAxis(int axis, float direction, float threshold = 0.5f, i
  * @param gesture Gest (GESTURE_*).
  */
 inline InputBinding Gesture(int gesture) {
-    return {InputBinding::Kind::Gesture, gesture};
+    return {InputBinding::Kind::TouchGesture, gesture};
 }
 
 } // namespace bind

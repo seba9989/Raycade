@@ -6,11 +6,10 @@
 
 namespace shapes {
 
-Canvas& Canvas::Content(const std::function<void(PrimitiveRenderer&)>& paint) {
+void Canvas::EditPixels(const std::function<void(PrimitiveRenderer&)>& paint) {
     PrimitiveRenderer renderer;
     renderer.Target(bitmap_);
     paint(renderer);
-    return *this;
 }
 
 bool Canvas::Contains(Vector2 point) const {
@@ -21,7 +20,7 @@ bool Canvas::Contains(Vector2 point) const {
 }
 
 void Canvas::Draw(PrimitiveRenderer& renderer) const {
-    if (bitmap_.Width() > 0) renderer.Blit(bitmap_, {0.0f, 0.0f});
+    if (bitmap_.Width() > 0) renderer.Blit(bitmap_, {0.0f, 0.0f}, color_);
 }
 
 } // namespace shapes

@@ -971,13 +971,12 @@ std::vector<std::string> Engine::ListDirectory(const std::string& path, const st
 }
 
 bool Engine::MakeDirectory(const std::string& path) const {
-    return ::MakeDirectory(path.c_str()) == 0 || ::DirectoryExists(path.c_str());
+    // raylib zwraca 0 także wtedy, gdy mkdir się nie udał - wynik sprawdzamy sami
+    return ::MakeDirectory(path.c_str()) == 0 && ::DirectoryExists(path.c_str());
 }
 
-bool Engine::ChangeDirectory(const std::string& path) {
-    const bool changed = ::ChangeDirectory(path.c_str());
-    if (!changed) Log(LogLevel::Error, "nie udalo sie zmienic katalogu na \"" + path + "\"");
-    return changed;
+bool Engine::ChangeDirectory(const std::string& path) const {
+    return ::ChangeDirectory(path.c_str()); // przyczynę błędu raylib zapisuje w logu
 }
 
 Engine& Engine::StartRecording() {

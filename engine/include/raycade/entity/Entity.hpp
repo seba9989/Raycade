@@ -206,8 +206,12 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
      * Po usunięciu wszystkie referencje i wskaźniki do obiektu (np. zapamiętane z Spawn<T>())
      * są nieważne - obiekt, do którego trzeba się później odwoływać, sprawdza się przez
      * IsDestroyed() przed końcem klatki albo nie trzyma się do niego referencji.
+     * @return Ten sam obiekt (ważny do końca bieżącej klatki).
      */
-    void Destroy() { destroyed_ = true; }
+    template <typename Self> Self& Destroy(this Self& self) {
+        self.destroyed_ = true;
+        return self;
+    }
 
     /** @brief Sprawdza, czy obiekt oznaczono do usunięcia (Destroy()) w tej klatce. */
     bool IsDestroyed() const { return destroyed_; }

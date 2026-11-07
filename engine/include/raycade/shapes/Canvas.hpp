@@ -14,15 +14,22 @@ namespace shapes {
 /**
  * @brief Płótno: bitmapa w RAM wyświetlana w pozycji obiektu (lewy górny róg).
  * @details Po płótnie można rysować i wypełniać obszary (BoundaryFill / FloodFill), bo
- * w odróżnieniu od ekranu da się z niego odczytać kolory pikseli. Współrzędne w Content()
+ * w odróżnieniu od ekranu da się z niego odczytać kolory pikseli. Współrzędne w Edit()
  * są liczone od lewego górnego rogu płótna.
  * @code{.cpp}
  * scene.Spawn<shapes::Canvas>().Position({50, 50}).Size({300, 200}).Background(WHITE)
- *     .Content([](PrimitiveRenderer& r) { r.Paint(BLACK).Circle({150, 100}, 80); });
+ *     .Edit([](PrimitiveRenderer& r) { r.Paint(BLACK).Circle({150, 100}, 80); });
  * @endcode
  */
 class Canvas : public Entity {
   public:
+    /**
+     * @brief Puste płótno z kolorem mnożącym WHITE (piksele bez zmian).
+     * @details Paint() działa tu jak w shapes::Sprite i shapes::Surface: mnoży piksele
+     * bitmapy przy wyświetlaniu, a samej bitmapy nie zmienia.
+     */
+    Canvas() { Paint(WHITE); }
+
     /**
      * @brief Ustawia rozmiar, tworząc bitmapę od nowa.
      * @param size Szerokość i wysokość w pikselach.
@@ -60,11 +67,17 @@ class Canvas : public Entity {
     }
 
     /**
-     * @brief Wykonuje rysowanie na bitmapie płótna.
+     * @brief Rysuje po bitmapie płótna (zmienia jej piksele na stałe).
+     * @details Wcześniej Content(); nazwa Content() oznacza w silniku treść tekstu
+     * (shapes::Text, ui::TextField).
      * @param paint Funkcja otrzymująca renderer z celem ustawionym już na bitmapę płótna.
-     * @return To samo płótno.
+     * @return Ten sam obiekt.
      */
-    Canvas& Content(const std::function<void(PrimitiveRenderer&)>& paint);
+    template <typename Self>
+    Self& Edit(this Self& self, const std::function<void(PrimitiveRenderer&)>& paint) {
+        self.EditPixels(paint);
+        return self;
+    }
 
     /**
      * @brief Udostępnia bitmapę płótna.
@@ -85,6 +98,9 @@ class Canvas : public Entity {
     void Draw(PrimitiveRenderer& renderer) const override;
 
   private:
+    /** @brief Wspólna część Edit() - rysowanie rendererem z celem na bitmapie płótna. */
+    void EditPixels(const std::function<void(PrimitiveRenderer&)>& paint);
+
     Bitmap bitmap_;            /**< Zawartość płótna. */
     Color background_ = WHITE; /**< Kolor używany przez Clear(). */
 };

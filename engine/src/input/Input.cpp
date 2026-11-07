@@ -92,7 +92,7 @@ bool Input::BindingDown(const InputBinding& b) const {
         return GamepadDown(b.gamepad, b.code);
     case InputBinding::Kind::PadAxis:
         return GamepadAxis(b.gamepad, b.code) * b.direction > b.threshold;
-    case InputBinding::Kind::Gesture:
+    case InputBinding::Kind::TouchGesture:
         return GestureDetected(b.code);
     }
     return false;
@@ -107,7 +107,7 @@ bool Input::BindingPressed(const InputBinding& b) const {
     case InputBinding::Kind::PadButton:
         return GamepadPressed(b.gamepad, b.code);
     case InputBinding::Kind::PadAxis:
-    case InputBinding::Kind::Gesture:
+    case InputBinding::Kind::TouchGesture:
         return false;
     }
     return false;
@@ -122,7 +122,7 @@ bool Input::BindingReleased(const InputBinding& b) const {
     case InputBinding::Kind::PadButton:
         return GamepadReleased(b.gamepad, b.code);
     case InputBinding::Kind::PadAxis:
-    case InputBinding::Kind::Gesture:
+    case InputBinding::Kind::TouchGesture:
         return false;
     }
     return false;

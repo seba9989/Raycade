@@ -31,14 +31,15 @@ namespace ui {
  * - Enter - OnSubmit(), Escape - utrata fokusu,
  * - przewijanie tekstu dłuższego niż pole.
  *
- * Domyślna czcionka raylib nie ma polskich liter - wpisują się poprawnie (Text() zwraca UTF-8),
+ * Domyślna czcionka raylib nie ma polskich liter - wpisują się poprawnie (Content() zwraca UTF-8),
  * ale są wyświetlane jako "?".
  * @code{.cpp}
  * scene.Spawn<ui::TextField>()
  *     .Placeholder("Twoje imie")
  *     .MaxLength(20)
  *     .Position({100, 100})
- *     .OnSubmit([](ui::TextField& self, const std::string& text) { Save(text); self.Text(""); });
+ *     .OnSubmit([](ui::TextField& self, const std::string& text) { Save(text); self.Content("");
+ * });
  * @endcode
  */
 class TextField : public Entity, public Focusable {
@@ -52,7 +53,7 @@ class TextField : public Entity, public Focusable {
      * @brief Ustawia tekst (UTF-8) i przenosi kursor na koniec.
      * @details Nie wywołuje OnChange().
      */
-    template <typename Self> Self& Text(this Self& self, const std::string& text) {
+    template <typename Self> Self& Content(this Self& self, const std::string& text) {
         self.codepoints_ = Decode(text);
         if (self.maxLength_ > 0 && self.codepoints_.size() > self.maxLength_)
             self.codepoints_.resize(self.maxLength_);
@@ -62,7 +63,7 @@ class TextField : public Entity, public Focusable {
     }
 
     /** @brief Zwraca tekst w UTF-8. */
-    std::string Text() const { return Encode(codepoints_.begin(), codepoints_.end()); }
+    std::string Content() const { return Encode(codepoints_.begin(), codepoints_.end()); }
 
     /** @brief Ustawia napis widoczny w pustym polu. */
     template <typename Self> Self& Placeholder(this Self& self, std::string text) {
@@ -79,23 +80,36 @@ class TextField : public Entity, public Focusable {
     /**
      * @brief Ustawia czcionkę pola (np. z polskimi znakami - patrz Typeface).
      * @details Bez niej pole używa DefaultTypeface z kontekstu, a na końcu fontu raylib, który
-     * nie ma polskich liter: wpisane "ą" zostanie zapisane w Text(), ale wyświetli się jako "?".
+     * nie ma polskich liter: wpisane "ą" zostanie zapisane w Content(), ale wyświetli się jako "?".
      * @param typeface Czcionka (współdzielona) albo nullptr.
      * @return Ten sam obiekt.
      */
     template <typename Self> Self& Font(this Self& self, std::shared_ptr<const Typeface> typeface) {
-        static_cast<TextField&>(self).font_ = std::move(typeface);
+        self.font_ = std::move(typeface);
         return self;
     }
 
     /** @brief Podaje czcionkę ustawioną na polu (nullptr - z kontekstu albo domyślna). */
     const std::shared_ptr<const Typeface>& Font() const { return font_; }
 
-    /** @brief Ustawia wielkość czcionki (domyślnie 20). */
-    template <typename Self> Self& FontSize(this Self& self, int size) {
+    /** @brief Ustawia wielkość czcionki w pikselach (domyślnie 20). */
+    template <typename Self> Self& FontSize(this Self& self, float size) {
         self.fontSize_ = size;
         return self;
     }
+
+    /**
+     * @brief Ustawia odstęp między znakami, jak shapes::Text::Spacing().
+     * @param spacing Odstęp w pikselach; ujemna wartość - domyślny (FontSize() / 10).
+     * @return Ten sam obiekt.
+     */
+    template <typename Self> Self& Spacing(this Self& self, float spacing) {
+        self.spacing_ = spacing;
+        return self;
+    }
+
+    /** @brief Podaje odstęp między znakami (już z domyślną wartością). */
+    float Spacing() const { return spacing_ < 0 ? Typeface::DefaultSpacing(fontSize_) : spacing_; }
 
     /** @brief Ogranicza liczbę znaków (0 - bez limitu). */
     template <typename Self> Self& MaxLength(this Self& self, std::size_t length) {
@@ -138,7 +152,7 @@ class TextField : public Entity, public Focusable {
     Vector2 Size() const { return size_; }
 
     /** @brief Podaje wielkość czcionki. */
-    int FontSize() const { return fontSize_; }
+    float FontSize() const { return fontSize_; }
 
     /** @brief Podaje limit znaków (0 - brak limitu). */
     std::size_t MaxLength() const { return maxLength_; }
@@ -190,15 +204,16 @@ class TextField : public Entity, public Focusable {
     /** @brief Ustawia kursor najbliżej miejsca kliknięcia. */
     void PlaceCaret(const Input& input);
 
-    std::vector<int> codepoints_;                    /**< Tekst jako kody znaków Unicode. */
-    std::size_t caret_ = 0;                          /**< Pozycja kursora (w znakach). */
-    mutable std::size_t firstVisible_ = 0;           /**< Pierwszy widoczny znak. */
-    std::string placeholder_;                        /**< Napis w pustym polu. */
-    Vector2 size_{260, 40};                          /**< Rozmiar pola. */
-    int fontSize_ = 20;                              /**< Wielkość czcionki. */
-    std::shared_ptr<const Typeface> font_;           /**< Czcionka albo nullptr. */
-    std::size_t maxLength_ = 0;                      /**< Limit znaków (0 - brak). */
-    double blinkStart_ = 0.0;                        /**< Początek cyklu migania kursora. */
+    std::vector<int> codepoints_;          /**< Tekst jako kody znaków Unicode. */
+    std::size_t caret_ = 0;                /**< Pozycja kursora (w znakach). */
+    mutable std::size_t firstVisible_ = 0; /**< Pierwszy widoczny znak. */
+    std::string placeholder_;              /**< Napis w pustym polu. */
+    Vector2 size_{260, 40};                /**< Rozmiar pola. */
+    float fontSize_ = 20.0f;               /**< Wielkość czcionki. */
+    float spacing_ = -1.0f;                /**< Odstęp między znakami; < 0 - domyślny. */
+    std::shared_ptr<const Typeface> font_; /**< Czcionka albo nullptr. */
+    std::size_t maxLength_ = 0;            /**< Limit znaków (0 - brak). */
+    double blinkStart_ = 0.0;              /**< Początek cyklu migania kursora. */
     std::function<void(const std::string&)> change_; /**< Zmiana tekstu. */
     std::function<void(const std::string&)> submit_; /**< Enter. */
 };

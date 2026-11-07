@@ -27,9 +27,7 @@ namespace shapes {
  * Arkusz jest współdzielony (std::shared_ptr), więc wiele obiektów może używać jednej bitmapy
  * w pamięci i jednej tekstury na karcie graficznej:
  * @code{.cpp}
- * std::shared_ptr<const Bitmap> coin;
- * if (auto bitmap = Bitmap::Load(engine.AssetPath("coin.png")))
- *     coin = std::make_shared<const Bitmap>(std::move(*bitmap));
+ * std::shared_ptr<const Bitmap> coin = Shared(Bitmap::Load(engine.AssetPath("coin.png")));
  * for (int i = 0; i < 10; ++i)
  *     scene.Spawn<shapes::Sprite>().Sheet(coin, {16, 16}).Fps(8).Play().Position({i * 40.0f, 0});
  * @endcode
@@ -66,16 +64,16 @@ class Sprite : public Entity {
      */
     template <typename Self>
     Self& Sheet(this Self& self, std::shared_ptr<const Bitmap> sheet, Vector2 frameSize = {0, 0}) {
-        Sprite& sprite = self;
-        sprite.sheet_ = std::move(sheet);
-        sprite.frameSize_ = frameSize;
-        sprite.ClampFrame();
+        self.sheet_ = std::move(sheet);
+        self.frameSize_ = frameSize;
+        self.ClampFrame();
         return self;
     }
 
     /**
      * @brief Wczytuje arkusz z pliku graficznego (skrót dla Bitmap::Load()).
-     * @details Gdy pliku nie da się wczytać, sprite nie ma arkusza (IsLoaded() == false)
+     * @details Gdy pliku nie da się wczytać, raylib zapisuje przyczynę w logu, a sprite nie ma
+     * arkusza (IsLoaded() == false)
      * i niczego nie rysuje. Kilka sprite'ów z tym samym obrazem lepiej utworzyć z jednej
      * bitmapy przez Sheet(std::shared_ptr<const Bitmap>, ...).
      * @param path Ścieżka pliku.
@@ -84,9 +82,7 @@ class Sprite : public Entity {
      */
     template <typename Self>
     Self& Sheet(this Self& self, const std::string& path, Vector2 frameSize = {0, 0}) {
-        auto bitmap = Bitmap::Load(path);
-        return self.Sheet(bitmap ? std::make_shared<const Bitmap>(std::move(*bitmap)) : nullptr,
-                          frameSize);
+        return self.Sheet(Shared(Bitmap::Load(path)), frameSize);
     }
 
     /** @brief Podaje arkusz klatek (albo nullptr). */
@@ -113,7 +109,7 @@ class Sprite : public Entity {
     template <typename Self>
     Self& Animation(this Self& self, const std::string& name, int first, int count, float fps,
                     bool loop = true) {
-        static_cast<Sprite&>(self).animations_[name] = {first, count, fps, loop};
+        self.animations_[name] = {first, count, fps, loop};
         return self;
     }
 
@@ -126,7 +122,7 @@ class Sprite : public Entity {
      * @return Ten sam obiekt.
      */
     template <typename Self> Self& Fps(this Self& self, float fps) {
-        static_cast<Sprite&>(self).fps_ = fps;
+        self.fps_ = fps;
         return self;
     }
 
@@ -142,7 +138,7 @@ class Sprite : public Entity {
      * @return Ten sam obiekt.
      */
     template <typename Self> Self& Play(this Self& self, const std::string& name) {
-        static_cast<Sprite&>(self).Start(name);
+        self.Start(name);
         return self;
     }
 
@@ -152,7 +148,7 @@ class Sprite : public Entity {
      * @return Ten sam obiekt.
      */
     template <typename Self> Self& Play(this Self& self) {
-        static_cast<Sprite&>(self).Resume();
+        self.Resume();
         return self;
     }
 
@@ -161,7 +157,7 @@ class Sprite : public Entity {
      * @return Ten sam obiekt.
      */
     template <typename Self> Self& Pause(this Self& self) {
-        static_cast<Sprite&>(self).playing_ = false;
+        self.playing_ = false;
         return self;
     }
 
@@ -170,10 +166,9 @@ class Sprite : public Entity {
      * @return Ten sam obiekt.
      */
     template <typename Self> Self& Stop(this Self& self) {
-        Sprite& sprite = self;
-        sprite.playing_ = false;
-        sprite.frame_ = 0;
-        sprite.time_ = 0.0f;
+        self.playing_ = false;
+        self.frame_ = 0;
+        self.time_ = 0.0f;
         return self;
     }
 
@@ -186,10 +181,9 @@ class Sprite : public Entity {
      * @return Ten sam obiekt.
      */
     template <typename Self> Self& Frame(this Self& self, int frame) {
-        Sprite& sprite = self;
-        sprite.frame_ = frame;
-        sprite.time_ = 0.0f;
-        sprite.ClampFrame();
+        self.frame_ = frame;
+        self.time_ = 0.0f;
+        self.ClampFrame();
         return self;
     }
 
@@ -205,7 +199,7 @@ class Sprite : public Entity {
      * @return Ten sam obiekt.
      */
     template <typename Self> Self& Speed(this Self& self, float multiplier) {
-        static_cast<Sprite&>(self).speed_ = multiplier;
+        self.speed_ = multiplier;
         return self;
     }
 
@@ -219,7 +213,7 @@ class Sprite : public Entity {
      * @return Ten sam obiekt.
      */
     template <typename Self> Self& FlipX(this Self& self, bool value = true) {
-        static_cast<Sprite&>(self).flipX_ = value;
+        self.flipX_ = value;
         return self;
     }
 
@@ -229,15 +223,15 @@ class Sprite : public Entity {
      * @return Ten sam obiekt.
      */
     template <typename Self> Self& FlipY(this Self& self, bool value = true) {
-        static_cast<Sprite&>(self).flipY_ = value;
+        self.flipY_ = value;
         return self;
     }
 
     /** @brief Sprawdza, czy klatka jest odbita w poziomie. */
-    bool IsFlippedX() const { return flipX_; }
+    bool IsFlipX() const { return flipX_; }
 
     /** @brief Sprawdza, czy klatka jest odbita w pionie. */
-    bool IsFlippedY() const { return flipY_; }
+    bool IsFlipY() const { return flipY_; }
 
     /**
      * @brief Ustawia punkt zaczepienia w klatce (piksele od jej lewego górnego rogu).
@@ -247,7 +241,7 @@ class Sprite : public Entity {
      * @return Ten sam obiekt.
      */
     template <typename Self> Self& Origin(this Self& self, Vector2 origin) {
-        static_cast<Sprite&>(self).origin_ = origin;
+        self.origin_ = origin;
         return self;
     }
 
@@ -261,8 +255,9 @@ class Sprite : public Entity {
      */
     template <typename Self>
     Self& OnFinish(this Self& self, Callback<Self, const std::string&> callback) {
-        static_cast<Sprite&>(self).finish_ =
-            [&self, fn = std::move(callback)](const std::string& name) { fn(self, name); };
+        self.finish_ = [&self, fn = std::move(callback)](const std::string& name) {
+            fn(self, name);
+        };
         return self;
     }
 

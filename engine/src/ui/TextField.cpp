@@ -4,6 +4,8 @@
  */
 #include <raycade/ui/TextField.hpp>
 
+#include <cmath>
+
 namespace ui {
 
 bool TextField::Contains(Vector2 point) const {
@@ -39,10 +41,10 @@ void TextField::Tick(float, const Input& input) {
 
     if (changed) {
         blinkStart_ = ::GetTime();
-        if (change_) change_(Text());
+        if (change_) change_(Content());
     }
     if (input.KeyPressed(KEY_ENTER) || input.KeyPressed(KEY_KP_ENTER))
-        if (submit_) submit_(Text());
+        if (submit_) submit_(Content());
     if (input.KeyPressed(KEY_ESCAPE)) Blur();
 }
 
@@ -52,26 +54,24 @@ void TextField::Draw(PrimitiveRenderer& renderer) const {
     renderer.Rect({0, 0}, size_);
     if (IsFocused()) renderer.Rect({1, 1}, {size_.x - 2, size_.y - 2});
 
-    const int textY = static_cast<int>((size_.y - static_cast<float>(fontSize_)) / 2);
-    const float size = static_cast<float>(fontSize_);
-    const Vector2 textPosition{static_cast<float>(kPadding), static_cast<float>(textY)};
+    const float textY = std::floor((size_.y - fontSize_) / 2);
+    const Vector2 textPosition{static_cast<float>(kPadding), textY};
     const Typeface& face = Face();
     if (codepoints_.empty() && !IsFocused()) {
-        face.Draw(placeholder_, textPosition, size, Typeface::DefaultSpacing(size), GRAY);
+        face.Draw(placeholder_, textPosition, fontSize_, Spacing(), GRAY);
         return;
     }
     KeepCaretVisible();
     const std::size_t end = VisibleEnd();
     const std::string visible =
         Encode(codepoints_.begin() + Offset(firstVisible_), codepoints_.begin() + Offset(end));
-    face.Draw(visible, textPosition, size, Typeface::DefaultSpacing(size), color_);
+    face.Draw(visible, textPosition, fontSize_, Spacing(), color_);
 
     // kursor miga co pół sekundy, ale zaraz po pisaniu jest zawsze widoczny
     const bool blinkOn = std::fmod(::GetTime() - blinkStart_, 1.0) < 0.5;
     if (IsFocused() && blinkOn) {
         const float x = static_cast<float>(kPadding + Width(firstVisible_, caret_));
-        renderer.Paint(color_).Fill().Rect({x, static_cast<float>(textY)},
-                                           {2, static_cast<float>(fontSize_)});
+        renderer.Paint(color_).Fill().Rect({x, textY}, {2, fontSize_});
     }
 }
 
@@ -107,9 +107,7 @@ int TextField::Width(std::size_t from, std::size_t to) const {
     if (to <= from) return 0;
     const std::string part =
         Encode(codepoints_.begin() + Offset(from), codepoints_.begin() + Offset(to));
-    const float size = static_cast<float>(fontSize_);
-    return static_cast<int>(
-        std::lround(Face().Measure(part, size, Typeface::DefaultSpacing(size)).x));
+    return static_cast<int>(std::lround(Face().Measure(part, fontSize_, Spacing()).x));
 }
 
 void TextField::KeepCaretVisible() const {

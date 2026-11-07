@@ -10,6 +10,8 @@
 #include <optional>
 #include <string>
 
+#include <raycade/render/Shared.hpp> // IWYU pragma: export
+
 /**
  * @brief Czcionka do rysowania tekstu (opakowanie raylib Font).
  * @details Domyślny font raylib (pusty Typeface) ma tylko znaki ASCII - polskie litery
@@ -21,8 +23,8 @@
  * przez Font(); bez tego szukają DefaultTypeface w kontekście (Contextable), a na końcu
  * używają fontu raylib.
  * @code{.cpp}
- * if (auto font = Typeface::Load(engine.AssetPath("Roboto.ttf"), 32))
- *     engine.ProvideContext<DefaultTypeface>(std::make_shared<const Typeface>(std::move(*font)));
+ * if (auto font = Shared(Typeface::Load(engine.AssetPath("Roboto.ttf"), 32)))
+ *     engine.ProvideContext<DefaultTypeface>(font);
  * scene.Spawn<shapes::Text>().Content("Zażółć gęślą jaźń").FontSize(24);
  * @endcode
  */
@@ -56,8 +58,7 @@ class Typeface {
     /** @brief Zwalnia czcionkę z pamięci i karty graficznej. */
     ~Typeface();
 
-    /** @brief Czcionka to zasób GPU - nie można jej kopiować (współdzieli się ją przez shared_ptr).
-     */
+    /** @brief Czcionka to zasób GPU - nie kopiuje się jej, tylko współdzieli przez shared_ptr. */
     Typeface(const Typeface&) = delete;
     /** @brief Czcionka to zasób GPU - nie można jej kopiować. */
     Typeface& operator=(const Typeface&) = delete;

@@ -24,8 +24,8 @@
  * | @ref shapes::Polygon  | wielokąt (wypełnianie scanline)       | `Vertices()`, `Edges()`, `Incremental()`, `IsSimple()`      |
  * | @ref shapes::Circle   | okrąg / koło                          | `Radius()`, `Symmetric()`                                   |
  * | @ref shapes::Ellipse  | elipsę                                | `Radius()`, `Symmetric()`                                   |
- * | @ref shapes::Canvas   | bitmapę w RAM (flood/boundary fill)   | `Size()`, `Background()`, `Clear()`, `Content()`, `Pixels()` |
- * | @ref shapes::Surface  | dzieci rysowane do tekstury GPU       | `Size()`, `Background()`, `Tint()`, `Smooth()`, `Target()`  |
+ * | @ref shapes::Canvas   | bitmapę w RAM (flood/boundary fill)   | `Size()`, `Background()`, `Clear()`, `Edit()`, `Pixels()`    |
+ * | @ref shapes::Surface  | dzieci rysowane do tekstury GPU       | `Size()`, `Background()`, `Smooth()`, `Target()`            |
  * | @ref shapes::Sprite   | klatkę z arkusza, z animacją          | `Sheet()`, `Animation()`, `Play()`, `Pause()`, `Stop()`, `Frame()`, `Fps()`, `Speed()`, `FlipX()`, `FlipY()`, `Origin()`, `OnFinish()` |
  * | @ref shapes::Text     | napis z czcionką (polskie znaki)      | `Content()`, `FontSize()`, `Spacing()`, `Font()`, `Size()`  |
  * | @ref shapes::Group    | nic - grupuje i przesuwa dzieci       | -                                                           |
@@ -43,6 +43,8 @@
  *
  * Konwencje: setter i getter mają tę samą nazwę (`Size(v)` / `Size()`), getter stanu
  * logicznego ma prefiks `Is` (`IsIncremental()`), a punkty i wierzchołki są typu Point2D.
+ * W kształtach z obrazem (Sprite, Canvas, Surface) Paint() to kolor mnożący piksele
+ * (domyślnie WHITE - bez zmian, `Fade(WHITE, 0.5f)` - półprzezroczystość).
  * Fill() działa w Rect, Triangle, Circle, Ellipse i Polygon, a Incremental() (własny algorytm
  * odcinka) we wszystkich kształtach z konturem z odcinków: Line, Lines, Polyline, Polygon,
  * Rect i Triangle. Wszystkie metody konfiguracji (wspólne i własne kształtu) używają deducing
