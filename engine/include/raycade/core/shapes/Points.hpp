@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "../Entity.hpp"
-#include "Line.hpp"
+#include "HitDistance.hpp"
 
 namespace shapes {
 
@@ -31,8 +31,7 @@ class Points : public Entity {
     /** @copydoc Updatable::Contains */
     bool Contains(Vector2 point) const override {
         for (const Point2D position : positions_)
-            if (::CheckCollisionPointCircle(point, World(position), Line::kHitDistance))
-                return true;
+            if (::CheckCollisionPointCircle(point, World(position), kHitDistance)) return true;
         return false;
     }
 

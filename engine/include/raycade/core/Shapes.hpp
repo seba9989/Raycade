@@ -32,7 +32,8 @@
  * Position(), Translate(), Rotate(), Scale(), Paint(), Layer(), Fill(), Children()
  * oraz zdarzenia OnUpdate(), OnClick(), OnMouseEnter(), OnMouseLeave() i OnKeyPressed().
  * Fill() działa w Rect, Triangle, Circle, Ellipse i Polygon, a Incremental() (własny algorytm
- * odcinka) w Line, Lines, Polyline i Polygon. Wszystkie metody konfiguracji (wspólne i własne
+ * odcinka) we wszystkich kształtach z konturem z odcinków: Line, Lines, Polyline, Polygon,
+ * Rect i Triangle. Wszystkie metody konfiguracji (wspólne i własne
  * kształtu) używają deducing this i zwracają typ obiektu, na którym je wywołano - także klasy
  * pochodnej, np. `class Ball : public shapes::Circle` - więc można je łączyć w dowolnej
  * kolejności. Patrz @ref Entity.

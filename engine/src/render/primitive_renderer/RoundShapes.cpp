@@ -7,17 +7,12 @@
 
 #include <raycade/render/PrimitiveRenderer.hpp>
 
+#include "Pixel.hpp"
+
 #include <algorithm>
 #include <cmath>
 
-namespace {
-
-/** @brief Zaokrągla współrzędną do najbliższego piksela. */
-int Round(float value) {
-    return static_cast<int>(std::lround(value));
-}
-
-} // namespace
+using pixel::Round;
 
 PrimitiveRenderer& PrimitiveRenderer::Circle(Point2D center, float radius) {
     if (symmetric_) {

@@ -5,6 +5,7 @@
 #pragma once
 
 #include "../Entity.hpp"
+#include "HitDistance.hpp"
 
 namespace shapes {
 
@@ -54,9 +55,6 @@ class Line : public Entity {
     bool Contains(Vector2 point) const override {
         return ::CheckCollisionPointLine(point, World(from_), World(to_), kHitDistance);
     }
-
-    /** @brief Tolerancja trafienia kursorem w odcinek, w pikselach. */
-    static constexpr int kHitDistance = 4;
 
   protected:
     /** @copydoc Drawable::Draw */

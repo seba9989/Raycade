@@ -24,6 +24,20 @@ class Rect : public Entity {
     /** @brief Podaje szerokość i wysokość. */
     Vector2 Size() const { return size_; }
 
+    /**
+     * @brief Rysuje kontur własnym algorytmem przyrostowym zamiast raylib.
+     * @details Nie zmienia wypełnienia (Fill()).
+     * @param value true dla algorytmu własnego, false dla raylib.
+     * @return Ten sam obiekt.
+     */
+    template <typename Self> Self& Incremental(this Self& self, bool value = true) {
+        self.incremental_ = value;
+        return self;
+    }
+
+    /** @brief Sprawdza, czy kontur rysuje algorytm przyrostowy. */
+    bool IsIncremental() const { return incremental_; }
+
     /** @copydoc Updatable::Contains */
     bool Contains(Vector2 point) const override {
         const auto local = TryToLocal(point);
@@ -33,11 +47,12 @@ class Rect : public Entity {
   protected:
     /** @copydoc Drawable::Draw */
     void Draw(PrimitiveRenderer& renderer) const override {
-        renderer.Paint(color_).Fill(filled_).Rect({0.0f, 0.0f}, size_);
+        renderer.Paint(color_).Fill(filled_).Incremental(incremental_).Rect({0.0f, 0.0f}, size_);
     }
 
   private:
-    Vector2 size_{10, 10}; /**< Szerokość i wysokość w pikselach. */
+    Vector2 size_{10, 10};     /**< Szerokość i wysokość w pikselach. */
+    bool incremental_ = false; /**< Czy kontur rysuje algorytm przyrostowy. */
 };
 
 } // namespace shapes

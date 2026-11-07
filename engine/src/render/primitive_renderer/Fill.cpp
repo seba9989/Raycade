@@ -6,18 +6,13 @@
 
 #include <raycade/render/PrimitiveRenderer.hpp>
 
+#include "Pixel.hpp"
+
 #include <cmath>
 #include <utility>
 #include <vector>
 
-namespace {
-
-/** @brief Zaokrągla współrzędną do najbliższego piksela. */
-int Round(float value) {
-    return static_cast<int>(std::lround(value));
-}
-
-} // namespace
+using pixel::Round;
 
 /**
  * @details Wersja iteracyjna - rekurencję zastępuje stos, żeby duży obszar nie przepełnił

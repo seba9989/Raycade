@@ -26,6 +26,7 @@ class Polygon : public Entity {
      */
     template <typename Self> Self& Vertices(this Self& self, std::vector<Point2D> vertices) {
         self.vertices_ = std::move(vertices);
+        self.simple_ = IsSimplePolygon(self.vertices_);
         return self;
     }
 
@@ -36,6 +37,7 @@ class Polygon : public Entity {
      */
     template <typename Self> Self& Edges(this Self& self, const std::vector<LineSegment>& edges) {
         self.vertices_ = PolygonVertices(edges).value_or(std::vector<Point2D>{});
+        self.simple_ = IsSimplePolygon(self.vertices_);
         return self;
     }
 
@@ -51,9 +53,11 @@ class Polygon : public Entity {
 
     /**
      * @brief Sprawdza, czy wielokąt jest łamaną zwyczajną.
+     * @details Wynik jest liczony raz, przy ustawieniu wierzchołków, a nie przy każdym teście
+     * trafienia.
      * @return Wynik IsSimplePolygon() dla bieżących wierzchołków.
      */
-    bool IsSimple() const { return IsSimplePolygon(vertices_); }
+    bool IsSimple() const { return simple_; }
 
     /** @brief Podaje wierzchołki wielokąta. */
     const std::vector<Point2D>& Vertices() const { return vertices_; }
@@ -63,7 +67,7 @@ class Polygon : public Entity {
 
     /** @copydoc Updatable::Contains */
     bool Contains(Vector2 point) const override {
-        if (!IsSimple()) return false;
+        if (!simple_) return false;
         const std::vector<Vector2> world = WorldVertices(vertices_);
         return ::CheckCollisionPointPoly(point, world.data(), static_cast<int>(world.size()));
     }
@@ -77,6 +81,7 @@ class Polygon : public Entity {
   private:
     std::vector<Point2D> vertices_; /**< Wierzchołki względem pozycji obiektu. */
     bool incremental_ = false;      /**< Czy użyć algorytmu przyrostowego. */
+    bool simple_ = false;           /**< Zapamiętany wynik IsSimplePolygon(). */
 };
 
 } // namespace shapes

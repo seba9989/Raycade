@@ -58,7 +58,8 @@ class PrimitiveRenderer {
 
     /**
      * @brief Wybiera własny algorytm przyrostowy dla odcinków.
-     * @details Dotyczy Line(), Lines(), Polyline() i konturu Polygon().
+     * @details Dotyczy wszystkiego, co składa się z odcinków: Line(), Lines(), Polyline()
+     * oraz konturów Rect(), Triangle() i Polygon(). Wypełnień nie zmienia.
      * @param value true dla algorytmu własnego, false dla raylib.
      * @return Ten sam renderer.
      */

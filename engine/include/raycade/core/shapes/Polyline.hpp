@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "../Entity.hpp"
-#include "Line.hpp"
+#include "HitDistance.hpp"
 
 namespace shapes {
 
@@ -65,8 +65,7 @@ class Polyline : public Entity {
         const int count = static_cast<int>(world.size());
         if (closed_ && count >= 3) return ::CheckCollisionPointPoly(point, world.data(), count);
         for (int i = 0; i + 1 < count; ++i)
-            if (::CheckCollisionPointLine(point, world[i], world[i + 1], Line::kHitDistance))
-                return true;
+            if (::CheckCollisionPointLine(point, world[i], world[i + 1], kHitDistance)) return true;
         return false;
     }
 

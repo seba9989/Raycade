@@ -5,17 +5,12 @@
 
 #include <raycade/render/PrimitiveRenderer.hpp>
 
+#include "Pixel.hpp"
+
 #include <cmath>
 #include <utility>
 
-namespace {
-
-/** @brief Zaokrągla współrzędną do najbliższego piksela. */
-int Round(float value) {
-    return static_cast<int>(std::lround(value));
-}
-
-} // namespace
+using pixel::Round;
 
 PrimitiveRenderer& PrimitiveRenderer::Reset() {
     color_ = BLACK;
@@ -92,6 +87,15 @@ void PrimitiveRenderer::LineIncremental(Vector2 from, Vector2 to) {
 
 PrimitiveRenderer& PrimitiveRenderer::Rect(Point2D position, Vector2 size) {
     const Rectangle rectangle{position.X(), position.Y(), size.x, size.y};
+    if (incremental_ && !filled_) {
+        // kontur z czterech odcinków, jak Polygon() - piksele [x, x + w - 1] x [y, y + h - 1],
+        // czyli te same co w konturze raylib
+        const float right = position.X() + size.x - 1.0f;
+        const float bottom = position.Y() + size.y - 1.0f;
+        const Point2D corners[] = {
+            position, {right, position.Y()}, {right, bottom}, {position.X(), bottom}};
+        return Polyline(corners, true);
+    }
     if (target_) {
         if (filled_)
             ::ImageDrawRectangleRec(&target_->Edit(), rectangle, color_);
@@ -115,6 +119,9 @@ PrimitiveRenderer& PrimitiveRenderer::Triangle(Point2D a, Point2D b, Point2D c) 
             ::ImageDrawTriangle(&target_->Edit(), a, b, c, color_);
         else
             ::DrawTriangle(a, b, c, color_);
+    } else if (incremental_) {
+        const Point2D corners[] = {a, b, c};
+        Polyline(corners, true);
     } else {
         if (target_)
             ::ImageDrawTriangleLines(&target_->Edit(), a, b, c, color_);

@@ -5,7 +5,7 @@
 #pragma once
 
 #include "../Entity.hpp"
-#include "Line.hpp"
+#include "HitDistance.hpp"
 
 namespace shapes {
 
@@ -14,7 +14,7 @@ class Point : public Entity {
   public:
     /** @copydoc Updatable::Contains */
     bool Contains(Vector2 point) const override {
-        return ::CheckCollisionPointCircle(point, WorldPosition(), Line::kHitDistance);
+        return ::CheckCollisionPointCircle(point, WorldPosition(), kHitDistance);
     }
 
   protected:
