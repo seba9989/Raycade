@@ -14,8 +14,10 @@ class PrimitiveRenderer;
 
 /**
  * @brief Punkt dwuwymiarowy zgodny ze współrzędnymi raylib.
- * @details Zamienia się automatycznie z i na Vector2, więc można go podawać wszędzie tam,
- * gdzie silnik przyjmuje Vector2.
+ * @details Typ punktu w API geometrii: PrimitiveRenderer i kształty z przestrzeni nazw shapes
+ * przyjmują pozycje, środki i wierzchołki jako Point2D. Zamienia się automatycznie z i na
+ * Vector2, więc pojedynczy punkt można podać także jako Vector2 albo `{x, y}`, a Point2D
+ * można przekazać do funkcji raylib. Listy wierzchołków to `std::vector<Point2D>`.
  * @code{.cpp}
  * Point2D p{100, 50};
  * p.X(120).Y(80).Draw(renderer);

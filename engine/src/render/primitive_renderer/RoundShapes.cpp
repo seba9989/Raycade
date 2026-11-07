@@ -19,7 +19,7 @@ int Round(float value) {
 
 } // namespace
 
-PrimitiveRenderer& PrimitiveRenderer::Circle(Vector2 center, float radius) {
+PrimitiveRenderer& PrimitiveRenderer::Circle(Point2D center, float radius) {
     if (symmetric_) {
         CircleSymmetric(center, radius);
     } else if (target_) {
@@ -70,15 +70,15 @@ void PrimitiveRenderer::CircleSymmetric(Vector2 center, float radius) {
     }
 }
 
-PrimitiveRenderer& PrimitiveRenderer::Ellipse(Vector2 center, Vector2 radius) {
+PrimitiveRenderer& PrimitiveRenderer::Ellipse(Point2D center, Vector2 radius) {
     // raylib nie ma funkcji rysującej elipsę na Image, więc na bitmapie zawsze własny algorytm
     if (symmetric_ || target_) {
         EllipseSymmetric(center, radius);
     } else {
         if (filled_)
-            ::DrawEllipse(Round(center.x), Round(center.y), radius.x, radius.y, color_);
+            ::DrawEllipse(Round(center.X()), Round(center.Y()), radius.x, radius.y, color_);
         else
-            ::DrawEllipseLines(Round(center.x), Round(center.y), radius.x, radius.y, color_);
+            ::DrawEllipseLines(Round(center.X()), Round(center.Y()), radius.x, radius.y, color_);
     }
     return *this;
 }

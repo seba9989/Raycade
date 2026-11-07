@@ -11,6 +11,7 @@
 #include <cstddef>
 #include <memory>
 #include <optional>
+#include <span>
 #include <utility>
 #include <vector>
 
@@ -400,16 +401,16 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
 
     /**
      * @brief Przelicza listę wierzchołków lokalnych na układ sceny.
-     * @tparam Vertex Typ wierzchołka (Vector2 albo Point2D).
+     * @details Wynik jest typu Vector2, bo służy do testów trafień funkcjami raylib
+     * (CheckCollisionPointPoly() itd.), które przyjmują tablice Vector2.
      * @param local Wierzchołki lokalne.
      * @return Wierzchołki w układzie sceny.
      */
-    template <typename Vertex>
-    std::vector<Vertex> WorldVertices(const std::vector<Vertex>& local) const {
-        std::vector<Vertex> world;
+    std::vector<Vector2> WorldVertices(std::span<const Point2D> local) const {
+        std::vector<Vector2> world;
         world.reserve(local.size());
-        for (const Vertex& vertex : local)
-            world.push_back(Vertex{World(vertex)});
+        for (const Point2D vertex : local)
+            world.push_back(World(vertex));
         return world;
     }
 

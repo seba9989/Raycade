@@ -16,7 +16,7 @@ class Line : public Entity {
      * @param position Pozycja lokalna.
      * @return Ten sam odcinek.
      */
-    template <typename Self> Self& From(this Self& self, Vector2 position) {
+    template <typename Self> Self& From(this Self& self, Point2D position) {
         self.from_ = position;
         return self;
     }
@@ -26,7 +26,7 @@ class Line : public Entity {
      * @param position Pozycja lokalna.
      * @return Ten sam odcinek.
      */
-    template <typename Self> Self& To(this Self& self, Vector2 position) {
+    template <typename Self> Self& To(this Self& self, Point2D position) {
         self.to_ = position;
         return self;
     }
@@ -56,8 +56,8 @@ class Line : public Entity {
     }
 
   private:
-    Vector2 from_{};           /**< Początek względem pozycji obiektu. */
-    Vector2 to_{};             /**< Koniec względem pozycji obiektu. */
+    Point2D from_;             /**< Początek względem pozycji obiektu. */
+    Point2D to_;               /**< Koniec względem pozycji obiektu. */
     bool incremental_ = false; /**< Czy użyć algorytmu przyrostowego. */
 };
 

@@ -20,7 +20,7 @@ class Lines : public Entity {
      * @param vertices Wierzchołki (0,1), (2,3) itd., lokalne względem pozycji obiektu.
      * @return Ten sam zbiór.
      */
-    template <typename Self> Self& Vertices(this Self& self, std::vector<Vector2> vertices) {
+    template <typename Self> Self& Vertices(this Self& self, std::vector<Point2D> vertices) {
         self.vertices_ = std::move(vertices);
         return self;
     }
@@ -51,7 +51,7 @@ class Lines : public Entity {
     }
 
   private:
-    std::vector<Vector2> vertices_; /**< Pary końców odcinków. */
+    std::vector<Point2D> vertices_; /**< Pary końców odcinków. */
     bool incremental_ = false;      /**< Czy użyć algorytmu przyrostowego. */
 };
 

@@ -26,10 +26,10 @@ int Round(float value) {
  * 2. dopóki stos nie jest pusty: zdejmij piksel P; pomiń go, jeśli ma kolor wypełnienia
  *    albo kolor krawędzi; w przeciwnym razie pokoloruj P i odłóż jego sąsiadów N, S, W, E.
  */
-PrimitiveRenderer& PrimitiveRenderer::BoundaryFill(Vector2 seed, Color boundary) {
+PrimitiveRenderer& PrimitiveRenderer::BoundaryFill(Point2D seed, Color boundary) {
     if (!target_) return *this; // z ekranu nie da się odczytać kolorów
 
-    std::vector<std::pair<int, int>> stack{{Round(seed.x), Round(seed.y)}};
+    std::vector<std::pair<int, int>> stack{{Round(seed.X()), Round(seed.Y())}};
     while (!stack.empty()) {
         const auto [x, y] = stack.back();
         stack.pop_back();
@@ -48,11 +48,11 @@ PrimitiveRenderer& PrimitiveRenderer::BoundaryFill(Vector2 seed, Color boundary)
  * @details Przebieg jak w BoundaryFill(), ale piksel jest pomijany, gdy ma kolor wypełnienia
  * albo kolor inny niż kolor ziarna (tła).
  */
-PrimitiveRenderer& PrimitiveRenderer::FloodFill(Vector2 seed) {
+PrimitiveRenderer& PrimitiveRenderer::FloodFill(Point2D seed) {
     if (!target_) return *this;
 
-    const int seedX = Round(seed.x);
-    const int seedY = Round(seed.y);
+    const int seedX = Round(seed.X());
+    const int seedY = Round(seed.Y());
     if (!target_->Contains(seedX, seedY)) return *this;
     const Color background = target_->Pixel(seedX, seedY);
 
@@ -71,7 +71,7 @@ PrimitiveRenderer& PrimitiveRenderer::FloodFill(Vector2 seed) {
     return *this;
 }
 
-PrimitiveRenderer& PrimitiveRenderer::Blit(const Bitmap& bitmap, Vector2 position) {
+PrimitiveRenderer& PrimitiveRenderer::Blit(const Bitmap& bitmap, Point2D position) {
     ::DrawTextureV(bitmap.Texture(), position, WHITE);
     return *this;
 }

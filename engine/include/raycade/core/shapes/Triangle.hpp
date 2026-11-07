@@ -18,7 +18,7 @@ class Triangle : public Entity {
      * @param c Trzeci wierzchołek.
      * @return Ten sam trójkąt.
      */
-    template <typename Self> Self& Vertices(this Self& self, Vector2 a, Vector2 b, Vector2 c) {
+    template <typename Self> Self& Vertices(this Self& self, Point2D a, Point2D b, Point2D c) {
         self.a_ = a;
         self.b_ = b;
         self.c_ = c;
@@ -37,9 +37,9 @@ class Triangle : public Entity {
     }
 
   private:
-    Vector2 a_{}; /**< Pierwszy wierzchołek. */
-    Vector2 b_{}; /**< Drugi wierzchołek. */
-    Vector2 c_{}; /**< Trzeci wierzchołek. */
+    Point2D a_; /**< Pierwszy wierzchołek. */
+    Point2D b_; /**< Drugi wierzchołek. */
+    Point2D c_; /**< Trzeci wierzchołek. */
 };
 
 } // namespace shapes

@@ -21,6 +21,11 @@
  * można łączyć. Stan zostaje między wywołaniami - Reset() przywraca domyślny pędzel,
  * ale nie zmienia celu rysowania (robią to tylko Target() i TargetScreen()), więc wywołany
  * w trakcie rysowania po bitmapie nie przeniesie przypadkiem rysowania na ekran.
+ *
+ * Wszystkie punkty (pozycje, środki, wierzchołki, ziarna wypełnień) są typu Point2D.
+ * Pojedynczy Vector2 konwertuje się na Point2D niejawnie, więc wywołania typu
+ * `Circle({100, 100}, 40)` działają bez zmian; listy wierzchołków to `std::vector<Point2D>`.
+ * Rozmiary i promienie pozostają typu Vector2 - to wektory, a nie punkty.
  * @code{.cpp}
  * renderer.Paint(RED).Fill().Circle({100, 100}, 40)
  *         .Fill(false).Rect({200, 60}, {120, 80});
@@ -114,7 +119,7 @@ class PrimitiveRenderer {
      * @param position Pozycja piksela.
      * @return Ten sam renderer.
      */
-    PrimitiveRenderer& Point(Vector2 position);
+    PrimitiveRenderer& Point(Point2D position);
 
     /**
      * @brief Rysuje odcinek wybranym algorytmem (patrz Incremental()).
@@ -123,7 +128,7 @@ class PrimitiveRenderer {
      * @return Ten sam renderer.
      * @see LineIncremental() - opis algorytmu przyrostowego.
      */
-    PrimitiveRenderer& Line(Vector2 from, Vector2 to);
+    PrimitiveRenderer& Line(Point2D from, Point2D to);
 
     /**
      * @brief Rysuje kontur lub wypełnienie prostokąta.
@@ -131,7 +136,7 @@ class PrimitiveRenderer {
      * @param size Szerokość i wysokość.
      * @return Ten sam renderer.
      */
-    PrimitiveRenderer& Rect(Vector2 position, Vector2 size);
+    PrimitiveRenderer& Rect(Point2D position, Vector2 size);
 
     /**
      * @brief Rysuje okrąg albo koło wybranym algorytmem (patrz Symmetric()).
@@ -140,7 +145,7 @@ class PrimitiveRenderer {
      * @return Ten sam renderer.
      * @see CircleSymmetric() - opis algorytmu z symetrią ośmiokrotną.
      */
-    PrimitiveRenderer& Circle(Vector2 center, float radius);
+    PrimitiveRenderer& Circle(Point2D center, float radius);
 
     /**
      * @brief Rysuje elipsę wybranym algorytmem (patrz Symmetric()).
@@ -151,7 +156,7 @@ class PrimitiveRenderer {
      * @return Ten sam renderer.
      * @see EllipseSymmetric() - opis algorytmu z symetrią czterokrotną.
      */
-    PrimitiveRenderer& Ellipse(Vector2 center, Vector2 radius);
+    PrimitiveRenderer& Ellipse(Point2D center, Vector2 radius);
 
     /**
      * @brief Rysuje kontur lub wypełnienie trójkąta.
@@ -160,7 +165,7 @@ class PrimitiveRenderer {
      * @param c Trzeci wierzchołek.
      * @return Ten sam renderer.
      */
-    PrimitiveRenderer& Triangle(Vector2 a, Vector2 b, Vector2 c);
+    PrimitiveRenderer& Triangle(Point2D a, Point2D b, Point2D c);
 
     /** @} */
 
@@ -196,27 +201,18 @@ class PrimitiveRenderer {
      * @param positions Pozycje punktów.
      * @return Ten sam renderer.
      */
-    PrimitiveRenderer& Points(std::span<const Vector2> positions);
+    PrimitiveRenderer& Points(std::span<const Point2D> positions);
 
     /**
      * @brief Rysuje niezależne odcinki z par kolejnych wierzchołków: (0,1), (2,3), ...
      * @param vertices Końce odcinków; ostatni punkt bez pary jest pomijany.
      * @return Ten sam renderer.
      */
-    PrimitiveRenderer& Lines(std::span<const Vector2> vertices);
+    PrimitiveRenderer& Lines(std::span<const Point2D> vertices);
 
     /**
-     * @brief Rysuje łamaną otwartą lub zamkniętą z wektorów raylib.
+     * @brief Rysuje łamaną otwartą lub zamkniętą.
      * @details W odróżnieniu od Polygon() nie sprawdza przecięć - łamana może być wiązana.
-     * @param vertices Wierzchołki w kolejności.
-     * @param closed Czy połączyć ostatni wierzchołek z pierwszym.
-     * @return Ten sam renderer.
-     */
-    PrimitiveRenderer& Polyline(std::span<const Vector2> vertices, bool closed = false);
-
-    /**
-     * @brief Rysuje łamaną otwartą lub zamkniętą z punktów Point2D.
-     * @details W odróżnieniu od Polygon() nie sprawdza przecięć.
      * @param vertices Wierzchołki w kolejności.
      * @param closed Czy połączyć ostatni wierzchołek z pierwszym.
      * @return Ten sam renderer.
@@ -249,7 +245,7 @@ class PrimitiveRenderer {
      * @param boundary Kolor krawędzi.
      * @return Ten sam renderer; bez ustawionej bitmapy niczego nie zmienia.
      */
-    PrimitiveRenderer& BoundaryFill(Vector2 seed, Color boundary);
+    PrimitiveRenderer& BoundaryFill(Point2D seed, Color boundary);
 
     /**
      * @brief Wypełnia spójny obszar w kolorze piksela startowego (flood fill).
@@ -258,7 +254,7 @@ class PrimitiveRenderer {
      * @return Ten sam renderer; bez ustawionej bitmapy lub dla ziarna poza nią niczego
      * nie zmienia.
      */
-    PrimitiveRenderer& FloodFill(Vector2 seed);
+    PrimitiveRenderer& FloodFill(Point2D seed);
 
     /** @} */
 
@@ -271,7 +267,7 @@ class PrimitiveRenderer {
      * @param position Lewy górny róg na ekranie.
      * @return Ten sam renderer.
      */
-    PrimitiveRenderer& Blit(const Bitmap& bitmap, Vector2 position);
+    PrimitiveRenderer& Blit(const Bitmap& bitmap, Point2D position);
 
     /** @} */
 

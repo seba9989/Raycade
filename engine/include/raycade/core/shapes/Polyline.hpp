@@ -22,7 +22,7 @@ class Polyline : public Entity {
      * @param vertices Punkty w kolejności.
      * @return Ta sama łamana.
      */
-    template <typename Self> Self& Vertices(this Self& self, std::vector<Vector2> vertices) {
+    template <typename Self> Self& Vertices(this Self& self, std::vector<Point2D> vertices) {
         self.vertices_ = std::move(vertices);
         return self;
     }
@@ -68,7 +68,7 @@ class Polyline : public Entity {
     }
 
   private:
-    std::vector<Vector2> vertices_; /**< Wierzchołki względem pozycji obiektu. */
+    std::vector<Point2D> vertices_; /**< Wierzchołki względem pozycji obiektu. */
     bool closed_ = false;           /**< Czy łamana jest zamknięta. */
     bool incremental_ = false;      /**< Czy użyć algorytmu przyrostowego. */
 };

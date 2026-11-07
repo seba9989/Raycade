@@ -20,14 +20,14 @@ class Points : public Entity {
      * @param positions Pozycje lokalne.
      * @return Ten sam zbiór.
      */
-    template <typename Self> Self& Positions(this Self& self, std::vector<Vector2> positions) {
+    template <typename Self> Self& Positions(this Self& self, std::vector<Point2D> positions) {
         self.positions_ = std::move(positions);
         return self;
     }
 
     /** @copydoc Updatable::Contains */
     bool Contains(Vector2 point) const override {
-        for (const Vector2& position : positions_)
+        for (const Point2D position : positions_)
             if (::CheckCollisionPointCircle(point, World(position), Line::kHitDistance))
                 return true;
         return false;
@@ -40,7 +40,7 @@ class Points : public Entity {
     }
 
   private:
-    std::vector<Vector2> positions_; /**< Pozycje punktów względem obiektu. */
+    std::vector<Point2D> positions_; /**< Pozycje punktów względem obiektu. */
 };
 
 } // namespace shapes

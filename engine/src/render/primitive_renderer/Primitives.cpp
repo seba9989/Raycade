@@ -15,15 +15,6 @@ int Round(float value) {
     return static_cast<int>(std::lround(value));
 }
 
-/** @brief Wspólna implementacja łamanej dla wierzchołków Vector2 i Point2D. */
-template <typename Vertex>
-void DrawPolyline(PrimitiveRenderer& renderer, std::span<const Vertex> vertices, bool closed) {
-    if (vertices.size() < 2) return;
-    for (std::size_t i = 0; i + 1 < vertices.size(); ++i)
-        renderer.Line(vertices[i], vertices[i + 1]);
-    if (closed) renderer.Line(vertices.back(), vertices.front());
-}
-
 } // namespace
 
 PrimitiveRenderer& PrimitiveRenderer::Reset() {
@@ -47,12 +38,12 @@ void PrimitiveRenderer::Span(int y, int fromX, int toX) {
         Plot(x, y);
 }
 
-PrimitiveRenderer& PrimitiveRenderer::Point(Vector2 position) {
-    Plot(Round(position.x), Round(position.y));
+PrimitiveRenderer& PrimitiveRenderer::Point(Point2D position) {
+    Plot(Round(position.X()), Round(position.Y()));
     return *this;
 }
 
-PrimitiveRenderer& PrimitiveRenderer::Line(Vector2 from, Vector2 to) {
+PrimitiveRenderer& PrimitiveRenderer::Line(Point2D from, Point2D to) {
     if (incremental_)
         LineIncremental(from, to);
     else if (target_)
@@ -99,8 +90,8 @@ void PrimitiveRenderer::LineIncremental(Vector2 from, Vector2 to) {
     }
 }
 
-PrimitiveRenderer& PrimitiveRenderer::Rect(Vector2 position, Vector2 size) {
-    const Rectangle rectangle{position.x, position.y, size.x, size.y};
+PrimitiveRenderer& PrimitiveRenderer::Rect(Point2D position, Vector2 size) {
+    const Rectangle rectangle{position.X(), position.Y(), size.x, size.y};
     if (target_) {
         if (filled_)
             ::ImageDrawRectangleRec(&target_->Edit(), rectangle, color_);
@@ -115,10 +106,10 @@ PrimitiveRenderer& PrimitiveRenderer::Rect(Vector2 position, Vector2 size) {
     return *this;
 }
 
-PrimitiveRenderer& PrimitiveRenderer::Triangle(Vector2 a, Vector2 b, Vector2 c) {
+PrimitiveRenderer& PrimitiveRenderer::Triangle(Point2D a, Point2D b, Point2D c) {
     if (filled_) {
         // raylib wymaga wierzchołków przeciwnie do ruchu wskazówek zegara
-        const float cross = (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+        const float cross = (b.X() - a.X()) * (c.Y() - a.Y()) - (b.Y() - a.Y()) * (c.X() - a.X());
         if (cross > 0.0f) std::swap(b, c);
         if (target_)
             ::ImageDrawTriangle(&target_->Edit(), a, b, c, color_);
@@ -133,25 +124,23 @@ PrimitiveRenderer& PrimitiveRenderer::Triangle(Vector2 a, Vector2 b, Vector2 c) 
     return *this;
 }
 
-PrimitiveRenderer& PrimitiveRenderer::Points(std::span<const Vector2> positions) {
-    for (const Vector2& position : positions)
+PrimitiveRenderer& PrimitiveRenderer::Points(std::span<const Point2D> positions) {
+    for (const Point2D position : positions)
         Point(position);
     return *this;
 }
 
-PrimitiveRenderer& PrimitiveRenderer::Lines(std::span<const Vector2> vertices) {
+PrimitiveRenderer& PrimitiveRenderer::Lines(std::span<const Point2D> vertices) {
     for (std::size_t i = 0; i + 1 < vertices.size(); i += 2)
         Line(vertices[i], vertices[i + 1]);
     return *this;
 }
 
-PrimitiveRenderer& PrimitiveRenderer::Polyline(std::span<const Vector2> vertices, bool closed) {
-    DrawPolyline(*this, vertices, closed);
-    return *this;
-}
-
 PrimitiveRenderer& PrimitiveRenderer::Polyline(std::span<const Point2D> vertices, bool closed) {
-    DrawPolyline(*this, vertices, closed);
+    if (vertices.size() < 2) return *this;
+    for (std::size_t i = 0; i + 1 < vertices.size(); ++i)
+        Line(vertices[i], vertices[i + 1]);
+    if (closed) Line(vertices.back(), vertices.front());
     return *this;
 }
 

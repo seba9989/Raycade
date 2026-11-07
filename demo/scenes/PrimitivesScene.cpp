@@ -97,7 +97,7 @@ SCENE("prymitywy") {
     scene.Spawn<shapes::Points>()
         .Position({830, 80})
         .Positions([] {
-            std::vector<Vector2> positions;
+            std::vector<Point2D> positions;
             for (int i = 0; i < 300; ++i)
                 positions.push_back({static_cast<float>(::GetRandomValue(0, 150)),
                                      static_cast<float>(::GetRandomValue(0, 120))});
@@ -108,7 +108,7 @@ SCENE("prymitywy") {
     scene.Spawn<shapes::Lines>()
         .Position({900, 270})
         .Vertices([] {
-            std::vector<Vector2> vertices;
+            std::vector<Point2D> vertices;
             for (int i = 0; i < 16; ++i) {
                 const float angle = static_cast<float>(i) * 2.0f * PI / 16.0f;
                 vertices.push_back({0, 0});

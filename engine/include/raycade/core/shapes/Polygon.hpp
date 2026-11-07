@@ -58,9 +58,7 @@ class Polygon : public Entity {
     /** @copydoc Updatable::Contains */
     bool Contains(Vector2 point) const override {
         if (!Simple()) return false;
-        std::vector<Vector2> world;
-        for (const Point2D& vertex : WorldVertices(vertices_))
-            world.push_back(vertex);
+        const std::vector<Vector2> world = WorldVertices(vertices_);
         return ::CheckCollisionPointPoly(point, world.data(), static_cast<int>(world.size()));
     }
 
