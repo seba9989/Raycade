@@ -1044,8 +1044,11 @@ class Engine : public Contextable {
     std::vector<int> RandomSequence(unsigned int count, int min, int max) const;
 
     /**
-     * @brief Zapisuje zrzut ekranu do pliku PNG.
-     * @param path Ścieżka pliku (względem katalogu roboczego).
+     * @brief Zapisuje zrzut ekranu do pliku na końcu bieżącej klatki.
+     * @details Zrzut obejmuje całą narysowaną klatkę (scenę, HUD i pasy przy skalowaniu),
+     * niezależnie od tego, czy Screenshot() wywołano w OnUpdate(), OnDraw() czy w zdarzeniu
+     * obiektu. Wynik zapisu trafia do logu.
+     * @param path Ścieżka pliku (także z katalogami); format wynika z rozszerzenia, np. ".png".
      * @return Ten sam silnik.
      */
     Engine& Screenshot(const std::string& path);
@@ -1284,6 +1287,7 @@ class Engine : public Contextable {
 
     /** @brief Obsługuje upuszczone pliki i odtwarzanie nagrania na początku klatki. */
     void PollSystemEvents();
+    void SaveScreenshot();
     /** @brief Tworzy (albo odtwarza) teksturę gry zgodnie z bieżącymi ustawieniami. */
     void CreateTarget();
 
@@ -1338,6 +1342,7 @@ class Engine : public Contextable {
     std::ofstream log_;        /**< Otwarty plik logu. */
     bool initialized_ = false; /**< Czy okno zostało utworzone. */
     bool quit_ = false;        /**< Czy zakończyć pętlę po bieżącej klatce. */
+    std::string screenshot_;   /**< Ścieżka zrzutu do wykonania na końcu klatki. */
 
     std::map<std::string, ::Scene> scenes_; /**< Utworzone sceny według nazw. */
     std::string active_;                    /**< Nazwa aktywnej sceny. */

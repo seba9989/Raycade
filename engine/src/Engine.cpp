@@ -7,6 +7,8 @@
 
 #include <raycade/Engine.hpp>
 
+#include <rlgl.h>
+
 #include <algorithm>
 #include <cmath>
 #include <cstdarg>
@@ -313,6 +315,7 @@ int Engine::Run() {
             target_.Draw(destination_);
             if (post) ::EndShaderMode();
         }
+        SaveScreenshot();
         ::EndDrawing();
         input_.UpdateActionState(); // stan osi pada do ActionPressed/Released w następnej klatce
 
@@ -751,8 +754,25 @@ int Engine::RandomValue(int min, int max) const {
 }
 
 Engine& Engine::Screenshot(const std::string& path) {
-    if (RequireWindow("Screenshot")) ::TakeScreenshot(path.c_str());
+    // zrzut w środku klatki pokazałby poprzednią albo niedokończoną klatkę - patrz Run()
+    if (RequireWindow("Screenshot")) screenshot_ = path;
     return *this;
+}
+
+/**
+ * @details Wołana w Run() przed EndDrawing(), gdy cała klatka jest już w buforze okna.
+ * Własny zapis zamiast TakeScreenshot(): raylib (5.5) obcina ścieżkę do samej nazwy pliku
+ * i zapisuje go zawsze w katalogu roboczym.
+ */
+void Engine::SaveScreenshot() {
+    if (screenshot_.empty()) return;
+    ::rlDrawRenderBatchActive(); // wierzchołki czekające w buforze rlgl jeszcze nie są w obrazie
+    Image image = ::LoadImageFromScreen();
+    const bool saved = image.data != nullptr && ::ExportImage(image, screenshot_.c_str());
+    ::UnloadImage(image);
+    Log(saved ? LogLevel::Info : LogLevel::Error,
+        "Zrzut ekranu -> \"" + screenshot_ + "\"" + (saved ? "" : " - zapis nie powiodl sie"));
+    screenshot_.clear();
 }
 
 Engine& Engine::OpenUrl(const std::string& url) {
