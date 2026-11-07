@@ -24,8 +24,25 @@ void Scene::Update(float dt, const Input& input) {
     frame.focused = focus_.focused ? focus_.focused->Owner() : nullptr;
     for (std::size_t i = 0; i < entities_.size(); ++i)
         entities_[i]->Update(dt, input, frame);
+    // po pętli po obiektach: Destroy() w zdarzeniu nie może usunąć obiektu w trakcie iteracji
+    RemoveDestroyed(entities_);
     // po ruchu obiektów, żeby kamera w tej samej klatce pokazała ich nowe położenie
     camera_.Update(dt);
+}
+
+void Scene::RemoveDestroyed(std::vector<std::unique_ptr<Entity>>& entities) {
+    std::erase_if(entities, [this](const std::unique_ptr<Entity>& entity) {
+        if (!entity->destroyed_) {
+            RemoveDestroyed(entity->children_);
+            return false;
+        }
+        // kamera nie może dalej czytać pozycji usuwanego obiektu (ani jego potomka)
+        if (const Entity* followed = camera_.Followed();
+            followed && entity->IsSelfOrAncestorOf(followed))
+            camera_.StopFollowing();
+        // fokus zdejmuje destruktor Focusable
+        return true;
+    });
 }
 
 void Scene::Draw(PrimitiveRenderer& renderer) const {

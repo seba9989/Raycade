@@ -6,10 +6,12 @@
 
 #include <raylib.h>
 
+#include <raycade/entity/Entity.hpp>
 #include <raycade/math/AffineMatrix2D.hpp>
 
 #include <cmath>
 #include <functional>
+#include <type_traits>
 
 /**
  * @brief Kamera 2D sceny (nakładka na Camera2D z raylib).
@@ -86,7 +88,9 @@ class SceneCamera {
 
     /**
      * @brief Ustawia podążanie za obiektem: co klatkę Target() zbliża się do jego pozycji.
-     * @details Obiekt musi żyć co najmniej tak długo jak scena (jak każdy obiekt sceny).
+     * @details Gdy śledzony obiekt sceny (albo jego przodek) zostanie usunięty przez
+     * Entity::Destroy(), scena sama wyłącza podążanie. Obiekt spoza sceny musi żyć co najmniej
+     * tak długo, jak kamera za nim podąża.
      * @tparam T Typ obiektu z metodą WorldPosition() (każdy Entity).
      * @param target Obiekt, za którym podąża kamera.
      * @param speed 0 - natychmiast; większa wartość - szybsze doganianie (np. 5 = płynnie).
@@ -94,6 +98,10 @@ class SceneCamera {
      */
     template <typename T> SceneCamera& Follow(const T& target, float speed = 0.0f) {
         follow_ = [&target] { return target.WorldPosition(); };
+        if constexpr (std::is_base_of_v<Entity, T>)
+            followed_ = &target;
+        else
+            followed_ = nullptr;
         followSpeed_ = speed;
         camera_.target = follow_(); // bez "dojazdu" z punktu (0, 0) w pierwszej klatce
         return *this;
@@ -110,6 +118,9 @@ class SceneCamera {
 
     /** @brief Sprawdza, czy kamera podąża za obiektem. */
     bool IsFollowing() const { return static_cast<bool>(follow_); }
+
+    /** @brief Podaje śledzony obiekt sceny albo nullptr (brak podążania albo cel spoza Entity). */
+    const Entity* Followed() const { return follow_ ? followed_ : nullptr; }
 
     /**
      * @brief Podaje przekształcenie świat -> okno jako macierz silnika.
@@ -149,5 +160,6 @@ class SceneCamera {
   private:
     Camera2D camera_{{0, 0}, {0, 0}, 0.0f, 1.0f}; /**< Offset, target, obrót (stopnie), zoom. */
     std::function<Vector2()> follow_;             /**< Pozycja śledzonego obiektu. */
+    const Entity* followed_ = nullptr;            /**< Śledzony obiekt (do Destroy()). */
     float followSpeed_ = 0.0f;                    /**< Szybkość doganiania (0 = natychmiast). */
 };

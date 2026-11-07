@@ -175,6 +175,11 @@ class Scene : public Contextable {
   private:
     /** @brief Wywołuje OnBlur() / OnFocus(), jeśli fokus zmienił się od ostatniego razu. */
     void NotifyFocus();
+    /**
+     * @brief Usuwa obiekty oznaczone przez Entity::Destroy() (rekurencyjnie, z dziećmi).
+     * @param entities Lista obiektów jednego poziomu drzewa.
+     */
+    void RemoveDestroyed(std::vector<std::unique_ptr<Entity>>& entities);
 
     /**
      * @brief Przenosi fokus na następny (+1) albo poprzedni (-1) obiekt w kolejności Taba.

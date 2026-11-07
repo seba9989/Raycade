@@ -196,6 +196,23 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
     }
 
     /**
+     * @brief Usuwa obiekt razem z dziećmi ze sceny.
+     * @details Obiekt jest tylko oznaczany, a usuwany przez scenę na końcu jej Update() -
+     * dlatego Destroy() można bezpiecznie wywołać w dowolnym zdarzeniu, także na sobie
+     * (`.OnClick([](auto& self) { self.Destroy(); })`) i w pętli po innych obiektach.
+     * Oznaczony obiekt nie dostaje już zdarzeń ani trafień myszą. Kamera, która za nim
+     * podążała, przestaje podążać, a fokus klawiatury jest zdejmowany.
+     *
+     * Po usunięciu wszystkie referencje i wskaźniki do obiektu (np. zapamiętane z Spawn<T>())
+     * są nieważne - obiekt, do którego trzeba się później odwoływać, sprawdza się przez
+     * IsDestroyed() przed końcem klatki albo nie trzyma się do niego referencji.
+     */
+    void Destroy() { destroyed_ = true; }
+
+    /** @brief Sprawdza, czy obiekt oznaczono do usunięcia (Destroy()) w tej klatce. */
+    bool IsDestroyed() const { return destroyed_; }
+
+    /**
      * @brief Wykonuje konfigurację dzieci i pozwala kontynuować łańcuch.
      * @param setup Funkcja otrzymująca ten obiekt jako jego konkretny typ
      * (dzieci tworzy się w niej przez Spawn<T>()).
@@ -423,6 +440,7 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
     Entity* parent_ = nullptr;          /**< Rodzic albo nullptr. */
     const SceneLinks* links_ = nullptr; /**< Powiązania ze sceną albo nullptr. */
     bool screenSpace_ = false;          /**< Czy obiekt jest w układzie ekranu. */
+    bool destroyed_ = false;            /**< Czy obiekt czeka na usunięcie (Destroy()). */
 
     /** @brief Kamera, przez którą widać obiekt: nullptr dla obiektów ekranu i niepodpiętych. */
     const SceneCamera* ViewCamera() const;

@@ -9,6 +9,7 @@
 #include <raycade/scene/SceneCamera.hpp>
 
 void Entity::Update(float dt, const Input& input, const PointerFrame& pointer) {
+    if (destroyed_) return; // czeka na usunięcie przez scenę na końcu klatki
     PointerEvents events;
     const bool focused = pointer.focused == this;
     events.hovered = IsSelfOrAncestorOf(pointer.target);
@@ -85,6 +86,7 @@ bool Entity::AnyChildContains(Vector2 point) const {
 }
 
 void Entity::CollectHits(Vector2 point, std::vector<const Entity*>& hits) const {
+    if (destroyed_) return;
     // poza przycięciem nie widać ani obiektu, ani dzieci - nie da się ich kliknąć
     if (clip_) {
         const auto local = TryToLocal(point);
