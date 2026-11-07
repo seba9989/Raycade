@@ -38,19 +38,11 @@ class Ellipse : public Entity {
     bool IsSymmetric() const { return symmetric_; }
 
     /** @copydoc Updatable::Contains */
-    bool Contains(Vector2 point) const override {
-        const auto local = TryToLocal(point);
-        if (!local || radius_.x == 0.0f || radius_.y == 0.0f) return false;
-        const float x = local->x / radius_.x;
-        const float y = local->y / radius_.y;
-        return x * x + y * y <= 1.0f;
-    }
+    bool Contains(Vector2 point) const override;
 
   protected:
     /** @copydoc Drawable::Draw */
-    void Draw(PrimitiveRenderer& renderer) const override {
-        renderer.Paint(color_).Fill(filled_).Symmetric(symmetric_).Ellipse({0.0f, 0.0f}, radius_);
-    }
+    void Draw(PrimitiveRenderer& renderer) const override;
 
   private:
     Vector2 radius_{20, 10}; /**< Promienie {poziomy, pionowy}. */

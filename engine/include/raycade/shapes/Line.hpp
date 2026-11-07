@@ -52,15 +52,11 @@ class Line : public Entity {
     bool IsIncremental() const { return incremental_; }
 
     /** @copydoc Updatable::Contains */
-    bool Contains(Vector2 point) const override {
-        return ::CheckCollisionPointLine(point, World(from_), World(to_), kHitDistance);
-    }
+    bool Contains(Vector2 point) const override;
 
   protected:
     /** @copydoc Drawable::Draw */
-    void Draw(PrimitiveRenderer& renderer) const override {
-        renderer.Paint(color_).Incremental(incremental_).Line(from_, to_);
-    }
+    void Draw(PrimitiveRenderer& renderer) const override;
 
   private:
     Point2D from_;             /**< Początek względem pozycji obiektu. */

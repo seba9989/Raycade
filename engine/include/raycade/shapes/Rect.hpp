@@ -39,16 +39,11 @@ class Rect : public Entity {
     bool IsIncremental() const { return incremental_; }
 
     /** @copydoc Updatable::Contains */
-    bool Contains(Vector2 point) const override {
-        const auto local = TryToLocal(point);
-        return local && ::CheckCollisionPointRec(*local, {0.0f, 0.0f, size_.x, size_.y});
-    }
+    bool Contains(Vector2 point) const override;
 
   protected:
     /** @copydoc Drawable::Draw */
-    void Draw(PrimitiveRenderer& renderer) const override {
-        renderer.Paint(color_).Fill(filled_).Incremental(incremental_).Rect({0.0f, 0.0f}, size_);
-    }
+    void Draw(PrimitiveRenderer& renderer) const override;
 
   private:
     Vector2 size_{10, 10};     /**< Szerokość i wysokość w pikselach. */

@@ -60,20 +60,11 @@ class Polyline : public Entity {
      * @copydoc Updatable::Contains
      * @details Łamana zamknięta jest traktowana jak wielokąt, otwarta - jak zbiór odcinków.
      */
-    bool Contains(Vector2 point) const override {
-        const std::vector<Vector2> world = WorldVertices(vertices_);
-        const int count = static_cast<int>(world.size());
-        if (closed_ && count >= 3) return ::CheckCollisionPointPoly(point, world.data(), count);
-        for (int i = 0; i + 1 < count; ++i)
-            if (::CheckCollisionPointLine(point, world[i], world[i + 1], kHitDistance)) return true;
-        return false;
-    }
+    bool Contains(Vector2 point) const override;
 
   protected:
     /** @copydoc Drawable::Draw */
-    void Draw(PrimitiveRenderer& renderer) const override {
-        renderer.Paint(color_).Incremental(incremental_).Polyline(vertices_, closed_);
-    }
+    void Draw(PrimitiveRenderer& renderer) const override;
 
   private:
     std::vector<Point2D> vertices_; /**< Wierzchołki względem pozycji obiektu. */

@@ -186,12 +186,7 @@ class Input {
      * @brief Pobiera przesunięcie kursora od poprzedniej klatki.
      * @return Przesunięcie w pikselach albo {0, 0}, gdy mysz jest wyłączona.
      */
-    Vector2 MouseDelta() const {
-        if (!mouse_) return {0, 0};
-        // raylib skaluje pozycję kursora (SetMouseScale), ale nie jego przesunięcie
-        const Vector2 delta = ::GetMouseDelta();
-        return {delta.x * scale_.x, delta.y * scale_.y};
-    }
+    Vector2 MouseDelta() const;
 
     /**
      * @brief Pobiera ruch kółka myszy w bieżącej klatce (większa z osi).
@@ -222,11 +217,7 @@ class Input {
      * @param gamepad Numer pada.
      * @return Nazwa albo pusty napis, gdy pad jest niedostępny.
      */
-    std::string GamepadName(int gamepad) const {
-        if (!GamepadAvailable(gamepad)) return {};
-        const char* name = ::GetGamepadName(gamepad);
-        return name ? name : "";
-    }
+    std::string GamepadName(int gamepad) const;
 
     /**
      * @brief Sprawdza, czy przycisk pada jest wciśnięty.
@@ -303,12 +294,7 @@ class Input {
      * @param index Indeks punktu (od 0 do TouchPointCount() - 1).
      * @return Pozycja w oknie albo {0, 0}.
      */
-    Vector2 TouchPosition(int index = 0) const {
-        if (!touch_) return {0, 0};
-        // raylib nie przelicza dotyku przez przesunięcie i skalę ekranu - robimy to tutaj
-        const Vector2 position = ::GetTouchPosition(index);
-        return {(position.x + offset_.x) * scale_.x, (position.y + offset_.y) * scale_.y};
-    }
+    Vector2 TouchPosition(int index = 0) const;
 
     /**
      * @brief Pobiera identyfikator punktu dotyku (stały, dopóki palec jest na ekranie).
@@ -334,11 +320,7 @@ class Input {
      * @param bindings Źródła z przestrzeni nazw bind.
      * @return Ten sam obiekt.
      */
-    Input& BindAction(const std::string& action, std::vector<InputBinding> bindings) {
-        actions_->actions[action] = std::move(bindings);
-        actions_->analogDown.erase(action);
-        return *this;
-    }
+    Input& BindAction(const std::string& action, std::vector<InputBinding> bindings);
 
     /**
      * @brief Ustawia oś: źródła na minus, na plus i osie analogowe pada.
@@ -351,35 +333,21 @@ class Input {
      */
     Input& BindAxis(const std::string& axis, std::vector<InputBinding> negative,
                     std::vector<InputBinding> positive, std::vector<InputBinding> analog = {},
-                    float deadzone = 0.15f) {
-        actions_->axes[axis] =
-            InputAxis{std::move(negative), std::move(positive), std::move(analog), deadzone};
-        return *this;
-    }
+                    float deadzone = 0.15f);
 
     /**
      * @brief Usuwa akcję albo oś o podanej nazwie.
      * @param name Nazwa akcji lub osi.
      * @return Ten sam obiekt.
      */
-    Input& Unbind(const std::string& name) {
-        actions_->actions.erase(name);
-        actions_->axes.erase(name);
-        actions_->analogDown.erase(name);
-        return *this;
-    }
+    Input& Unbind(const std::string& name);
 
     /**
      * @brief Sprawdza, czy któreś źródło akcji jest wciśnięte.
      * @param action Nazwa akcji, np. "skok".
      * @return Stan akcji.
      */
-    bool ActionDown(const std::string& action) const {
-        const auto* bindings = Find(actions_->actions, action);
-        if (!bindings) return false;
-        return std::any_of(bindings->begin(), bindings->end(),
-                           [&](const InputBinding& b) { return BindingDown(b); });
-    }
+    bool ActionDown(const std::string& action) const;
 
     /**
      * @brief Sprawdza, czy akcję naciśnięto w tej klatce.
@@ -387,26 +355,14 @@ class Input {
      * @param action Nazwa akcji.
      * @return Stan naciśnięcia.
      */
-    bool ActionPressed(const std::string& action) const {
-        const auto* bindings = Find(actions_->actions, action);
-        if (!bindings) return false;
-        for (const InputBinding& b : *bindings)
-            if (b.kind != InputBinding::Kind::PadAxis && BindingPressed(b)) return true;
-        return AnalogDown(*bindings) && !WasAnalogDown(action);
-    }
+    bool ActionPressed(const std::string& action) const;
 
     /**
      * @brief Sprawdza, czy akcję puszczono w tej klatce (żadne źródło nie jest już wciśnięte).
      * @param action Nazwa akcji.
      * @return Stan puszczenia.
      */
-    bool ActionReleased(const std::string& action) const {
-        const auto* bindings = Find(actions_->actions, action);
-        if (!bindings || ActionDown(action)) return false;
-        for (const InputBinding& b : *bindings)
-            if (b.kind != InputBinding::Kind::PadAxis && BindingReleased(b)) return true;
-        return WasAnalogDown(action) && !AnalogDown(*bindings);
-    }
+    bool ActionReleased(const std::string& action) const;
 
     /**
      * @brief Pobiera wartość osi.
@@ -415,20 +371,7 @@ class Input {
      * @param axis Nazwa osi, np. "ruch_x".
      * @return Wartość od -1 do 1.
      */
-    float Axis(const std::string& axis) const {
-        const auto* definition = Find(actions_->axes, axis);
-        if (!definition) return 0.0f;
-        float value = 0.0f;
-        for (const InputBinding& b : definition->negative)
-            if (BindingDown(b)) value -= 1.0f;
-        for (const InputBinding& b : definition->positive)
-            if (BindingDown(b)) value += 1.0f;
-        for (const InputBinding& b : definition->analog) {
-            const float v = GamepadAxis(b.gamepad, b.code) * b.direction;
-            if (std::fabs(v) > definition->deadzone) value += v;
-        }
-        return std::clamp(value, -1.0f, 1.0f);
-    }
+    float Axis(const std::string& axis) const;
 
     /**
      * @brief Łączy dwie osie w kierunek o długości najwyżej 1 (np. ruch po skosie nie jest
@@ -437,12 +380,7 @@ class Input {
      * @param y Nazwa osi pionowej.
      * @return Wektor kierunku.
      */
-    Vector2 AxisVector(const std::string& x, const std::string& y) const {
-        Vector2 v{Axis(x), Axis(y)};
-        const float length = std::sqrt(v.x * v.x + v.y * v.y);
-        if (length > 1.0f) v = {v.x / length, v.y / length};
-        return v;
-    }
+    Vector2 AxisVector(const std::string& x, const std::string& y) const;
 
     /**
      * @brief Zwraca powiązania akcji (np. do wyświetlenia w ustawieniach sterowania).
@@ -485,56 +423,16 @@ class Input {
     }
 
     /** @brief Czy pojedyncze źródło jest wciśnięte. */
-    bool BindingDown(const InputBinding& b) const {
-        switch (b.kind) {
-        case InputBinding::Kind::Key:
-            return KeyDown(b.code);
-        case InputBinding::Kind::Mouse:
-            return MouseDown(b.code);
-        case InputBinding::Kind::PadButton:
-            return GamepadDown(b.gamepad, b.code);
-        case InputBinding::Kind::PadAxis:
-            return GamepadAxis(b.gamepad, b.code) * b.direction > b.threshold;
-        }
-        return false;
-    }
+    bool BindingDown(const InputBinding& b) const;
 
     /** @brief Czy źródło (poza osią pada) naciśnięto w tej klatce. */
-    bool BindingPressed(const InputBinding& b) const {
-        switch (b.kind) {
-        case InputBinding::Kind::Key:
-            return KeyPressed(b.code);
-        case InputBinding::Kind::Mouse:
-            return MousePressed(b.code);
-        case InputBinding::Kind::PadButton:
-            return GamepadPressed(b.gamepad, b.code);
-        case InputBinding::Kind::PadAxis:
-            return false;
-        }
-        return false;
-    }
+    bool BindingPressed(const InputBinding& b) const;
 
     /** @brief Czy źródło (poza osią pada) puszczono w tej klatce. */
-    bool BindingReleased(const InputBinding& b) const {
-        switch (b.kind) {
-        case InputBinding::Kind::Key:
-            return KeyReleased(b.code);
-        case InputBinding::Kind::Mouse:
-            return MouseReleased(b.code);
-        case InputBinding::Kind::PadButton:
-            return GamepadReleased(b.gamepad, b.code);
-        case InputBinding::Kind::PadAxis:
-            return false;
-        }
-        return false;
-    }
+    bool BindingReleased(const InputBinding& b) const;
 
     /** @brief Czy któraś oś pada z listy jest teraz wychylona ponad próg. */
-    bool AnalogDown(const std::vector<InputBinding>& bindings) const {
-        return std::any_of(bindings.begin(), bindings.end(), [&](const InputBinding& b) {
-            return b.kind == InputBinding::Kind::PadAxis && BindingDown(b);
-        });
-    }
+    bool AnalogDown(const std::vector<InputBinding>& bindings) const;
 
     /** @brief Stan wychyleń osi pada akcji z poprzedniej klatki. */
     bool WasAnalogDown(const std::string& action) const {
@@ -555,12 +453,7 @@ class Input {
      * @param offset Przesunięcie dodawane do pozycji w oknie.
      * @param scale Skala mnożona po przesunięciu.
      */
-    void Transform(Vector2 offset, Vector2 scale) {
-        offset_ = offset;
-        scale_ = scale;
-        ::SetMouseOffset(static_cast<int>(offset.x), static_cast<int>(offset.y));
-        ::SetMouseScale(scale.x, scale.y);
-    }
+    void Transform(Vector2 offset, Vector2 scale);
 
     /**
      * @brief Przelicza punkt z układu gry na piksele okna (odwrotność Transform()).
@@ -575,11 +468,7 @@ class Input {
      * @brief Kopia stanu wejścia z klawiaturą nieprzejętą.
      * @details Dla obiektu z fokusem, który sam przejął klawiaturę i jako jedyny ma ją widzieć.
      */
-    Input Uncaptured() const {
-        Input copy = *this;
-        copy.captured_ = false;
-        return copy;
-    }
+    Input Uncaptured() const;
 
     Vector2 offset_{0, 0};  /**< Przesunięcie okno → gra. */
     Vector2 scale_{1, 1};   /**< Skala okno → gra. */

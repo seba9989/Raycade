@@ -24,6 +24,12 @@ Nagłówek zbiorczy katalogu leży obok niego (`shapes.hpp` obok `shapes/`, `ui.
 Źródła w `engine/src/` odwzorowują ten sam układ; nagłówki prywatne implementacji (np.
 `src/render/primitive_renderer/Pixel.hpp`) zostają w `src/`.
 
+W nagłówku zostaje tylko to, co musi lub powinno być inline: szablony (settery z deducing
+this, `Spawn<T>()`, `Follow<T>()`), jedno- i dwuwierszowe gettery/settery oraz drobna
+matematyka (`AffineMatrix2D`). Pozostałe ciała metod - w tym wirtualne `Draw()`, `Contains()`
+i `Tick()` - są w odpowiadającym pliku `.cpp`. Typ potrzebny tylko w implementacji
+deklaruje się zapowiadająco (`class SceneCamera;`), żeby nie łamać kolejności warstw.
+
 Wewnątrz silnika nagłówki dołącza się zawsze pełną ścieżką: `#include <raycade/entity/Entity.hpp>`,
 nigdy względną (`"../Entity.hpp"`). Ścieżka względna zostaje tylko dla nagłówków prywatnych
 w `src/`. Katalogi mają nazwy małymi literami, pliki z klasami - PascalCase.

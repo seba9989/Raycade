@@ -29,17 +29,11 @@ class Points : public Entity {
     const std::vector<Point2D>& Positions() const { return positions_; }
 
     /** @copydoc Updatable::Contains */
-    bool Contains(Vector2 point) const override {
-        for (const Point2D position : positions_)
-            if (::CheckCollisionPointCircle(point, World(position), kHitDistance)) return true;
-        return false;
-    }
+    bool Contains(Vector2 point) const override;
 
   protected:
     /** @copydoc Drawable::Draw */
-    void Draw(PrimitiveRenderer& renderer) const override {
-        renderer.Paint(color_).Points(positions_);
-    }
+    void Draw(PrimitiveRenderer& renderer) const override;
 
   private:
     std::vector<Point2D> positions_; /**< Pozycje punktów względem obiektu. */

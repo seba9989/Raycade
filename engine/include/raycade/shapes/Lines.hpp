@@ -42,19 +42,11 @@ class Lines : public Entity {
     bool IsIncremental() const { return incremental_; }
 
     /** @copydoc Updatable::Contains */
-    bool Contains(Vector2 point) const override {
-        for (std::size_t i = 0; i + 1 < vertices_.size(); i += 2)
-            if (::CheckCollisionPointLine(point, World(vertices_[i]), World(vertices_[i + 1]),
-                                          kHitDistance))
-                return true;
-        return false;
-    }
+    bool Contains(Vector2 point) const override;
 
   protected:
     /** @copydoc Drawable::Draw */
-    void Draw(PrimitiveRenderer& renderer) const override {
-        renderer.Paint(color_).Incremental(incremental_).Lines(vertices_);
-    }
+    void Draw(PrimitiveRenderer& renderer) const override;
 
   private:
     std::vector<Point2D> vertices_; /**< Pary końców odcinków. */

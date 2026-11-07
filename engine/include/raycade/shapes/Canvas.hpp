@@ -64,12 +64,7 @@ class Canvas : public Entity {
      * @param paint Funkcja otrzymująca renderer z celem ustawionym już na bitmapę płótna.
      * @return To samo płótno.
      */
-    Canvas& Content(const std::function<void(PrimitiveRenderer&)>& paint) {
-        PrimitiveRenderer renderer;
-        renderer.Target(bitmap_);
-        paint(renderer);
-        return *this;
-    }
+    Canvas& Content(const std::function<void(PrimitiveRenderer&)>& paint);
 
     /**
      * @brief Udostępnia bitmapę płótna.
@@ -83,18 +78,11 @@ class Canvas : public Entity {
     }
 
     /** @copydoc Updatable::Contains */
-    bool Contains(Vector2 point) const override {
-        const auto local = TryToLocal(point);
-        return local &&
-               ::CheckCollisionPointRec(*local, {0.0f, 0.0f, static_cast<float>(bitmap_.Width()),
-                                                 static_cast<float>(bitmap_.Height())});
-    }
+    bool Contains(Vector2 point) const override;
 
   protected:
     /** @copydoc Drawable::Draw */
-    void Draw(PrimitiveRenderer& renderer) const override {
-        if (bitmap_.Width() > 0) renderer.Blit(bitmap_, {0.0f, 0.0f});
-    }
+    void Draw(PrimitiveRenderer& renderer) const override;
 
   private:
     Bitmap bitmap_;            /**< Zawartość płótna. */

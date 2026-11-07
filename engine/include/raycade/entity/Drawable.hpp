@@ -25,13 +25,7 @@ class Drawable {
      * macierz i osobno wywołuje Render() dla dzieci, więc każde zaczyna z czystym pędzlem.
      * @param renderer Renderer prymitywów; metoda ustawia jego cel na ekran.
      */
-    virtual void Render(PrimitiveRenderer& renderer) const {
-        renderer.Reset().TargetScreen();
-        // raylib nie ma stosu trybów mieszania, więc tryb dotyczy tylko własnego Draw()
-        if (blend_ != BLEND_ALPHA) ::BeginBlendMode(blend_);
-        Draw(renderer);
-        if (blend_ != BLEND_ALPHA) ::EndBlendMode();
-    }
+    virtual void Render(PrimitiveRenderer& renderer) const;
 
     /**
      * @brief Pobiera warstwę rysowania wśród obiektów tego samego rodzica.
@@ -97,12 +91,7 @@ class Drawable {
      * @param objects Obiekty o wspólnym rodzicu.
      * @return Wskaźniki w kolejności rysowania.
      */
-    static std::vector<const Drawable*> ByLayer(std::vector<const Drawable*> objects) {
-        std::stable_sort(objects.begin(), objects.end(), [](const Drawable* a, const Drawable* b) {
-            return a->Layer() < b->Layer();
-        });
-        return objects;
-    }
+    static std::vector<const Drawable*> ByLayer(std::vector<const Drawable*> objects);
 
   protected:
     /** @brief Rysuje sam obiekt bez dzieci. */

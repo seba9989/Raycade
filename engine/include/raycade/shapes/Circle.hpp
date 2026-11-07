@@ -38,16 +38,11 @@ class Circle : public Entity {
     bool IsSymmetric() const { return symmetric_; }
 
     /** @copydoc Updatable::Contains */
-    bool Contains(Vector2 point) const override {
-        const auto local = TryToLocal(point);
-        return local && ::CheckCollisionPointCircle(*local, {0.0f, 0.0f}, radius_);
-    }
+    bool Contains(Vector2 point) const override;
 
   protected:
     /** @copydoc Drawable::Draw */
-    void Draw(PrimitiveRenderer& renderer) const override {
-        renderer.Paint(color_).Fill(filled_).Symmetric(symmetric_).Circle({0.0f, 0.0f}, radius_);
-    }
+    void Draw(PrimitiveRenderer& renderer) const override;
 
   private:
     float radius_ = 10.0f;   /**< Promień w pikselach. */

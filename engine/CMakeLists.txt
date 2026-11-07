@@ -8,6 +8,26 @@ add_library(raycade STATIC
     src/render/primitive_renderer/Polygon.cpp
     src/render/primitive_renderer/Primitives.cpp
     src/render/primitive_renderer/RoundShapes.cpp
+    src/input/Input.cpp
+    src/entity/Drawable.cpp
+    src/entity/Entity.cpp
+    src/entity/Focusable.cpp
+    src/entity/Updatable.cpp
+    src/shapes/Canvas.cpp
+    src/shapes/Circle.cpp
+    src/shapes/Ellipse.cpp
+    src/shapes/Line.cpp
+    src/shapes/Lines.cpp
+    src/shapes/Point.cpp
+    src/shapes/Points.cpp
+    src/shapes/Polygon.cpp
+    src/shapes/Polyline.cpp
+    src/shapes/Rect.cpp
+    src/shapes/Surface.cpp
+    src/shapes/Triangle.cpp
+    src/ui/TextField.cpp
+    src/scene/Scene.cpp
+    src/scene/SceneCamera.cpp
 )
 add_library(raycade::raycade ALIAS raycade)
 

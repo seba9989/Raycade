@@ -45,15 +45,11 @@ class Triangle : public Entity {
     bool IsIncremental() const { return incremental_; }
 
     /** @copydoc Updatable::Contains */
-    bool Contains(Vector2 point) const override {
-        return ::CheckCollisionPointTriangle(point, World(a_), World(b_), World(c_));
-    }
+    bool Contains(Vector2 point) const override;
 
   protected:
     /** @copydoc Drawable::Draw */
-    void Draw(PrimitiveRenderer& renderer) const override {
-        renderer.Paint(color_).Fill(filled_).Incremental(incremental_).Triangle(a_, b_, c_);
-    }
+    void Draw(PrimitiveRenderer& renderer) const override;
 
   private:
     Point2D a_;                /**< Pierwszy wierzchołek. */

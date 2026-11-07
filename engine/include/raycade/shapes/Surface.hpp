@@ -93,10 +93,7 @@ class Surface : public Entity {
     bool IsSmooth() const { return smooth_; }
 
     /** @copydoc Updatable::Contains */
-    bool Contains(Vector2 point) const override {
-        const auto local = TryToLocal(point);
-        return local && ::CheckCollisionPointRec(*local, {0, 0, size_.x, size_.y});
-    }
+    bool Contains(Vector2 point) const override;
 
     /** @brief Udostępnia teksturę (np. do własnego rysowania jej kopii). */
     const RenderTarget& Target() const { return target_; }
@@ -109,18 +106,7 @@ class Surface : public Entity {
      * @details Najpierw dzieci do tekstury (w czystym układzie powierzchni), potem tekstura
      * w układzie powierzchni - z jej przekształceniem, rodzicami i kamerą.
      */
-    void RenderContent(PrimitiveRenderer& renderer) const override {
-        if (size_.x < 1 || size_.y < 1) return;
-        if (!target_.IsValid()) {
-            target_ = RenderTarget{static_cast<int>(size_.x), static_cast<int>(size_.y)};
-            target_.Smooth(smooth_);
-        }
-        target_.Begin();
-        target_.Clear(background_);
-        RenderChildren(renderer);
-        target_.End();
-        target_.Draw(Vector2{0, 0}, tint_);
-    }
+    void RenderContent(PrimitiveRenderer& renderer) const override;
 
     /** @brief Dzieci są trafiane tylko wewnątrz powierzchni (poza nią są ucięte). */
     bool ChildrenHittable(Vector2 point) const override { return Contains(point); }

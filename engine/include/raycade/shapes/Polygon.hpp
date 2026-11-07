@@ -66,17 +66,11 @@ class Polygon : public Entity {
     bool IsIncremental() const { return incremental_; }
 
     /** @copydoc Updatable::Contains */
-    bool Contains(Vector2 point) const override {
-        if (!simple_) return false;
-        const std::vector<Vector2> world = WorldVertices(vertices_);
-        return ::CheckCollisionPointPoly(point, world.data(), static_cast<int>(world.size()));
-    }
+    bool Contains(Vector2 point) const override;
 
   protected:
     /** @copydoc Drawable::Draw */
-    void Draw(PrimitiveRenderer& renderer) const override {
-        renderer.Paint(color_).Fill(filled_).Incremental(incremental_).Polygon(vertices_);
-    }
+    void Draw(PrimitiveRenderer& renderer) const override;
 
   private:
     std::vector<Point2D> vertices_; /**< Wierzchołki względem pozycji obiektu. */

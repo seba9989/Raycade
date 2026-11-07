@@ -130,18 +130,7 @@ class SceneCamera {
      * @brief Przesuwa Target() za śledzonym obiektem. Wywoływana przez scenę co klatkę.
      * @param dt Czas od poprzedniej klatki w sekundach.
      */
-    void Update(float dt) {
-        if (!follow_) return;
-        const Vector2 goal = follow_();
-        if (followSpeed_ <= 0.0f) {
-            camera_.target = goal;
-            return;
-        }
-        // wygładzanie wykładnicze - niezależne od liczby klatek na sekundę
-        const float t = 1.0f - std::exp(-followSpeed_ * dt);
-        camera_.target.x += (goal.x - camera_.target.x) * t;
-        camera_.target.y += (goal.y - camera_.target.y) * t;
-    }
+    void Update(float dt);
 
   private:
     Camera2D camera_{{0, 0}, {0, 0}, 0.0f, 1.0f}; /**< Offset, target, obrót (stopnie), zoom. */
