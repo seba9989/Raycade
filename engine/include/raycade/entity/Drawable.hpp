@@ -7,10 +7,12 @@
 #include <raylib.h>
 
 #include <algorithm>
+#include <memory>
 #include <optional>
 #include <vector>
 
 #include <raycade/render/PrimitiveRenderer.hpp>
+#include <raycade/render/ShaderProgram.hpp>
 
 /**
  * @brief Obiekt, którego własny kształt można narysować.
@@ -66,6 +68,27 @@ class Drawable {
 
     /** @brief Podaje prostokąt przycięcia (w układzie lokalnym) albo std::nullopt. */
     const std::optional<Rectangle>& Clip() const { return clip_; }
+
+    /**
+     * @brief Rysuje obiekt przez shader GPU.
+     * @details Jak Blend() - dotyczy tylko własnego rysunku obiektu, bez dzieci. Żeby nałożyć
+     * efekt na całą grupę, shader ustawia się na shapes::Surface (działa na teksturze z
+     * rysunkiem dzieci). Shader niepoprawnie wczytany (ShaderProgram::IsValid() == false) jest
+     * pomijany.
+     * @code{.cpp}
+     * auto glow = std::make_shared<ShaderProgram>(ShaderProgram::Load("", "assets/glow.fs"));
+     * scene.Spawn<shapes::Circle>().Radius(40).Fill().Shader(glow);
+     * @endcode
+     * @param shader Shader (współdzielony) albo nullptr - bez shadera.
+     * @return Ten sam obiekt.
+     */
+    template <typename Self> Self& Shader(this Self& self, std::shared_ptr<ShaderProgram> shader) {
+        self.shader_ = std::move(shader);
+        return self;
+    }
+
+    /** @brief Podaje shader obiektu (np. do ustawienia uniformów) albo nullptr. */
+    const std::shared_ptr<ShaderProgram>& Shader() const { return shader_; }
 
     /**
      * @brief Ustawia sposób mieszania kolorów z tym, co już narysowano.
@@ -128,12 +151,23 @@ class Drawable {
     static std::vector<const Drawable*> ByLayer(std::vector<const Drawable*> objects);
 
   protected:
+    /**
+     * @brief Włącza tryb mieszania i shader obiektu (Blend(), Shader()).
+     * @details Para z EndEffects(). Drawable::Render() otacza nimi Draw(); klasa, która rysuje
+     * inaczej (np. shapes::Surface - teksturę), otacza nimi własne rysowanie.
+     */
+    void BeginEffects() const;
+
+    /** @brief Wyłącza to, co włączyło BeginEffects(). */
+    void EndEffects() const;
+
     /** @brief Rysuje sam obiekt bez dzieci. */
     virtual void Draw(PrimitiveRenderer& renderer) const = 0;
 
-    Color color_ = BLACK;           /**< Kolor figury. */
-    bool filled_ = false;           /**< Czy figura jest wypełniona. */
-    int layer_ = 0;                 /**< Warstwa wśród rodzeństwa. */
-    int blend_ = BLEND_ALPHA;       /**< Tryb mieszania kolorów. */
-    std::optional<Rectangle> clip_; /**< Przycięcie rysunku (układ lokalny). */
+    Color color_ = BLACK;                   /**< Kolor figury. */
+    bool filled_ = false;                   /**< Czy figura jest wypełniona. */
+    int layer_ = 0;                         /**< Warstwa wśród rodzeństwa. */
+    int blend_ = BLEND_ALPHA;               /**< Tryb mieszania kolorów. */
+    std::optional<Rectangle> clip_;         /**< Przycięcie rysunku (układ lokalny). */
+    std::shared_ptr<ShaderProgram> shader_; /**< Shader własnego rysunku albo nullptr. */
 };

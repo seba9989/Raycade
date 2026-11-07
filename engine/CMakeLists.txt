@@ -5,6 +5,7 @@ add_library(raycade STATIC
     src/render/Bitmap.cpp
     src/render/ClipStack.cpp
     src/render/RenderTarget.cpp
+    src/render/ShaderProgram.cpp
     src/render/primitive_renderer/Fill.cpp
     src/render/primitive_renderer/Polygon.cpp
     src/render/primitive_renderer/Primitives.cpp

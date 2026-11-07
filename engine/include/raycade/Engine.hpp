@@ -10,6 +10,7 @@
 #include <fstream>
 #include <functional>
 #include <map>
+#include <memory>
 #include <optional>
 #include <set>
 #include <string>
@@ -20,6 +21,7 @@
 #include <raycade/render/Bitmap.hpp>
 #include <raycade/render/PrimitiveRenderer.hpp>
 #include <raycade/render/RenderTarget.hpp>
+#include <raycade/render/ShaderProgram.hpp>
 #include <raycade/scene/Scene.hpp>
 
 /** @brief Poziom komunikatu w logu silnika (Engine::Log()). */
@@ -273,6 +275,20 @@ class Engine : public Contextable {
      * @return Ten sam silnik.
      */
     Engine& Icon(std::string path);
+
+    /**
+     * @brief Ustawia shader nakładany na cały obraz gry (post-processing: CRT, winieta,
+     * skala szarości).
+     * @details Działa przy skalowaniu (ScaleMode() inny niż Scaling::None): gra rysuje się
+     * wtedy do tekstury w swojej rozdzielczości, a shader działa przy przenoszeniu jej do okna.
+     * Bez skalowania shader nie jest używany (silnik zapisuje ostrzeżenie w logu).
+     * @param shader Shader albo nullptr - bez efektu.
+     * @return Ten sam silnik.
+     */
+    Engine& PostShader(std::shared_ptr<ShaderProgram> shader);
+
+    /** @brief Podaje shader obrazu gry albo nullptr. */
+    const std::shared_ptr<ShaderProgram>& PostShader() const { return postShader_; }
 
     /**
      * @brief Ustawia kolor czyszczenia ekranu na początku każdej klatki.
@@ -1199,14 +1215,15 @@ class Engine : public Contextable {
     unsigned int replayIndex_ = 0;     /**< Następne zdarzenie do odtworzenia. */
     unsigned int replayFrame_ = 0;     /**< Klatka odtwarzania (od 0). */
 
-    Scaling scaling_ = Scaling::None;    /**< Tryb dopasowania obrazu do okna. */
-    int viewWidth_ = 0;                  /**< Szerokość gry; 0 = rozmiar okna przy Init(). */
-    int viewHeight_ = 0;                 /**< Wysokość gry; 0 = rozmiar okna przy Init(). */
-    bool smoothScaling_ = false;         /**< Czy wygładzać skalowany obraz. */
-    Color letterbox_ = BLACK;            /**< Kolor pasów wokół obrazu. */
-    RenderTarget target_;                /**< Tekstura, do której rysuje gra przy skalowaniu. */
-    Rectangle destination_{};            /**< Gdzie w oknie rysujemy teksturę gry. */
-    std::string logFile_ = "engine.log"; /**< Ścieżka pliku logu; pusta wyłącza zapis. */
+    Scaling scaling_ = Scaling::None; /**< Tryb dopasowania obrazu do okna. */
+    int viewWidth_ = 0;               /**< Szerokość gry; 0 = rozmiar okna przy Init(). */
+    int viewHeight_ = 0;              /**< Wysokość gry; 0 = rozmiar okna przy Init(). */
+    bool smoothScaling_ = false;      /**< Czy wygładzać skalowany obraz. */
+    Color letterbox_ = BLACK;         /**< Kolor pasów wokół obrazu. */
+    RenderTarget target_;             /**< Tekstura, do której rysuje gra przy skalowaniu. */
+    Rectangle destination_{};         /**< Gdzie w oknie rysujemy teksturę gry. */
+    std::shared_ptr<ShaderProgram> postShader_; /**< Shader całego obrazu gry. */
+    std::string logFile_ = "engine.log";        /**< Ścieżka pliku logu; pusta wyłącza zapis. */
 
     std::function<void(float)> update_;      /**< Globalna logika co klatkę. */
     std::function<void(float)> fixedUpdate_; /**< Globalna logika ze stałym krokiem. */

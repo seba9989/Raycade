@@ -33,7 +33,7 @@
  *
  * Metody wspólne ma każdy kształt (z klas Transformable, Drawable, Updatable i Entity):
  * - przekształcenia: Position(), Translate(), Rotate(), Scale(),
- * - wygląd: Paint(), Fill(), Layer(), Blend(), Clip(),
+ * - wygląd: Paint(), Fill(), Layer(), Blend(), Clip(), Shader(),
  * - drzewo i układ: Spawn(), Children(), ScreenSpace(),
  * - zdarzenia: OnUpdate(), OnClick(), OnMouseUp(), OnMouseEnter(), OnMouseLeave(), OnScroll(),
  *   OnDragStart(), OnDrag(), OnDragEnd(), OnKeyPressed(), OnKeyReleased(),

@@ -121,6 +121,13 @@ Engine& Engine::ScaleMode(Scaling mode) {
     return *this;
 }
 
+Engine& Engine::PostShader(std::shared_ptr<ShaderProgram> shader) {
+    postShader_ = std::move(shader);
+    if (postShader_ && scaling_ == Scaling::None)
+        Log(LogLevel::Warning, "PostShader() dziala tylko przy ScaleMode() innym niz None");
+    return *this;
+}
+
 Engine& Engine::SmoothScaling(bool value) {
     smoothScaling_ = value;
     target_.Smooth(value);
@@ -295,7 +302,10 @@ int Engine::Run() {
             target_.End();
             ::BeginDrawing();
             ::ClearBackground(letterbox_);
+            const bool post = postShader_ && postShader_->IsValid();
+            if (post) ::BeginShaderMode(postShader_->Raw());
             target_.Draw(destination_);
+            if (post) ::EndShaderMode();
         }
         ::EndDrawing();
         input_.UpdateActionState(); // stan osi pada do ActionPressed/Released w następnej klatce
@@ -330,6 +340,7 @@ void Engine::Shutdown() {
         ::UnloadAutomationEventList(replayList_);
         replaying_ = false;
     }
+    postShader_.reset(); // zasób GPU - przed zamknięciem okna
     ReleaseTarget();
     ::CloseWindow();
     // komunikaty raylib po zamknięciu znów idą prosto na konsolę (silnik może już nie istnieć)

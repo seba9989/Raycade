@@ -20,7 +20,7 @@ namespace shapes {
  * - półprzezroczystość całej grupy naraz (Tint() z alfą - bez prześwitywania nakładających się
  *   dzieci przez siebie),
  * - jedno przekształcenie całego rysunku (np. obrót gotowego obrazka),
- * - podstawa efektów na całym obrazie (shadery - w przyszłości).
+ * - efekty na całym rysunku dzieci: Shader() i Blend() działają na gotowej teksturze.
  *
  * Trafienia myszą w dzieci działają jak zwykle, ale tylko wewnątrz powierzchni.
  * @code{.cpp}
