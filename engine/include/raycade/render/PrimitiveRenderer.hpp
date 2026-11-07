@@ -144,7 +144,7 @@ class PrimitiveRenderer {
      * @param center Środek.
      * @param radius Promień.
      * @return Ten sam renderer.
-     * @see CircleSymmetric() - opis algorytmu z symetrią ośmiokrotną.
+     * @see CircleSymmetric() - algorytm punktu środkowego z symetrią ośmiokrotną.
      */
     PrimitiveRenderer& Circle(Point2D center, float radius);
 
@@ -310,7 +310,9 @@ class PrimitiveRenderer {
     void LineIncremental(Vector2 from, Vector2 to);
 
     /**
-     * @brief Rysuje okrąg lub koło własnym algorytmem z symetrią ośmiokrotną.
+     * @brief Rysuje okrąg lub koło algorytmem punktu środkowego z symetrią ośmiokrotną.
+     * @details Arytmetyka całkowita: środek i promień są zaokrąglane do pikseli, a zmienna
+     * decyzyjna wybiera w każdym kroku piksel E albo SE. Każdy piksel jest rysowany raz.
      * @param center Środek.
      * @param radius Promień.
      */

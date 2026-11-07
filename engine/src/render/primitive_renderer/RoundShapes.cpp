@@ -1,8 +1,9 @@
 /**
  * @file RoundShapes.cpp
  * @brief Algorytmy okręgu i elipsy z wykorzystaniem symetrii.
- * @details Okrąg wykorzystuje osiem odbić punktu obliczonego w wycinku pi/4, a elipsa
- * cztery odbicia punktu obliczonego w ćwiartce.
+ * @details Okrąg: algorytm punktu środkowego (Bresenhama) na liczbach całkowitych dla oktantu
+ * od (0, r) do x = y i osiem odbić każdego punktu. Elipsa: cztery odbicia punktu obliczonego
+ * w ćwiartce.
  *
  * Odbicia (i sąsiednie kroki z tym samym zaokrąglonym punktem) trafiają w te same piksele,
  * dlatego piksele są najpierw zbierane, a dopiero potem rysowane - każdy dokładnie raz.
@@ -90,16 +91,18 @@ PrimitiveRenderer& PrimitiveRenderer::Circle(Point2D center, float radius) {
 void PrimitiveRenderer::CircleSymmetric(Vector2 center, float radius) {
     const int cx = Round(center.x);
     const int cy = Round(center.y);
-    const int extent = std::abs(Round(radius));
-    const int steps = std::max(1, static_cast<int>(std::ceil(radius * PI / 4.0f)));
+    const int r = Round(std::fabs(radius));
 
-    RowExtents rows(cy - extent, cy + extent);
+    // Algorytm punktu środkowego dla oktantu od (0, r) do x = y: x rośnie o 1, a y maleje
+    // o 1, gdy punkt środkowy (x + 1, y - 1/2) leży poza okręgiem. Zmienna decyzyjna
+    // d = F(x + 1, y - 1/2), gdzie F(x, y) = x^2 + y^2 - r^2, przemnożona przez 4 i
+    // zaokrąglona do liczby całkowitej - dlatego start 1 - r zamiast 5/4 - r.
+    RowExtents rows(cy - r, cy + r);
     std::vector<std::pair<int, int>> pixels;
-    for (int i = 0; i <= steps; ++i) {
-        const float angle = (PI / 4.0f) * static_cast<float>(i) / static_cast<float>(steps);
-        const int x = Round(radius * std::cos(angle));
-        const int y = Round(radius * std::sin(angle));
-
+    int x = 0;
+    int y = r;
+    int d = 1 - r;
+    while (x <= y) {
         if (filled_) {
             rows.Add(cy + y, cx - x, cx + x);
             rows.Add(cy - y, cx - x, cx + x);
@@ -115,13 +118,20 @@ void PrimitiveRenderer::CircleSymmetric(Vector2 center, float radius) {
                                          {cx + y, cy - x},
                                          {cx - y, cy - x}});
         }
+        if (d < 0) {
+            d += 2 * x + 3; // punkt E: środek wewnątrz okręgu
+        } else {
+            d += 2 * (x - y) + 5; // punkt SE: środek na zewnątrz
+            --y;
+        }
+        ++x;
     }
     if (filled_) {
-        rows.ForEach([this](int y, int fromX, int toX) { Span(y, fromX, toX); });
+        rows.ForEach([this](int row, int fromX, int toX) { Span(row, fromX, toX); });
     } else {
         Deduplicate(pixels);
-        for (const auto& [x, y] : pixels)
-            Plot(x, y);
+        for (const auto& [px, py] : pixels)
+            Plot(px, py);
     }
 }
 
@@ -167,10 +177,10 @@ void PrimitiveRenderer::EllipseSymmetric(Vector2 center, Vector2 radius) {
         }
     }
     if (filled_) {
-        rows.ForEach([this](int y, int fromX, int toX) { Span(y, fromX, toX); });
+        rows.ForEach([this](int row, int fromX, int toX) { Span(row, fromX, toX); });
     } else {
         Deduplicate(pixels);
-        for (const auto& [x, y] : pixels)
-            Plot(x, y);
+        for (const auto& [px, py] : pixels)
+            Plot(px, py);
     }
 }
