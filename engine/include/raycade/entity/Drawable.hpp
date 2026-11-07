@@ -7,6 +7,7 @@
 #include <raylib.h>
 
 #include <algorithm>
+#include <optional>
 #include <vector>
 
 #include <raycade/render/PrimitiveRenderer.hpp>
@@ -32,6 +33,39 @@ class Drawable {
      * @return Numer warstwy; większa wartość oznacza rysowanie później.
      */
     int Layer() const { return layer_; }
+
+    /**
+     * @brief Przycina rysunek obiektu i jego dzieci do prostokąta (scissor).
+     * @details Prostokąt jest w układzie lokalnym obiektu (jak współrzędne w Draw()), więc
+     * przesuwa się razem z obiektem, rodzicami i kamerą. Kliknięcia poza nim nie trafiają ani
+     * w obiekt, ani w dzieci. Zagnieżdżone przycięcia się przecinają. Przy obrocie przycinana
+     * jest obwiednia prostokąta na ekranie - do dokładnego przycinania obróconej grupy służy
+     * shapes::Surface. Przydaje się np. w przewijanym panelu, minimapie i polu tekstowym.
+     * @code{.cpp}
+     * scene.Spawn<shapes::Group>()
+     *     .Position({50, 50})
+     *     .Clip({0, 0, 300, 200}) // dzieci widać tylko w prostokącie 300x200
+     *     .Children([](shapes::Group& panel) { panel.Spawn<shapes::Circle>().Radius(250); });
+     * @endcode
+     * @param area Prostokąt w układzie lokalnym.
+     * @return Ten sam obiekt.
+     */
+    template <typename Self> Self& Clip(this Self& self, Rectangle area) {
+        self.clip_ = area;
+        return self;
+    }
+
+    /**
+     * @brief Wyłącza przycinanie (stan domyślny): `.Clip(std::nullopt)`.
+     * @return Ten sam obiekt.
+     */
+    template <typename Self> Self& Clip(this Self& self, std::nullopt_t) {
+        self.clip_.reset();
+        return self;
+    }
+
+    /** @brief Podaje prostokąt przycięcia (w układzie lokalnym) albo std::nullopt. */
+    const std::optional<Rectangle>& Clip() const { return clip_; }
 
     /**
      * @brief Ustawia sposób mieszania kolorów z tym, co już narysowano.
@@ -97,8 +131,9 @@ class Drawable {
     /** @brief Rysuje sam obiekt bez dzieci. */
     virtual void Draw(PrimitiveRenderer& renderer) const = 0;
 
-    Color color_ = BLACK;     /**< Kolor figury. */
-    bool filled_ = false;     /**< Czy figura jest wypełniona. */
-    int layer_ = 0;           /**< Warstwa wśród rodzeństwa. */
-    int blend_ = BLEND_ALPHA; /**< Tryb mieszania kolorów. */
+    Color color_ = BLACK;           /**< Kolor figury. */
+    bool filled_ = false;           /**< Czy figura jest wypełniona. */
+    int layer_ = 0;                 /**< Warstwa wśród rodzeństwa. */
+    int blend_ = BLEND_ALPHA;       /**< Tryb mieszania kolorów. */
+    std::optional<Rectangle> clip_; /**< Przycięcie rysunku (układ lokalny). */
 };

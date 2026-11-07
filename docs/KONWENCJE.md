@@ -11,7 +11,7 @@ warstwy wcześniejsze na liście:
 | Katalog    | Zawartość                                                      | Zależy od               |
 |------------|----------------------------------------------------------------|-------------------------|
 | `math/`    | AffineMatrix2D, Point2D, LineSegment, algorytmy geometrii      | -                       |
-| `render/`  | Bitmap, RenderTarget, PrimitiveRenderer                        | math                    |
+| `render/`  | Bitmap, RenderTarget, ClipStack, PrimitiveRenderer             | math                    |
 | `input/`   | Input, akcje i osie                                            | -                       |
 | `entity/`  | Entity i klasy bazowe (Transformable, Drawable, Updatable...)  | math, render, input     |
 | `shapes/`  | kształty z przestrzeni nazw `shapes`                           | entity                  |

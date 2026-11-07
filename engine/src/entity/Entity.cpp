@@ -5,6 +5,7 @@
  */
 #include <raycade/entity/Entity.hpp>
 
+#include <raycade/render/ClipStack.hpp>
 #include <raycade/scene/SceneCamera.hpp>
 
 void Entity::Update(float dt, const Input& input, const PointerFrame& pointer) {
@@ -30,7 +31,10 @@ void Entity::Render(PrimitiveRenderer& renderer) const {
     const auto matrix = transform_.RlglMatrix();
     rlPushMatrix();
     rlMultMatrixf(matrix.data());
+    // przycięcie obejmuje własny rysunek i dzieci (prostokąt w układzie lokalnym)
+    if (clip_) ClipStack::Push(*clip_);
     RenderContent(renderer);
+    if (clip_) ClipStack::Pop();
     rlPopMatrix();
 }
 
@@ -81,6 +85,11 @@ bool Entity::AnyChildContains(Vector2 point) const {
 }
 
 void Entity::CollectHits(Vector2 point, std::vector<const Entity*>& hits) const {
+    // poza przycięciem nie widać ani obiektu, ani dzieci - nie da się ich kliknąć
+    if (clip_) {
+        const auto local = TryToLocal(point);
+        if (!local || !::CheckCollisionPointRec(*local, *clip_)) return;
+    }
     if (ChildrenHittable(point))
         for (const Entity* child : TopFirst(children_))
             child->CollectHits(point, hits);

@@ -10,6 +10,8 @@
 
 #include <raycade/render/RenderTarget.hpp>
 
+#include <raycade/render/ClipStack.hpp>
+
 #include <rlgl.h>
 
 #include <utility>
@@ -90,13 +92,17 @@ int RenderTarget::Depth() {
  * 1. zapamiętanie projekcji i macierzy widoku (BeginTextureMode() je wyzeruje),
  * 2. BeginTextureMode() - opróżnia bufor wierzchołków do poprzedniego celu, podpina teksturę,
  *    ustawia projekcję na jej rozmiar i zeruje macierz widoku,
- * 3. rlPushMatrix() + rlLoadIdentity() - odkłada przekształcenie obiektów (transform) na stos
+ * 3. ClipStack::BeginTarget() - wyłącza przycięcia z zewnątrz (scissor) na czas rysowania
+ *    do tekstury,
+ * 4. rlPushMatrix() + rlLoadIdentity() - odkłada przekształcenie obiektów (transform) na stos
  *    rlgl i zaczyna od jednostkowego, żeby rysunek w teksturze nie dziedziczył pozycji obiektu.
  */
 void RenderTarget::Begin() const {
     if (!IsValid()) return;
     Stack().push_back({this, ::rlGetMatrixProjection(), ::rlGetMatrixModelview()});
     ::BeginTextureMode(target_);
+    // przycięcia z zewnątrz nie dotyczą rysunku w teksturze (scissor raylib zostałby włączony)
+    ClipStack::BeginTarget(Width(), Height());
     ::rlPushMatrix();
     ::rlLoadIdentity();
 }
@@ -109,7 +115,8 @@ void RenderTarget::Begin() const {
  * 3. rlPushMatrix() + 2x rlPopMatrix(): rlPopMatrix() zapisuje do macierzy bieżącego trybu,
  *    a krok 2 zostawił tryb macierzy widoku. Pierwsza para przełącza rlgl z powrotem na
  *    macierz przekształceń bez zmiany stosu, drugie rlPopMatrix() przywraca przekształcenie
- *    odłożone w Begin() (a na dnie stosu wraca do zwykłego trybu bez przekształceń).
+ *    odłożone w Begin() (a na dnie stosu wraca do zwykłego trybu bez przekształceń),
+ * 4. ClipStack::EndTarget() - przywrócenie przycięcia poprzedniego celu.
  */
 void RenderTarget::End() const {
     if (!IsValid() || !IsActive()) return;
@@ -129,6 +136,9 @@ void RenderTarget::End() const {
     ::rlPushMatrix();
     ::rlPopMatrix();
     ::rlPopMatrix();
+
+    // po powrocie do poprzedniego celu - przycięcie liczone jest w jego pikselach
+    ClipStack::EndTarget();
 }
 
 const RenderTarget& RenderTarget::Clear(Color color) const {
