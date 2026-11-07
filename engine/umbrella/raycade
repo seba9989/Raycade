@@ -23,6 +23,7 @@
 
 // IWYU pragma: begin_exports
 #include <raycade/Engine.hpp>
+#include <raycade/engine/SceneMacro.hpp>
 #include <raycade/shapes.hpp>
 #include <raycade/ui.hpp>
 // IWYU pragma: end_exports

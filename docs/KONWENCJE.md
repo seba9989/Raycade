@@ -17,14 +17,16 @@ warstwy wcześniejsze na liście:
 | `shapes/`    | kształty z przestrzeni nazw `shapes`                            | entity i jej zależności     |
 | `ui/`        | elementy interfejsu z przestrzeni nazw `ui`                     | entity i jej zależności     |
 | `scene/`     | Scene, SceneCamera                                              | entity i jej zależności     |
+| `engine/EngineTypes.hpp` | typy ustawień: LogLevel, Scaling                    | -                           |
 | `Engine.hpp` | pętla, okno, sceny, zasoby                                      | wszystkie powyższe          |
-| `engine/`    | typy ustawień (EngineTypes.hpp), makro SCENE (SceneMacro.hpp)   | dołącza je `Engine.hpp`     |
+| `engine/SceneMacro.hpp` | makro SCENE (wymaga pełnej klasy Engine)             | `Engine.hpp`                |
 
 Nagłówek zbiorczy katalogu leży obok niego (`shapes.hpp` obok `shapes/`, `ui.hpp` obok
-`ui/`). `<raycade>` (w `engine/umbrella/`) dołącza `Engine.hpp`, `shapes.hpp` i `ui.hpp`.
-Źródła w `engine/src/` odwzorowują ten sam układ (implementacja `Engine` jest w `src/engine/`,
-podzielona na pliki `Engine*.cpp` według grup metod z dokumentacji klasy); nagłówki prywatne implementacji (np.
-`src/render/primitive_renderer/Pixel.hpp`) zostają w `src/`.
+`ui/`). `<raycade>` (w `engine/umbrella/`) dołącza `Engine.hpp`, `engine/SceneMacro.hpp`,
+`shapes.hpp` i `ui.hpp`. Źródła w `engine/src/` odwzorowują ten sam układ. Implementacja
+`Engine` jest w `src/engine/`, podzielona tematycznie na pliki `Engine*.cpp` - który plik
+zawiera którą grupę metod, opisuje tabela w dokumentacji `Engine.hpp`. Nagłówki prywatne
+implementacji (np. `src/render/primitive_renderer/Pixel.hpp`) zostają w `src/`.
 
 W nagłówku zostaje tylko to, co musi lub powinno być inline: szablony (settery z deducing
 this, `Spawn<T>()`, `Follow<T>()`), jedno- i dwuwierszowe gettery/settery oraz drobna
@@ -131,7 +133,10 @@ Odczyt wejścia w silniku przechodzi wyłącznie przez klasę `Input`.
 - Komentarze i dokumentacja Doxygen są po polsku, z polskimi znakami.
 - Tekst zapisywany w logu jest po polsku **bez** polskich znaków: konsola Windows bez
   `/utf-8` pokazałaby krzaki. Tekst w oknie też, chyba że jest rysowany czcionką wczytaną
-  przez `Typeface::Load()` (ma polskie litery) - domyślny font raylib ich nie ma.
+  przez `Typeface::Load()` (ma polskie litery) - domyślny font raylib ich nie ma. Napis
+  rysowany taką czcionką ma polskie litery, a napis widoczny tylko bez niej (np. komunikat
+  o braku pliku czcionki) - nie. Nazwy akcji (`BindAction("nowa pilka", ...)`) to
+  identyfikatory, więc też są bez polskich znaków.
 - Nazwy scen są po polsku (`"prymitywy"`), nazwy plików po angielsku (`PrimitivesScene.cpp`).
 
 ## Logi

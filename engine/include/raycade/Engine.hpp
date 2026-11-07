@@ -1,9 +1,20 @@
 /**
  * @file Engine.hpp
- * @brief Klasa Engine (okno, pętla gry, sceny, wejście) i makro SCENE.
- * @details Typy ustawień (LogLevel, Scaling) są w engine/EngineTypes.hpp, a makro SCENE
- * w engine/SceneMacro.hpp - oba pliki dołącza ten nagłówek. Implementacja jest podzielona
- * na pliki src/engine/Engine*.cpp według grup metod.
+ * @brief Klasa Engine (okno, pętla gry, sceny, wejście).
+ * @details Typy ustawień (LogLevel, Scaling) są w engine/EngineTypes.hpp, który dołącza ten
+ * nagłówek. Makro SCENE jest w engine/SceneMacro.hpp - ten z kolei dołącza Engine.hpp, a do
+ * gry trafia przez nagłówek zbiorczy `<raycade>`.
+ *
+ * Implementacja jest podzielona tematycznie na pliki w src/engine/:
+ * - Engine.cpp - cykl życia, pętla Run(), Log() i RaylibLogLevel(), Clear(),
+ * - EngineWindow.cpp - konfiguracja okna (bez skalowania), stan okna i monitory, sterowanie
+ *   oknem,
+ * - EngineScaling.cpp - Resolution(), ScaleMode(), SmoothScaling(), PostShader(), ViewSize(),
+ * - EngineInput.cpp - ExitKey(), kursor i pady, MousePosition(), nagrywanie wejścia,
+ * - EngineScenes.cpp - sceny,
+ * - EngineSystem.cpp - schowek oraz czas, losowość i różne (w tym Screenshot(),
+ *   EventWaiting()),
+ * - EngineFiles.cpp - pliki i katalogi.
  */
 #pragma once
 
@@ -1371,6 +1382,3 @@ class Engine : public Contextable {
      */
     void LoadStartScene();
 };
-
-// SceneRegistration i makro SCENE (wymagają pełnej definicji Engine)
-#include <raycade/engine/SceneMacro.hpp>

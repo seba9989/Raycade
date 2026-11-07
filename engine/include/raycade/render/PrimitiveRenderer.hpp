@@ -155,7 +155,7 @@ class PrimitiveRenderer {
      * @param center Środek.
      * @param radius Promienie {poziomy, pionowy}.
      * @return Ten sam renderer.
-     * @see EllipseSymmetric() - opis algorytmu z symetrią czterokrotną.
+     * @see EllipseSymmetric() - algorytm punktu środkowego z symetrią czterokrotną.
      */
     PrimitiveRenderer& Ellipse(Point2D center, Vector2 radius);
 
@@ -319,7 +319,11 @@ class PrimitiveRenderer {
     void CircleSymmetric(Vector2 center, float radius);
 
     /**
-     * @brief Rysuje elipsę własnym algorytmem z symetrią czterokrotną.
+     * @brief Rysuje elipsę algorytmem punktu środkowego z symetrią czterokrotną.
+     * @details Arytmetyka całkowita jak w CircleSymmetric(): środek i promienie są zaokrąglane
+     * do pikseli, a ćwiartka jest liczona w dwóch obszarach - tam, gdzie krzywa jest bardziej
+     * pozioma (krok w x), i tam, gdzie bardziej pionowa (krok w y). Dla równych promieni
+     * wynik jest taki sam jak okrąg z CircleSymmetric(). Każdy piksel jest rysowany raz.
      * @param center Środek.
      * @param radius Promienie {poziomy, pionowy}.
      */

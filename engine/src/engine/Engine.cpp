@@ -68,12 +68,6 @@ Contextable* ContextRoot() {
     return &Engine::Get();
 }
 
-Engine& Engine::Fps(int fps) {
-    fps_ = fps;
-    if (initialized_) ::SetTargetFPS(fps_);
-    return *this;
-}
-
 Engine& Engine::Init() {
     if (initialized_) return *this;
     if (!logFile_.empty()) log_.open(logFile_);

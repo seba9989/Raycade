@@ -2,8 +2,8 @@
  * @file RoundShapes.cpp
  * @brief Algorytmy okręgu i elipsy z wykorzystaniem symetrii.
  * @details Okrąg: algorytm punktu środkowego (Bresenhama) na liczbach całkowitych dla oktantu
- * od (0, r) do x = y i osiem odbić każdego punktu. Elipsa: cztery odbicia punktu obliczonego
- * w ćwiartce.
+ * od (0, r) do x = y i osiem odbić każdego punktu. Elipsa: ten sam algorytm w dwóch obszarach
+ * ćwiartki (nachylenie powyżej i poniżej -1) i cztery odbicia każdego punktu.
  *
  * Odbicia (i sąsiednie kroki z tym samym zaokrąglonym punktem) trafiają w te same piksele,
  * dlatego piksele są najpierw zbierane, a dopiero potem rysowane - każdy dokładnie raz.
@@ -61,6 +61,45 @@ class RowExtents {
 void Deduplicate(std::vector<std::pair<int, int>>& pixels) {
     std::sort(pixels.begin(), pixels.end());
     pixels.erase(std::unique(pixels.begin(), pixels.end()), pixels.end());
+}
+
+/**
+ * @brief Algorytm punktu środkowego dla ćwiartki elipsy od (0, b) do (a, 0).
+ * @details Wywołuje plot(x, y) dla każdego punktu ćwiartki. Wymaga a > 0 i b > 0.
+ */
+template <typename PlotFn> void EllipseQuadrant(long long a, long long b, PlotFn plot) {
+    const long long a2 = a * a;
+    const long long b2 = b * b;
+    // Algorytm punktu środkowego dla ćwiartki od (0, b) do (a, 0), F(x, y) = b²x² + a²y² - a²b².
+    // Zmienna decyzyjna jest przemnożona przez 4, żeby połówki punktu środkowego dały liczby
+    // całkowite. Obszar 1 (nachylenie > -1): x rośnie o 1, a y maleje, gdy punkt środkowy
+    // (x + 1, y - 1/2) leży poza elipsą.
+    long long x = 0;
+    long long y = b;
+    long long d = 4 * b2 - 4 * a2 * b + a2; // 4 F(1, b - 1/2)
+    while (b2 * x <= a2 * y) {
+        plot(x, y);
+        if (d < 0) {
+            d += 4 * b2 * (2 * x + 3); // punkt E
+        } else {
+            d += 4 * b2 * (2 * x + 3) - 8 * a2 * (y - 1); // punkt SE
+            --y;
+        }
+        ++x;
+    }
+    // Obszar 2 (nachylenie < -1): y maleje o 1, a x rośnie, gdy punkt środkowy
+    // (x + 1/2, y - 1) leży wewnątrz elipsy.
+    d = b2 * (2 * x + 1) * (2 * x + 1) + 4 * a2 * (y - 1) * (y - 1) - 4 * a2 * b2;
+    while (y >= 0) {
+        plot(x, y);
+        if (d > 0) {
+            d += 4 * a2 * (3 - 2 * y); // punkt S
+        } else {
+            d += 8 * b2 * (x + 1) + 4 * a2 * (3 - 2 * y); // punkt SE
+            ++x;
+        }
+        --y;
+    }
 }
 
 } // namespace
@@ -157,17 +196,15 @@ PrimitiveRenderer& PrimitiveRenderer::Ellipse(Point2D center, Vector2 radius) {
 void PrimitiveRenderer::EllipseSymmetric(Vector2 center, Vector2 radius) {
     const int cx = Round(center.x);
     const int cy = Round(center.y);
-    const int extent = std::abs(Round(radius.y));
-    const float longer = std::max(radius.x, radius.y);
-    const int steps = std::max(1, static_cast<int>(std::ceil(longer * PI / 2.0f)));
+    // te same zaokrąglenia co w CircleSymmetric(), więc Ellipse({r, r}) daje okrąg Circle(r)
+    const long long a = Round(std::fabs(radius.x));
+    const long long b = Round(std::fabs(radius.y));
 
-    RowExtents rows(cy - extent, cy + extent);
+    RowExtents rows(cy - static_cast<int>(b), cy + static_cast<int>(b));
     std::vector<std::pair<int, int>> pixels;
-    for (int i = 0; i <= steps; ++i) {
-        const float angle = (PI / 2.0f) * static_cast<float>(i) / static_cast<float>(steps);
-        const int x = Round(radius.x * std::cos(angle));
-        const int y = Round(radius.y * std::sin(angle));
-
+    const auto reflect = [&](long long px, long long py) {
+        const int x = static_cast<int>(px);
+        const int y = static_cast<int>(py);
         if (filled_) {
             rows.Add(cy + y, cx - x, cx + x);
             rows.Add(cy - y, cx - x, cx + x);
@@ -175,7 +212,17 @@ void PrimitiveRenderer::EllipseSymmetric(Vector2 center, Vector2 radius) {
             pixels.insert(pixels.end(),
                           {{cx + x, cy + y}, {cx - x, cy + y}, {cx + x, cy - y}, {cx - x, cy - y}});
         }
+    };
+
+    if (a == 0 || b == 0) {
+        // elipsa zdegenerowana do odcinka - w EllipseQuadrant() warunek obszaru 1 nigdy by
+        // się nie zmienił
+        for (long long t = 0; t <= std::max(a, b); ++t)
+            reflect(a == 0 ? 0 : t, b == 0 ? 0 : t);
+    } else {
+        EllipseQuadrant(a, b, reflect);
     }
+
     if (filled_) {
         rows.ForEach([this](int row, int fromX, int toX) { Span(row, fromX, toX); });
     } else {

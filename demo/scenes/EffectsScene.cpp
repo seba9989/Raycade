@@ -122,7 +122,9 @@ SCENE("efekty") {
     Engine& engine = Engine::Get();
     scene.ProvideContext<Balls>();
 
-    // czcionka z polskimi znakami, jeśli jest w zasobach - dla wszystkich napisów sceny
+    // czcionka z polskimi znakami (w repozytorium DejaVu Sans) - dla wszystkich napisów sceny.
+    // Napisy mają polskie litery; bez pliku czcionki font raylib pokaże w ich miejscu "?",
+    // a dolny napis (bez polskich liter) wyjaśnia dlaczego.
     std::shared_ptr<const Typeface> font = Shared(Typeface::Load(engine.AssetPath("font.ttf"), 32));
     const bool hasFont = font != nullptr;
     if (font) scene.ProvideContext<DefaultTypeface>(font);
@@ -135,7 +137,7 @@ SCENE("efekty") {
     };
 
     // ---------------- animacja bitmap ----------------
-    title({40, 30}, "Animacja: LPM pauza, X odbicie");
+    title({40, 30}, "Animacja: LPM - pauza, X - odbicie");
     const auto wheel = MakeWheelSheet();
     scene.Spawn<shapes::Sprite>()
         .Sheet(wheel, {kFrame, kFrame})
@@ -162,7 +164,7 @@ SCENE("efekty") {
     title({40, 230}, "drugie: Speed(0.5), Paint(SKYBLUE)").FontSize(16);
 
     // ---------------- przycinanie ----------------
-    title({370, 30}, "Clip(): kolko myszy przewija");
+    title({370, 30}, "Clip(): kółko myszy przewija");
     auto& panel = scene.Spawn<shapes::Group>().Position({370, 70}).Clip({0, 0, 260, 200});
     panel.Spawn<shapes::Rect>().Size({260, 200}).Paint(LIGHTGRAY);
     auto& list = panel.Spawn<shapes::Group>();
@@ -190,7 +192,7 @@ SCENE("efekty") {
     panel.Spawn<shapes::Rect>().Size({260, 200}).Paint(DARKGRAY).Layer(1); // ramka nad listą
 
     // ---------------- shadery ----------------
-    title({690, 30}, "Shader na Surface, G szarosc");
+    title({690, 30}, "Shader na Surface, G - szarość");
     auto wave = Shared(ShaderProgram::FromCode("", kWaveShader));
     auto gray = Shared(ShaderProgram::FromCode("", kGrayShader));
     if (!wave || !gray) engine.Log(LogLevel::Warning, "shader demo nie dziala");
@@ -213,7 +215,7 @@ SCENE("efekty") {
         });
 
     // ---------------- usuwanie obiektów i krok stały ----------------
-    title({40, 300}, "Krok staly + Destroy(): LPM usuwa pilke, B / podwojne klikniecie dodaje");
+    title({40, 300}, "Krok stały + Destroy(): LPM usuwa piłkę, B / podwójne kliknięcie dodaje");
     scene.Spawn<shapes::Rect>()
         .Position({kField.x, kField.y})
         .Size({kField.width, kField.height})
@@ -223,8 +225,9 @@ SCENE("efekty") {
         SpawnBall(scene, {kField.x + 80.0f + static_cast<float>(i) * 140, kField.y + 60});
 
     // ---------------- tekst ----------------
-    title({40, 650}, hasFont ? "Zażółć gęślą jaźń - czcionka z assets/font.ttf"
-                             : "Brak assets/font.ttf - font raylib bez polskich znakow")
+    title({40, 650},
+          hasFont ? "Zażółć gęślą jaźń - czcionka z assets/font.ttf"
+                  : "Brak assets/font.ttf - font raylib nie ma polskich liter (zamiast nich \"?\")")
         .FontSize(18)
         .Paint(hasFont ? DARKGREEN : MAROON);
 
@@ -266,9 +269,9 @@ SCENE("efekty") {
             SpawnBall(scene, inField ? mouse : Vector2{kField.x + kField.width / 2, kField.y + 40});
         }
         const Balls* balls = scene.Context<Balls>();
-        counter.Content("Pilki: " + std::to_string(balls->list.size()) +
-                        "   usuniete: " + std::to_string(balls->removed) +
-                        "   kroki stale: " + std::to_string(std::lround(1.0f / e.FixedStep())) +
+        counter.Content("Piłki: " + std::to_string(balls->list.size()) +
+                        "   usunięte: " + std::to_string(balls->removed) +
+                        "   kroki stałe: " + std::to_string(std::lround(1.0f / e.FixedStep())) +
                         "/s   FPS: " + std::to_string(e.CurrentFps()));
     });
 }

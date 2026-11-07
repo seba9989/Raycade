@@ -1,7 +1,8 @@
 /**
  * @file SceneMacro.hpp
  * @brief Rejestracja scen: SceneRegistration i makro SCENE.
- * @details Dołączany przez Engine.hpp, po definicji klasy Engine.
+ * @details Wymaga pełnej definicji klasy Engine, więc sam dołącza Engine.hpp (nigdy
+ * odwrotnie). Do gry trafia przez nagłówek zbiorczy `<raycade>`.
  */
 #pragma once
 

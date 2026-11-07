@@ -18,6 +18,14 @@ Engine& Engine::ClipboardText(const std::string& text) {
     return *this;
 }
 
+Engine& Engine::EventWaiting(bool value) {
+    if (value)
+        ::EnableEventWaiting();
+    else
+        ::DisableEventWaiting();
+    return *this;
+}
+
 double Engine::Time() const {
     return initialized_ ? ::GetTime() : 0.0;
 }

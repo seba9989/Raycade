@@ -40,6 +40,12 @@ Engine& Engine::Fullscreen(bool value) {
     return *this;
 }
 
+Engine& Engine::Fps(int fps) {
+    fps_ = fps;
+    if (initialized_) ::SetTargetFPS(fps_);
+    return *this;
+}
+
 Engine& Engine::VSync(bool value) {
     return WindowFlag(FLAG_VSYNC_HINT, value, "VSync", false);
 }
@@ -179,14 +185,6 @@ Engine& Engine::ToggleBorderless() {
 
 Engine& Engine::Focus() {
     if (RequireWindow("Focus")) ::SetWindowFocused();
-    return *this;
-}
-
-Engine& Engine::EventWaiting(bool value) {
-    if (value)
-        ::EnableEventWaiting();
-    else
-        ::DisableEventWaiting();
     return *this;
 }
 
