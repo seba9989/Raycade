@@ -48,10 +48,10 @@
     types_or = [ "c" "c++" ]; # domyślnie także JSON itp. - nie formatujemy .zed/*.json
   };
 
-  # Dokumentacja HTML wg doxygen/Doxyfile -> doxygen/html/index.html
+  # Dokumentacja HTML wg docs/Doxyfile -> docs/html/index.html
   scripts.docs.exec = ''
     cd "$DEVENV_ROOT"
-    doxygen doxygen/Doxyfile
+    doxygen docs/Doxyfile
   '';
 
   scripts.edit.exec = ''

@@ -77,9 +77,9 @@
  * @section dokumentacja Dokumentacja
  * Dokumentację HTML generuje polecenie `docs` (devenv) albo, w katalogu głównym projektu:
  * @code{.sh}
- * doxygen doxygen/Doxyfile
+ * doxygen docs/Doxyfile
  * @endcode
- * Wynik trafia do `doxygen/html/index.html`.
+ * Wynik trafia do `docs/html/index.html`.
  */
 
 #include <string>

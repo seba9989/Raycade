@@ -1,0 +1,1194 @@
+/**
+ * @file Engine.hpp
+ * @brief Klasa Engine (okno, pętla gry, sceny, wejście) i makro SCENE.
+ */
+#pragma once
+
+#include <raylib.h>
+
+#include <fstream>
+#include <functional>
+#include <map>
+#include <optional>
+#include <set>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include <raycade/input/Input.hpp>
+#include <raycade/render/Bitmap.hpp>
+#include <raycade/render/PrimitiveRenderer.hpp>
+#include <raycade/render/RenderTarget.hpp>
+#include <raycade/scene/Scene.hpp>
+
+/** @brief Poziom komunikatu w logu silnika (Engine::Log()). */
+enum class LogLevel {
+    Debug,   /**< Szczegóły diagnostyczne (m.in. TRACE i DEBUG z raylib). */
+    Info,    /**< Zwykła informacja, np. wczytanie sceny. */
+    Warning, /**< Coś pominięto, ale program działa dalej. */
+    Error    /**< Operacja się nie udała. */
+};
+
+/**
+ * @brief Sposób dopasowania obrazu gry do okna (Engine::ScaleMode()).
+ * @details Przy trybie innym niż None gra rysuje zawsze w stałej rozdzielczości
+ * (Engine::Resolution()) do tekstury, która jest potem skalowana na okno. Współrzędne myszy
+ * są przeliczane automatycznie, więc obiekty, kliknięcia i MousePosition() działają
+ * w rozdzielczości gry niezależnie od rozmiaru okna.
+ */
+enum class Scaling {
+    None,        /**< Bez skalowania - współrzędne gry to piksele okna (domyślnie). */
+    Stretch,     /**< Rozciągnięcie na całe okno, bez zachowania proporcji. */
+    Fit,         /**< Największa skala z zachowaniem proporcji; resztę wypełniają pasy. */
+    PixelPerfect /**< Jak Fit, ale tylko całkowite skale (ostre piksele, większe pasy). */
+};
+
+/**
+ * @brief Główny obiekt silnika zarządzający oknem, scenami, wejściem i pętlą gry.
+ * @details Silnik jest singletonem: Engine::Get() zwraca zawsze tę samą instancję.
+ * Metody konfiguracji zwracają Engine&, dlatego można je łączyć w łańcuch.
+ * Ustawienia okna można zmieniać także po Init() - zmieniają wtedy okno na bieżąco.
+ *
+ * W każdej klatce Run() wykonuje kolejno: globalne OnUpdate(), aktualizację aktywnej
+ * sceny, czyszczenie ekranu, rysowanie sceny, globalne OnDraw() i zamianę buforów.
+ *
+ * Silnik jest korzeniem łańcucha kontekstu (Contextable): wartości z
+ * Engine::Get().ProvideContext<T>() widzą wszystkie sceny i obiekty. Można je udostępnić przed
+ * Init(); są usuwane w Shutdown(), przed zamknięciem okna.
+ *
+ * Obsługa błędów jest jednolita w obrębie rodzaju metody:
+ * - konfiguracja i polecenia (settery, SwitchScene(), LoadScene(), Maximize() itd.) zwracają
+ *   Engine& i niepoprawne wywołanie tylko zapisują w logu (LogLevel::Warning albo Error),
+ *   żeby nie przerywać łańcucha wywołań,
+ * - operacje na plikach i nagraniach zwracają wynik: `bool` (SaveText(), StopRecording(),
+ *   Replay()) albo `std::optional` (LoadText()),
+ * - Init() zapisuje błąd w logu, a wynik podaje IsReady(),
+ * - wyjątek (std::out_of_range) rzuca tylko Scene(), bo musi zwrócić referencję do sceny,
+ *   której nie ma.
+ *
+ * @code{.cpp}
+ * Engine& engine = Engine::Get().Title("Gra").Window(800, 600).Fps(60).Init();
+ * if (!engine.IsReady()) return 1;
+ *
+ * engine.CreateScene("menu", [&](Scene& scene) { // pierwsza scena staje się aktywna
+ *     scene.Spawn<shapes::Circle>().Position({400, 300}).Radius(20).Paint(ORANGE).Fill();
+ * });
+ *
+ * return engine
+ *     .OnUpdate([&](float) {
+ *         if (engine.KeyPressed(KEY_ENTER)) engine.SwitchScene("menu");
+ *     })
+ *     .Run();
+ * @endcode
+ */
+class Engine : public Contextable {
+  public:
+    /**
+     * @brief Zwraca jedyną instancję silnika (singleton Meyersa).
+     * @return Referencja do silnika, tworzonego przy pierwszym wywołaniu.
+     */
+    static Engine& Get() {
+        static Engine instance;
+        return instance;
+    }
+
+    /** @brief Kopiowanie silnika jest zabronione. */
+    Engine(const Engine&) = delete;
+    /** @brief Przypisanie kopii silnika jest zabronione. */
+    Engine& operator=(const Engine&) = delete;
+
+    /** @name Konfiguracja okna */
+    /** @{ */
+
+    /**
+     * @brief Ustawia tytuł okna.
+     * @param title Nowy tytuł.
+     * @return Ten sam silnik.
+     */
+    Engine& Title(std::string title);
+
+    /** @brief Podaje tytuł okna. */
+    const std::string& Title() const { return title_; }
+
+    /**
+     * @brief Ustawia rozmiar okna i wyłącza tryb pełnoekranowy.
+     * @param width Szerokość w pikselach.
+     * @param height Wysokość w pikselach.
+     * @return Ten sam silnik.
+     */
+    Engine& Window(int width, int height);
+
+    /**
+     * @brief Ustawia rozdzielczość gry używaną przy ScaleMode() innym niż None.
+     * @details Domyślnie równa rozmiarowi okna z Window() w chwili Init(). Gra zawsze rysuje
+     * w tej rozdzielczości, a obraz jest skalowany na okno.
+     * @param width Szerokość obszaru gry.
+     * @param height Wysokość obszaru gry.
+     * @return Ten sam silnik.
+     */
+    Engine& Resolution(int width, int height);
+
+    /**
+     * @brief Ustawia sposób dopasowania obrazu do okna (np. w trybie pełnoekranowym).
+     * @param mode Tryb skalowania, patrz Scaling.
+     * @return Ten sam silnik.
+     */
+    Engine& ScaleMode(Scaling mode);
+
+    /** @brief Podaje tryb dopasowania obrazu do okna. */
+    Scaling ScaleMode() const { return scaling_; }
+
+    /**
+     * @brief Wybiera filtr skalowania obrazu.
+     * @details Domyślnie wyłączony: piksele pozostają ostre, co dobrze pokazuje własne
+     * algorytmy rastrowe. Włączony wygładza obraz (filtr dwuliniowy).
+     * @param value Czy wygładzać.
+     * @return Ten sam silnik.
+     */
+    Engine& SmoothScaling(bool value = true);
+
+    /** @brief Sprawdza, czy skalowany obraz jest wygładzany. */
+    bool IsSmoothScaling() const { return smoothScaling_; }
+
+    /**
+     * @brief Ustawia kolor pasów wokół obrazu w trybach Fit i PixelPerfect.
+     * @param color Kolor pasów (domyślnie czarny).
+     * @return Ten sam silnik.
+     */
+    Engine& Letterbox(Color color) {
+        letterbox_ = color;
+        return *this;
+    }
+
+    /** @brief Podaje kolor pasów wokół obrazu. */
+    Color Letterbox() const { return letterbox_; }
+
+    /**
+     * @brief Podaje rozmiar obszaru, w którym rysuje gra.
+     * @return Rozdzielczość gry przy włączonym skalowaniu, w przeciwnym razie rozmiar okna.
+     */
+    Vector2 ViewSize() const;
+
+    /**
+     * @brief Sprawdza, czy włączony jest tryb pełnoekranowy.
+     * @return Stan ustawienia Fullscreen().
+     */
+    bool IsFullscreen() const { return fullscreen_; }
+
+    /**
+     * @brief Włącza lub wyłącza tryb pełnoekranowy.
+     * @details Po Init() okno najpierw dostaje natywną rozdzielczość monitora - inaczej raylib
+     * przełączyłby monitor w tryb o rozmiarze okna (np. 1000x700). Z ScaleMode() obraz gry
+     * jest wtedy skalowany na cały ekran.
+     * @param value Czy włączyć ten tryb.
+     * @return Ten sam silnik.
+     */
+    Engine& Fullscreen(bool value = true);
+
+    /**
+     * @brief Ustawia docelową liczbę klatek na sekundę.
+     * @param fps Docelowa liczba klatek.
+     * @return Ten sam silnik.
+     */
+    Engine& Fps(int fps);
+
+    /**
+     * @brief Podaje docelową liczbę klatek na sekundę.
+     * @details Zmierzoną liczbę klatek podaje CurrentFps().
+     */
+    int Fps() const { return fps_; }
+
+    /**
+     * @brief Włącza lub wyłącza synchronizację pionową (V-Sync).
+     * @details Wielokrotne buforowanie: raylib (przez GLFW) zawsze tworzy okno z podwójnym
+     * buforem ramki - rysujemy w tylnym buforze, a EndDrawing() zamienia go z przednim.
+     * V-Sync synchronizuje tę zamianę z odświeżaniem monitora, co usuwa rozrywanie obrazu
+     * (tearing). Podwójne buforowanie działa niezależnie od tego ustawienia.
+     * @param value Czy włączyć V-Sync.
+     * @return Ten sam silnik.
+     */
+    Engine& VSync(bool value = true);
+
+    /** @brief Sprawdza, czy włączona jest synchronizacja pionowa. */
+    bool IsVSync() const;
+
+    /**
+     * @brief Pozwala użytkownikowi zmieniać rozmiar okna myszą.
+     * @param value Czy okno ma zmienny rozmiar.
+     * @return Ten sam silnik.
+     */
+    Engine& Resizable(bool value = true);
+
+    /**
+     * @brief Włącza wygładzanie krawędzi (MSAA 4x).
+     * @details Działa tylko przed Init() - później karta graficzna ma już utworzony bufor.
+     * @param value Czy włączyć MSAA.
+     * @return Ten sam silnik.
+     */
+    Engine& Msaa(bool value = true);
+
+    /**
+     * @brief Włącza obsługę wysokiego DPI (ostry obraz przy skalowaniu systemu, np. 150%).
+     * @details Działa tylko przed Init().
+     * @param value Czy włączyć High DPI.
+     * @return Ten sam silnik.
+     */
+    Engine& HighDpi(bool value = true);
+
+    /**
+     * @brief Usuwa ramkę i pasek tytułu okna.
+     * @param value Czy okno ma być bez ramki.
+     * @return Ten sam silnik.
+     */
+    Engine& Undecorated(bool value = true);
+
+    /**
+     * @brief Utrzymuje okno zawsze nad innymi oknami.
+     * @param value Czy okno ma być zawsze na wierzchu.
+     * @return Ten sam silnik.
+     */
+    Engine& AlwaysOnTop(bool value = true);
+
+    /**
+     * @brief Ustawia minimalny rozmiar okna (przy zmiennym rozmiarze).
+     * @param width Minimalna szerokość.
+     * @param height Minimalna wysokość.
+     * @return Ten sam silnik.
+     */
+    Engine& MinSize(int width, int height);
+
+    /**
+     * @brief Ustawia maksymalny rozmiar okna (przy zmiennym rozmiarze).
+     * @param width Maksymalna szerokość.
+     * @param height Maksymalna wysokość.
+     * @return Ten sam silnik.
+     */
+    Engine& MaxSize(int width, int height);
+
+    /**
+     * @brief Ustawia ikonę okna z pliku obrazu (np. PNG).
+     * @details Można wywołać przed Init(). Błąd wczytania jest zapisywany w logu.
+     * @param path Ścieżka pliku, np. AssetPath("ikona.png").
+     * @return Ten sam silnik.
+     */
+    Engine& Icon(std::string path);
+
+    /**
+     * @brief Ustawia kolor czyszczenia ekranu na początku każdej klatki.
+     * @param color Kolor tła.
+     * @return Ten sam silnik.
+     */
+    Engine& Background(Color color) {
+        background_ = color;
+        return *this;
+    }
+
+    /** @brief Podaje kolor tła. */
+    Color Background() const { return background_; }
+
+    /** @} */
+
+    /** @name Konfiguracja wejścia i logów */
+    /** @{ */
+
+    /**
+     * @brief Włącza lub wyłącza odczyt klawiatury.
+     * @param value Czy włączyć klawiaturę.
+     * @return Ten sam silnik.
+     */
+    Engine& Keyboard(bool value = true) {
+        input_.Keyboard(value);
+        return *this;
+    }
+
+    /**
+     * @brief Włącza lub wyłącza odczyt myszy.
+     * @details Wyłączenie myszy wyłącza też zdarzenia myszy obiektów sceny.
+     * @param value Czy włączyć mysz.
+     * @return Ten sam silnik.
+     */
+    Engine& Mouse(bool value = true) {
+        input_.Mouse(value);
+        return *this;
+    }
+
+    /**
+     * @brief Włącza lub wyłącza odczyt padów.
+     * @param value Czy włączyć pady.
+     * @return Ten sam silnik.
+     */
+    Engine& Gamepad(bool value = true) {
+        input_.Gamepad(value);
+        return *this;
+    }
+
+    /**
+     * @brief Włącza lub wyłącza odczyt ekranu dotykowego.
+     * @param value Czy włączyć dotyk.
+     * @return Ten sam silnik.
+     */
+    Engine& Touch(bool value = true) {
+        input_.Touch(value);
+        return *this;
+    }
+
+    /**
+     * @brief Ustawia klawisz zamykający okno (domyślnie ESC).
+     * @details Można wywołać przed Init(). KEY_NULL (0) wyłącza zamykanie klawiszem.
+     * @param key Kod klawisza raylib.
+     * @return Ten sam silnik.
+     */
+    Engine& ExitKey(int key);
+
+    /** @brief Podaje klawisz zamykający okno. */
+    int ExitKey() const { return exitKey_; }
+
+    /**
+     * @brief Ustawia ścieżkę pliku diagnostycznego.
+     * @param path Ścieżka pliku; pusty napis wyłącza zapis do pliku.
+     * @return Ten sam silnik.
+     */
+    Engine& LogFile(std::string path) {
+        logFile_ = std::move(path);
+        return *this;
+    }
+
+    /**
+     * @brief Ustawia, od jakiego poziomu komunikaty samego raylib trafiają do logu.
+     * @details Komunikaty raylib są przekazywane do Log() (z przedrostkiem "[raylib]"), więc
+     * lądują także w pliku logu. Domyślnie LOG_INFO; LOG_WARNING wycisza informacje
+     * o starcie, a LOG_NONE - wszystko.
+     * @param level Poziom raylib (LOG_*).
+     * @return Ten sam silnik.
+     */
+    Engine& RaylibLogLevel(int level);
+
+    /** @} */
+
+    /** @name Logika globalna (niezależna od aktywnej sceny) */
+    /** @{ */
+
+    /**
+     * @brief Ustawia globalną funkcję aktualizacji.
+     * @param update Funkcja wywoływana co klatkę z czasem dt w sekundach.
+     * @return Ten sam silnik.
+     */
+    Engine& OnUpdate(std::function<void(float dt)> update) {
+        update_ = std::move(update);
+        return *this;
+    }
+
+    /**
+     * @brief Ustawia globalną funkcję rysowania (np. HUD widoczny w każdej scenie).
+     * @param draw Funkcja wywoływana co klatkę po narysowaniu sceny.
+     * @return Ten sam silnik.
+     */
+    Engine& OnDraw(std::function<void(PrimitiveRenderer&)> draw) {
+        draw_ = std::move(draw);
+        return *this;
+    }
+
+    /**
+     * @brief Ustawia reakcję na pliki przeciągnięte na okno.
+     * @param callback Funkcja otrzymująca ścieżki upuszczonych plików.
+     * @return Ten sam silnik.
+     */
+    Engine& OnFilesDropped(std::function<void(const std::vector<std::string>&)> callback) {
+        filesDropped_ = std::move(callback);
+        return *this;
+    }
+
+    /** @} */
+
+    /** @name Cykl życia */
+    /** @{ */
+
+    /**
+     * @brief Otwiera okno i inicjalizuje silnik, jeśli jeszcze nie jest gotowy.
+     * @details Błąd utworzenia okna jest zapisywany w logu.
+     * @return Ten sam silnik; wynik można sprawdzić przez IsReady().
+     */
+    Engine& Init();
+
+    /**
+     * @brief Sprawdza wynik inicjalizacji.
+     * @return true, gdy okno jest gotowe.
+     */
+    bool IsReady() const { return initialized_; }
+
+    /**
+     * @brief Uruchamia pętlę gry aż do zamknięcia okna, a potem sprząta.
+     * @return 0 po normalnym zakończeniu albo 1 po błędzie inicjalizacji (kod wyjścia dla main).
+     */
+    int Run();
+
+    /**
+     * @brief Zwalnia sceny, tekstury i okno.
+     * @details Sceny są usuwane przed zamknięciem okna, bo tekstury bitmap wymagają
+     * aktywnego kontekstu OpenGL. Ponowne wywołanie jest bezpieczne.
+     */
+    void Shutdown();
+
+    /** @} */
+
+    /**
+     * @name Sceny
+     * Aktualizowana i rysowana jest tylko aktywna scena; nieaktywne pozostają zamrożone.
+     *
+     * Sceny zarejestrowane (makro SCENE, RegisterScene()) są wczytywane leniwie: konfiguracja
+     * sceny wykonuje się dopiero przy pierwszym wejściu na nią (scena startowa - na początku
+     * Run(), pozostałe - przy pierwszym SwitchScene()). Raz wczytana scena zostaje w pamięci
+     * do końca działania silnika i po powrocie zachowuje swój stan.
+     */
+    /** @{ */
+
+    /**
+     * @brief Tworzy scenę i natychmiast wykonuje jej konfigurację.
+     * @param name Nazwa sceny.
+     * @param setup Funkcja otrzymująca utworzoną scenę.
+     * @return Ten sam silnik.
+     */
+    Engine& CreateScene(const std::string& name, const std::function<void(::Scene&)>& setup);
+
+    /**
+     * @brief Tworzy scenę albo zwraca już istniejącą o tej nazwie.
+     * @details Pierwsza utworzona scena staje się aktywna.
+     * @param name Nazwa sceny.
+     * @return Referencja do sceny.
+     */
+    ::Scene& CreateScene(const std::string& name);
+
+    /**
+     * @brief Rejestruje konfigurację sceny wczytywanej leniwie.
+     * @details Scena powstaje dopiero przy pierwszym wejściu na nią, zawsze po Init(), więc
+     * w konfiguracji można wczytywać tekstury. Zwykle wywoływane przez makro SCENE.
+     * Ponowna rejestracja tej samej nazwy jest ignorowana i zapisywana w logu.
+     * @param name Nazwa sceny.
+     * @param setup Funkcja konfigurująca scenę.
+     * @return Ten sam silnik.
+     */
+    Engine& RegisterScene(std::string name, std::function<void(::Scene&)> setup);
+
+    /**
+     * @brief Wybiera scenę startową spośród zarejestrowanych scen.
+     * @details Kolejność rejestracji scen z różnych plików jest nieokreślona, dlatego scenę
+     * startową trzeba wskazać jawnie.
+     * @param name Nazwa sceny.
+     * @return Ten sam silnik.
+     */
+    Engine& StartScene(std::string name) {
+        start_ = std::move(name);
+        return *this;
+    }
+
+    /**
+     * @brief Pobiera scenę o podanej nazwie, w razie potrzeby wczytując ją.
+     * @details Wczytanie zarejestrowanej sceny wymaga otwartego okna (po Init()).
+     * @param name Nazwa sceny.
+     * @return Referencja do sceny.
+     * @throw std::out_of_range Gdy scena nie istnieje ani nie jest zarejestrowana.
+     */
+    ::Scene& Scene(const std::string& name);
+
+    /**
+     * @brief Sprawdza, czy scena została już wczytana.
+     * @param name Nazwa sceny.
+     * @return true, gdy scena istnieje w pamięci.
+     */
+    bool IsSceneLoaded(const std::string& name) const { return scenes_.contains(name); }
+
+    /**
+     * @brief Wczytuje zarejestrowaną scenę od razu, bez przełączania na nią.
+     * @details Pozwala wczytać ciężką scenę z wyprzedzeniem (np. na ekranie ładowania), żeby
+     * późniejsze SwitchScene() było natychmiastowe. Już wczytana scena pozostaje bez zmian -
+     * do ponownego wczytania służy ReloadScene(). Wymaga otwartego okna (po Init()).
+     * @param name Nazwa zarejestrowanej sceny.
+     * @return Ten sam silnik.
+     */
+    Engine& LoadScene(const std::string& name);
+
+    /**
+     * @brief Zleca zwolnienie sceny (obiektów i ich tekstur) na koniec bieżącej klatki.
+     * @details Zwolnienie jest odroczone, bo scena może zlecić je z własnego zdarzenia, w trakcie
+     * pętli po swoich obiektach. Następne wejście na scenę wczyta ją od nowa. Zwolnienie
+     * aktywnej sceny bez przełączenia na inną oznacza jej restart. Sceny utworzonej przez
+     * CreateScene() (bez rejestracji) nie da się wczytać ponownie, dlatego aktywnej takiej
+     * sceny nie można zwolnić.
+     * @warning Po zwolnieniu referencje do sceny i jej obiektów (np. z Scene()) są
+     * nieważne.
+     * @param name Nazwa sceny.
+     * @return Ten sam silnik.
+     */
+    Engine& UnloadScene(const std::string& name);
+
+    /**
+     * @brief Zleca zwolnienie i ponowne wczytanie sceny na koniec bieżącej klatki.
+     * @details Konfiguracja sceny wykonuje się od nowa, więc obiekty wracają do stanu
+     * początkowego (np. restart poziomu). Działa także dla sceny aktywnej.
+     * @param name Nazwa zarejestrowanej sceny.
+     * @return Ten sam silnik.
+     */
+    Engine& ReloadScene(const std::string& name);
+
+    /**
+     * @brief Zleca zmianę aktywnej sceny na koniec bieżącej klatki.
+     * @details Niewczytana scena jest wtedy wczytywana. Nieznana nazwa jest zapisywana jako
+     * błąd w logu.
+     * @param name Nazwa sceny utworzonej albo zarejestrowanej.
+     * @return Ten sam silnik.
+     */
+    Engine& SwitchScene(const std::string& name);
+
+    /**
+     * @brief Podaje nazwę aktywnej sceny.
+     * @return Referencja do nazwy.
+     */
+    const std::string& ActiveScene() const { return active_; }
+
+    /** @} */
+
+    /** @name Klawiatura i mysz */
+    /** @{ */
+
+    /**
+     * @brief Sprawdza, czy klawisz jest aktualnie wciśnięty.
+     * @param key Kod klawisza raylib.
+     * @return Stan klawisza.
+     */
+    bool KeyDown(int key) const { return input_.KeyDown(key); }
+
+    /**
+     * @brief Sprawdza, czy klawisz naciśnięto w bieżącej klatce.
+     * @param key Kod klawisza raylib.
+     * @return Stan naciśnięcia.
+     */
+    bool KeyPressed(int key) const { return input_.KeyPressed(key); }
+
+    /**
+     * @brief Sprawdza, czy przycisk myszy jest wciśnięty.
+     * @param button Kod przycisku raylib.
+     * @return Stan przycisku.
+     */
+    bool MouseDown(int button) const { return input_.MouseDown(button); }
+
+    /**
+     * @brief Sprawdza, czy przycisk myszy naciśnięto w bieżącej klatce.
+     * @param button Kod przycisku raylib.
+     * @return Stan naciśnięcia.
+     */
+    bool MousePressed(int button) const { return input_.MousePressed(button); }
+
+    /**
+     * @brief Pobiera pozycję kursora.
+     * @details We współrzędnych gry: przy ScaleMode() innym niż None są one przeliczone
+     * z pikseli okna na rozdzielczość gry (ViewSize()).
+     * @return Współrzędne kursora albo {0, 0}, gdy mysz jest wyłączona.
+     */
+    Vector2 MousePosition() const { return input_.MousePosition(); }
+
+    /**
+     * @brief Udostępnia pełny odczyt wejścia: klawiatura, mysz, pady i dotyk.
+     * @details Powyższe metody to skróty najczęstszych zapytań; resztę (np. KeyReleased(),
+     * MouseWheel(), GamepadAxis()) daje Input.
+     * @return Stan wejścia (ten sam, który obiekty dostają w Tick()).
+     */
+    const ::Input& Input() const { return input_; }
+
+    /** @} */
+
+    /**
+     * @name Akcje i osie wejścia
+     * Nazwy zamiast konkretnych klawiszy: gra pyta o "skok", a nie o spację. Dzięki temu jedna
+     * akcja może mieć kilka źródeł (klawiatura, mysz, pad), a sterowanie da się zmienić
+     * w jednym miejscu. Odczyt: Input::ActionPressed(), Input::Axis() (także w Tick()).
+     * @code{.cpp}
+     * engine.BindAction("skok", {bind::Key(KEY_SPACE), bind::Pad(GAMEPAD_BUTTON_RIGHT_FACE_DOWN)})
+     *     .BindAxis("ruch_x", {bind::Key(KEY_A), bind::Key(KEY_LEFT)},
+     *               {bind::Key(KEY_D), bind::Key(KEY_RIGHT)},
+     *               {bind::PadAxis(GAMEPAD_AXIS_LEFT_X, 1.0f)});
+     *
+     * // w Tick(dt, input):
+     * if (input.ActionPressed("skok")) Jump();
+     * Translate({input.Axis("ruch_x") * speed * dt, 0});
+     * @endcode
+     */
+    /** @{ */
+
+    /**
+     * @brief Ustawia źródła akcji (zastępuje poprzednie).
+     * @param action Nazwa akcji.
+     * @param bindings Źródła z przestrzeni nazw bind.
+     * @return Ten sam silnik.
+     */
+    Engine& BindAction(const std::string& action, std::vector<InputBinding> bindings) {
+        input_.BindAction(action, std::move(bindings));
+        return *this;
+    }
+
+    /**
+     * @brief Ustawia oś: źródła na minus, na plus i osie analogowe pada.
+     * @param axis Nazwa osi.
+     * @param negative Źródła dające -1 (np. A, strzałka w lewo).
+     * @param positive Źródła dające +1 (np. D, strzałka w prawo).
+     * @param analog Osie pada: bind::PadAxis(GAMEPAD_AXIS_*, kierunek); kierunek -1 odwraca oś.
+     * @param deadzone Wychylenia analogowe mniejsze od tej wartości są pomijane.
+     * @return Ten sam silnik.
+     */
+    Engine& BindAxis(const std::string& axis, std::vector<InputBinding> negative,
+                     std::vector<InputBinding> positive, std::vector<InputBinding> analog = {},
+                     float deadzone = 0.15f) {
+        input_.BindAxis(axis, std::move(negative), std::move(positive), std::move(analog),
+                        deadzone);
+        return *this;
+    }
+
+    /**
+     * @brief Usuwa akcję albo oś o podanej nazwie.
+     * @param name Nazwa akcji lub osi.
+     * @return Ten sam silnik.
+     */
+    Engine& Unbind(const std::string& name) {
+        input_.Unbind(name);
+        return *this;
+    }
+
+    /** @brief Skrót: Input::ActionDown(). */
+    bool ActionDown(const std::string& action) const { return input_.ActionDown(action); }
+    /** @brief Skrót: Input::ActionPressed(). */
+    bool ActionPressed(const std::string& action) const { return input_.ActionPressed(action); }
+    /** @brief Skrót: Input::ActionReleased(). */
+    bool ActionReleased(const std::string& action) const { return input_.ActionReleased(action); }
+    /** @brief Skrót: Input::Axis(). */
+    float Axis(const std::string& axis) const { return input_.Axis(axis); }
+
+    /** @} */
+
+    /**
+     * @name Kursor i pady (sterowanie)
+     * Działają po Init(); wcześniej są ignorowane (z wpisem w logu).
+     */
+    /** @{ */
+
+    /**
+     * @brief Przenosi kursor w podane miejsce.
+     * @param position Nowa pozycja kursora we współrzędnych gry (jak MousePosition()).
+     * @return Ten sam silnik.
+     */
+    Engine& MousePosition(Vector2 position);
+
+    /**
+     * @brief Ustawia wygląd kursora systemowego.
+     * @param cursor Kod raylib (MOUSE_CURSOR_DEFAULT, MOUSE_CURSOR_POINTING_HAND itd.).
+     * @return Ten sam silnik.
+     */
+    Engine& MouseCursor(int cursor);
+
+    /**
+     * @brief Ukrywa albo pokazuje kursor nad oknem.
+     * @param value true - ukryj, false - pokaż.
+     * @return Ten sam silnik.
+     */
+    Engine& HideCursor(bool value = true);
+
+    /**
+     * @brief Blokuje kursor w oknie (ukryty, ruch tylko przez MouseDelta()) albo go zwalnia.
+     * @details Przydatne do sterowania kamerą myszą.
+     * @param value true - zablokuj, false - zwolnij.
+     * @return Ten sam silnik.
+     */
+    Engine& LockCursor(bool value = true);
+
+    /** @brief Sprawdza, czy kursor jest ukryty (także gdy jest zablokowany). */
+    bool IsCursorHidden() const;
+
+    /** @brief Sprawdza, czy kursor znajduje się nad oknem. */
+    bool IsCursorOnScreen() const;
+
+    /**
+     * @brief Włącza wibrację pada.
+     * @param gamepad Numer pada.
+     * @param left Siła lewego silnika (0-1).
+     * @param right Siła prawego silnika (0-1).
+     * @param seconds Czas trwania w sekundach.
+     * @return Ten sam silnik.
+     */
+    Engine& GamepadVibration(int gamepad, float left, float right, float seconds);
+
+    /**
+     * @brief Wczytuje mapowania padów w formacie SDL_GameControllerDB.
+     * @param mappings Treść mapowań.
+     * @return Liczba wczytanych mapowań albo 0.
+     */
+    int GamepadMappings(const std::string& mappings);
+
+    /** @} */
+
+    /**
+     * @name Stan okna i monitory
+     * Przed Init() zwracają wartości domyślne (0, false, {0, 0}).
+     */
+    /** @{ */
+
+    /**
+     * @brief Szerokość okna (w punktach ekranu, bez skali DPI).
+     * @details Przy ScaleMode() innym niż None gra rysuje w rozdzielczości ViewSize(), a nie
+     * w rozmiarze okna - do układania obiektów służy wtedy ViewSize().
+     */
+    int ScreenWidth() const;
+    /** @brief Wysokość okna (w punktach ekranu, bez skali DPI); patrz ScreenWidth(). */
+    int ScreenHeight() const;
+    /** @brief Szerokość bufora rysowania w pikselach (z uwzględnieniem DPI). */
+    int RenderWidth() const;
+    /** @brief Wysokość bufora rysowania w pikselach (z uwzględnieniem DPI). */
+    int RenderHeight() const;
+    /** @brief Czy rozmiar okna zmienił się w poprzedniej klatce. */
+    bool IsWindowResized() const;
+    /** @brief Czy okno ma fokus. */
+    bool IsWindowFocused() const;
+    /** @brief Czy okno jest ukryte. */
+    bool IsWindowHidden() const;
+    /** @brief Czy okno jest zminimalizowane. */
+    bool IsWindowMinimized() const;
+    /** @brief Czy okno jest zmaksymalizowane. */
+    bool IsWindowMaximized() const;
+    /** @brief Pozycja okna na pulpicie. */
+    Vector2 WindowPosition() const;
+    /** @brief Skala DPI okna (np. {1.5, 1.5} przy 150%). */
+    Vector2 WindowScaleDpi() const;
+
+    /** @brief Liczba podłączonych monitorów. */
+    int MonitorCount() const;
+    /** @brief Numer monitora, na którym jest okno. */
+    int CurrentMonitor() const;
+    /** @brief Pozycja monitora na wirtualnym pulpicie. */
+    Vector2 MonitorPosition(int monitor) const;
+    /** @brief Szerokość trybu wideo monitora w pikselach. */
+    int MonitorWidth(int monitor) const;
+    /** @brief Wysokość trybu wideo monitora w pikselach. */
+    int MonitorHeight(int monitor) const;
+    /** @brief Fizyczna szerokość monitora w milimetrach. */
+    int MonitorPhysicalWidth(int monitor) const;
+    /** @brief Fizyczna wysokość monitora w milimetrach. */
+    int MonitorPhysicalHeight(int monitor) const;
+    /** @brief Częstotliwość odświeżania monitora w Hz. */
+    int MonitorRefreshRate(int monitor) const;
+    /** @brief Nazwa monitora (albo pusty napis). */
+    std::string MonitorName(int monitor) const;
+
+    /** @} */
+
+    /**
+     * @name Sterowanie oknem
+     * WindowPosition() i Opacity() można wywołać przed Init() - zostaną zastosowane przy
+     * otwarciu okna. Pozostałe działają po Init().
+     */
+    /** @{ */
+
+    /**
+     * @brief Ustawia pozycję okna na pulpicie.
+     * @param x Pozycja pozioma.
+     * @param y Pozycja pionowa.
+     * @return Ten sam silnik.
+     */
+    Engine& WindowPosition(int x, int y);
+
+    /**
+     * @brief Ustawia przezroczystość całego okna.
+     * @param opacity Od 0 (niewidoczne) do 1 (nieprzezroczyste).
+     * @return Ten sam silnik.
+     */
+    Engine& Opacity(float opacity);
+
+    /** @brief Maksymalizuje okno (wymaga okna o zmiennym rozmiarze). */
+    Engine& Maximize();
+    /** @brief Minimalizuje okno. */
+    Engine& Minimize();
+    /** @brief Przywraca zminimalizowane albo zmaksymalizowane okno. */
+    Engine& Restore();
+    /** @brief Przełącza tryb okna bez ramki na cały ekran (borderless windowed). */
+    Engine& ToggleBorderless();
+    /** @brief Przenosi fokus na okno. */
+    Engine& Focus();
+
+    /** @} */
+
+    /** @name Schowek */
+    /** @{ */
+
+    /**
+     * @brief Pobiera tekst ze schowka systemowego.
+     * @return Tekst albo pusty napis (także przed Init()).
+     */
+    std::string ClipboardText() const;
+
+    /**
+     * @brief Kopiuje tekst do schowka systemowego.
+     * @param text Tekst (UTF-8).
+     * @return Ten sam silnik.
+     */
+    Engine& ClipboardText(const std::string& text);
+
+    /**
+     * @brief Pobiera obraz ze schowka jako bitmapę.
+     * @details W raylib 5.5 działa tylko na Windows; na innych systemach (i przed Init())
+     * zwraca pustą bitmapę - sprawdź Width() > 0.
+     * @return Bitmapa z obrazem albo pusta.
+     */
+    Bitmap ClipboardImage() const;
+
+    /** @} */
+
+    /** @name Czas, losowość i różne */
+    /** @{ */
+
+    /**
+     * @brief Pobiera zmierzoną liczbę klatek na sekundę.
+     * @details W odróżnieniu od Fps(), które podaje wartość docelową.
+     * @return Średnia z ostatnich klatek.
+     */
+    int CurrentFps() const;
+
+    /**
+     * @brief Usypia program na podany czas.
+     * @param seconds Czas w sekundach.
+     * @return Ten sam silnik.
+     */
+    Engine& Wait(double seconds);
+
+    /**
+     * @brief Ustawia ziarno generatora liczb losowych (powtarzalne wyniki).
+     * @param seed Ziarno.
+     * @return Ten sam silnik.
+     */
+    Engine& RandomSeed(unsigned int seed);
+
+    /**
+     * @brief Losuje liczbę całkowitą z przedziału domkniętego.
+     * @param min Dolna granica.
+     * @param max Górna granica.
+     * @return Wylosowana liczba.
+     */
+    int RandomValue(int min, int max) const;
+
+    /**
+     * @brief Losuje liczbę zmiennoprzecinkową z przedziału [min, max].
+     * @details Korzysta z tego samego generatora co RandomValue(), więc RandomSeed() działa
+     * dla obu. Rozdzielczość: milionowa część przedziału.
+     * @param min Dolna granica.
+     * @param max Górna granica.
+     * @return Wylosowana liczba.
+     */
+    float RandomFloat(float min, float max) const;
+
+    /**
+     * @brief Zapisuje zrzut ekranu do pliku PNG.
+     * @param path Ścieżka pliku (względem katalogu roboczego).
+     * @return Ten sam silnik.
+     */
+    Engine& Screenshot(const std::string& path);
+
+    /**
+     * @brief Otwiera adres w domyślnej przeglądarce.
+     * @param url Adres (http:// albo https://).
+     * @return Ten sam silnik.
+     */
+    Engine& OpenUrl(const std::string& url);
+
+    /**
+     * @brief Włącza czekanie na zdarzenia zamiast ciągłego odświeżania.
+     * @details Program zużywa mniej procesora, ale klatki pojawiają się tylko przy wejściu
+     * użytkownika - dobre dla narzędzi, złe dla animacji.
+     * @param value Czy czekać na zdarzenia.
+     * @return Ten sam silnik.
+     */
+    Engine& EventWaiting(bool value = true);
+
+    /** @} */
+
+    /** @name Pliki i katalogi */
+    /** @{ */
+
+    /** @brief Katalog, w którym leży plik wykonywalny (z ukośnikiem na końcu). */
+    std::string ApplicationDirectory() const;
+    /** @brief Bieżący katalog roboczy. */
+    std::string WorkingDirectory() const;
+    /** @brief Sprawdza, czy plik istnieje. */
+    bool FileExists(const std::string& path) const;
+    /** @brief Sprawdza, czy katalog istnieje. */
+    bool DirectoryExists(const std::string& path) const;
+    /** @brief Czas ostatniej modyfikacji pliku (sekundy od epoki Uniksa) albo 0. */
+    long FileModTime(const std::string& path) const;
+
+    /**
+     * @brief Zwraca pełną ścieżkę zasobu z katalogu assets/ obok pliku wykonywalnego.
+     * @details CMake kopiuje tam katalog assets/ gry, więc ścieżka działa niezależnie od tego,
+     * z jakiego katalogu uruchomiono program.
+     * @param name Nazwa pliku w assets/, np. "player.png" albo "dzwieki/skok.wav".
+     * @return Ścieżka, np. "/home/.../build/assets/player.png".
+     */
+    std::string AssetPath(const std::string& name) const;
+
+    /**
+     * @brief Wczytuje cały plik tekstowy.
+     * @param path Ścieżka pliku.
+     * @return Treść albo brak wartości, gdy pliku nie da się odczytać.
+     */
+    std::optional<std::string> LoadText(const std::string& path) const;
+
+    /**
+     * @brief Zapisuje tekst do pliku (nadpisując go).
+     * @param path Ścieżka pliku.
+     * @param text Treść.
+     * @return true, gdy zapis się udał.
+     */
+    bool SaveText(const std::string& path, const std::string& text) const;
+
+    /** @} */
+
+    /**
+     * @name Nagrywanie i odtwarzanie wejścia
+     * Nagrywa klawiaturę, mysz i pady klatka po klatce, a potem odtwarza je, np. żeby pokazać
+     * demo na obronie zawsze tak samo. Podczas odtwarzania prawdziwe wejście nadal działa.
+     * @code{.cpp}
+     * if (engine.KeyPressed(KEY_F5)) engine.StartRecording();
+     * if (engine.KeyPressed(KEY_F6)) engine.StopRecording("demo.rae");
+     * if (engine.KeyPressed(KEY_F7)) engine.Replay("demo.rae");
+     * @endcode
+     */
+    /** @{ */
+
+    /**
+     * @brief Zaczyna nagrywanie wejścia.
+     * @return Ten sam silnik.
+     */
+    Engine& StartRecording();
+
+    /**
+     * @brief Kończy nagrywanie i zapisuje je do pliku.
+     * @param path Ścieżka pliku nagrania (format tekstowy raylib).
+     * @return true, gdy zapis się udał.
+     */
+    bool StopRecording(const std::string& path);
+
+    /**
+     * @brief Odtwarza nagranie od następnej klatki.
+     * @param path Ścieżka pliku nagrania.
+     * @return true, gdy nagranie wczytano i ma zdarzenia.
+     */
+    bool Replay(const std::string& path);
+
+    /** @brief Czy trwa nagrywanie. */
+    bool IsRecording() const { return recording_; }
+    /** @brief Czy trwa odtwarzanie. */
+    bool IsReplaying() const { return replaying_; }
+
+    /** @} */
+
+    /** @name Czyszczenie ekranu i bitmap */
+    /** @{ */
+
+    /**
+     * @brief Czyści aktualny cel rysowania wskazanym kolorem.
+     * @param color Kolor czyszczenia.
+     * @return Ten sam silnik.
+     */
+    Engine& Clear(Color color) {
+        ::ClearBackground(color);
+        return *this;
+    }
+
+    /**
+     * @brief Czyści teksturę renderowaną (np. zawartość shapes::Surface).
+     * @param target Tekstura docelowa.
+     * @param color Kolor czyszczenia.
+     * @return Ten sam silnik.
+     */
+    Engine& Clear(const RenderTarget& target, Color color);
+
+    /**
+     * @brief Czyści bitmapę w pamięci RAM.
+     * @param bitmap Bitmapa docelowa.
+     * @param color Kolor czyszczenia.
+     * @return Ten sam silnik.
+     */
+    Engine& Clear(Bitmap& bitmap, Color color) {
+        bitmap.Clear(color);
+        return *this;
+    }
+
+    /** @} */
+
+    /** @name Rysowanie i diagnostyka */
+    /** @{ */
+
+    /**
+     * @brief Udostępnia renderer prymitywów silnika.
+     * @return Referencja do renderera.
+     */
+    PrimitiveRenderer& Primitives() { return primitives_; }
+
+    /**
+     * @brief Zapisuje komunikat do stderr i opcjonalnego pliku logu.
+     * @details Każdy wpis zaczyna się znacznikiem poziomu, np. `[UWAGA] ...`. Komunikaty raylib
+     * trafiają tu z tym samym znacznikiem i dopiskiem `[raylib]`.
+     * @param level Poziom komunikatu.
+     * @param message Treść komunikatu.
+     * @return Ten sam silnik.
+     */
+    Engine& Log(LogLevel level, const std::string& message);
+
+    /**
+     * @brief Zapisuje komunikat informacyjny (LogLevel::Info).
+     * @param message Treść komunikatu.
+     * @return Ten sam silnik.
+     */
+    Engine& Log(const std::string& message) { return Log(LogLevel::Info, message); }
+
+    /** @} */
+
+  private:
+    /** @brief Prywatny konstruktor - instancję zwraca wyłącznie Get(). */
+    Engine() = default;
+    /** @brief Destruktor wywołuje Shutdown(). */
+    ~Engine() { Shutdown(); }
+
+    /**
+     * @brief Sprawdza, czy okno istnieje; jeśli nie - zapisuje ostrzeżenie w logu.
+     * @param function Nazwa wywołanej metody (do komunikatu).
+     * @return true, gdy okno jest gotowe.
+     */
+    bool RequireWindow(const char* function);
+
+    /**
+     * @brief Ustawia lub zdejmuje flagę okna (przed Init() - zapamiętuje, po - zmienia okno).
+     * @param flag Flaga raylib (FLAG_*).
+     * @param value Czy flaga ma być ustawiona.
+     * @param name Nazwa metody (do komunikatów).
+     * @param onlyBeforeInit Czy flagi nie da się zmienić po Init() (MSAA, High DPI).
+     * @return Ten sam silnik.
+     */
+    Engine& WindowFlag(unsigned int flag, bool value, const char* name, bool onlyBeforeInit);
+
+    /** @brief Ustawia ikonę z icon_ (wymaga okna). */
+    void ApplyIcon();
+
+    /** @brief Obsługuje upuszczone pliki i odtwarzanie nagrania na początku klatki. */
+    void PollSystemEvents();
+    /** @brief Tworzy (albo odtwarza) teksturę gry zgodnie z bieżącymi ustawieniami. */
+    void CreateTarget();
+
+    /** @brief Zwalnia teksturę gry i przywraca przeliczanie myszy 1:1. */
+    void ReleaseTarget();
+
+    /** @brief Liczy prostokąt obrazu w oknie i przeliczenie myszy dla bieżącego rozmiaru okna. */
+    void UpdateScaling();
+
+    std::string title_ = "Gra";             /**< Tytuł okna. */
+    int width_ = 800;                       /**< Szerokość okna w trybie okienkowym. */
+    int height_ = 600;                      /**< Wysokość okna w trybie okienkowym. */
+    bool fullscreen_ = false;               /**< Czy używać trybu pełnoekranowego. */
+    int fps_ = 60;                          /**< Docelowa liczba klatek na sekundę. */
+    Color background_ = BLACK;              /**< Kolor czyszczenia ekranu w każdej klatce. */
+    ::Input input_;                         /**< Stan i ustawienia urządzeń wejścia. */
+    int exitKey_ = KEY_ESCAPE;              /**< Klawisz zamykający okno. */
+    std::optional<Vector2> windowPosition_; /**< Pozycja okna do ustawienia przy Init(). */
+    std::optional<float> opacity_; /**< Przezroczystość okna do ustawienia przy Init(). */
+    unsigned int windowFlags_ = 0; /**< Flagi okna (FLAG_*) z Resizable() itd. */
+    std::optional<std::pair<int, int>> minSize_; /**< Minimalny rozmiar okna. */
+    std::optional<std::pair<int, int>> maxSize_; /**< Maksymalny rozmiar okna. */
+    std::string icon_;                           /**< Ścieżka ikony do ustawienia przy Init(). */
+    int raylibLogLevel_ = LOG_INFO;              /**< Próg komunikatów raylib. */
+    /** Reakcja na pliki upuszczone na okno. */
+    std::function<void(const std::vector<std::string>&)> filesDropped_;
+    AutomationEventList recordList_{}; /**< Bufor nagrywanego wejścia. */
+    AutomationEventList replayList_{}; /**< Odtwarzane nagranie. */
+    bool recording_ = false;           /**< Czy trwa nagrywanie. */
+    bool replaying_ = false;           /**< Czy trwa odtwarzanie. */
+    unsigned int replayIndex_ = 0;     /**< Następne zdarzenie do odtworzenia. */
+    unsigned int replayFrame_ = 0;     /**< Klatka odtwarzania (od 0). */
+
+    Scaling scaling_ = Scaling::None;    /**< Tryb dopasowania obrazu do okna. */
+    int viewWidth_ = 0;                  /**< Szerokość gry; 0 = rozmiar okna przy Init(). */
+    int viewHeight_ = 0;                 /**< Wysokość gry; 0 = rozmiar okna przy Init(). */
+    bool smoothScaling_ = false;         /**< Czy wygładzać skalowany obraz. */
+    Color letterbox_ = BLACK;            /**< Kolor pasów wokół obrazu. */
+    RenderTarget target_;                /**< Tekstura, do której rysuje gra przy skalowaniu. */
+    Rectangle destination_{};            /**< Gdzie w oknie rysujemy teksturę gry. */
+    std::string logFile_ = "engine.log"; /**< Ścieżka pliku logu; pusta wyłącza zapis. */
+
+    std::function<void(float)> update_;            /**< Globalna logika co klatkę. */
+    std::function<void(PrimitiveRenderer&)> draw_; /**< Globalne rysowanie po scenie. */
+
+    std::ofstream log_;        /**< Otwarty plik logu. */
+    bool initialized_ = false; /**< Czy okno zostało utworzone. */
+
+    std::map<std::string, ::Scene> scenes_; /**< Utworzone sceny według nazw. */
+    std::string active_;                    /**< Nazwa aktywnej sceny. */
+    std::string pending_; /**< Scena, na którą przełączamy po zakończeniu klatki. */
+    std::string start_;   /**< Scena startowa wybrana przez StartScene(). */
+    /** Konfiguracje scen zarejestrowanych makrem SCENE, wykonywane przy pierwszym wejściu. */
+    std::map<std::string, std::function<void(::Scene&)>> registered_;
+    PrimitiveRenderer primitives_; /**< Renderer używany do rysowania scen. */
+    /** Czas wczytywania scen w bieżącej klatce, odejmowany od dt następnej. */
+    double loadSeconds_ = 0.0;
+    std::set<std::string> unload_; /**< Sceny do zwolnienia na koniec klatki. */
+    std::set<std::string> reload_; /**< Sceny do ponownego wczytania na koniec klatki. */
+
+    /**
+     * @brief Wykonuje odroczone przełączenie, zwolnienia i ponowne wczytania scen.
+     */
+    void ApplySceneChanges();
+
+    /**
+     * @brief Zwraca scenę, wczytując ją przy pierwszym użyciu.
+     * @param name Nazwa sceny.
+     * @return Wskaźnik sceny albo nullptr, gdy scena nie istnieje ani nie jest zarejestrowana.
+     */
+    ::Scene* Load(const std::string& name);
+
+    /**
+     * @brief Wybiera i wczytuje scenę startową na początku Run().
+     */
+    void LoadStartScene();
+};
+
+/**
+ * @brief Pomocniczy rejestrator scen wykorzystywany przez makro SCENE.
+ * @details Statyczny obiekt tej klasy powstaje przed main(), a jego konstruktor rejestruje
+ * funkcję konfigurującą scenę w silniku.
+ */
+struct SceneRegistration {
+    /**
+     * @brief Zapamiętuje funkcję konfigurującą scenę.
+     * @param name Nazwa sceny.
+     * @param setup Funkcja konfigurująca.
+     */
+    SceneRegistration(const char* name, void (*setup)(Scene&)) {
+        Engine::Get().RegisterScene(name, setup);
+    }
+};
+
+/** @cond PRYWATNE */
+#define SCENE_CONCAT_(a, b) a##b
+#define SCENE_CONCAT(a, b) SCENE_CONCAT_(a, b)
+#define SCENE_IMPL_(name, setup)                                                                   \
+    static void setup(Scene& scene);                                                               \
+    static const SceneRegistration SCENE_CONCAT(setup, _registration){name, setup};                \
+    static void setup(Scene& scene)
+/** @endcond */
+
+/**
+ * @def SCENE(name)
+ * @brief Rejestruje scenę z bloku kodu wykonywanego po inicjalizacji okna.
+ * @details Wewnątrz bloku dostępna jest zmienna `scene` (Scene&). Blok wykona się przy
+ * pierwszym wejściu na scenę (wczytywanie leniwe), a scenę startową wybiera
+ * Engine::StartScene(). Makro jest przeznaczone dla plików .cpp gry - nie należy go używać
+ * w bibliotece statycznej, bo linker może pominąć plik, do którego nic się nie odwołuje.
+ * @code{.cpp}
+ * SCENE("menu") {
+ *     scene.Spawn<shapes::Rect>().Position({300, 200}).Size({400, 300});
+ * }
+ * @endcode
+ * @param name Nazwa sceny używana przez StartScene() i SwitchScene().
+ */
+#define SCENE(name) SCENE_IMPL_(name, SCENE_CONCAT(scene_setup_, __COUNTER__))

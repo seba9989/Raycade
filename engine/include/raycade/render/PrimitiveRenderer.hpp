@@ -11,8 +11,8 @@
 
 #include <span>
 
-#include "Bitmap.hpp"
-#include "Geometry.hpp"
+#include <raycade/math/Geometry.hpp>
+#include <raycade/render/Bitmap.hpp>
 
 /**
  * @brief Renderer prymitywów dwuwymiarowych ze stanem podobnym do pędzla.
