@@ -1,37 +1,44 @@
 /**
  * @file Sprite.hpp
- * @brief Kształt Sprite - bitmapa z animacją klatkową z arkusza (sprite sheet).
+ * @brief Kształt Sprite - klatka z arkusza (SpriteSheet) z animacją poklatkową.
  */
 #pragma once
 
-#include <map>
+#include <cstdint>
+#include <functional>
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include <raycade/entity/Entity.hpp>
 #include <raycade/render/Assets.hpp>
 #include <raycade/render/Bitmap.hpp>
+#include <raycade/render/SpriteSheet.hpp>
 
 namespace shapes {
 
 /**
  * @brief Obraz z arkusza klatek z animacją poklatkową.
- * @details Arkusz (sprite sheet) to jedna bitmapa z klatkami jednakowego rozmiaru ułożonymi
- * w wierszach - od lewej do prawej, potem w kolejnym wierszu. Klatki numeruje się od 0.
- *
- * Animacja to nazwany zakres klatek z szybkością (klatki na sekundę) i zapętleniem. Bez
- * zdefiniowanych animacji działa animacja domyślna (nazwa "") obejmująca cały arkusz, z
- * szybkością Fps(). Czas animacji płynie w Tick() z dt sceny, więc zgadza się z resztą gry
- * niezależnie od liczby klatek na sekundę okna.
- *
- * Arkusz jest współdzielony (std::shared_ptr), więc wiele obiektów może używać jednej bitmapy
- * w pamięci i jednej tekstury na karcie graficznej:
+ * @details Klatki i nazwane animacje opisuje SpriteSheet - współdzielony, więc wielu
+ * przeciwników używa jednego opisu, jednej bitmapy w pamięci i jednej tekstury na karcie
+ * graficznej. Sprite pamięta tylko własny stan: bieżącą animację, klatkę i czas.
  * @code{.cpp}
- * std::shared_ptr<const Bitmap> coin = engine.Assets().Bitmap("coin.png");
+ * auto coin = std::make_shared<SpriteSheet>(
+ *     SpriteSheet::Grid(engine.Assets().Bitmap("coin.png"), {16, 16}));
+ * coin->Clip("kreci", 0, 8, 8);
  * for (int i = 0; i < 10; ++i)
- *     scene.Spawn<shapes::Sprite>().Sheet(coin, {16, 16}).Fps(8).Play().Position({i * 40.0f, 0});
+ *     scene.Spawn<shapes::Sprite>().Sheet(coin).Play("kreci").Position({i * 40.0f, 0});
  * @endcode
+ *
+ * Dla pojedynczego obiektu wystarczy skrót: Sheet() z bitmapą albo nazwą pliku tworzy
+ * prywatny arkusz z siatki, a Animation() dopisuje do niego animacje. Animation() na arkuszu
+ * współdzielonym robi najpierw prywatną kopię opisu (bitmapa zostaje wspólna), więc nie
+ * zmienia innych sprite'ów.
+ *
+ * Bez wybranej animacji działa animacja domyślna (nazwa "") obejmująca cały arkusz,
+ * z szybkością Fps(). Czas animacji płynie w Tick() z dt sceny, więc zgadza się z resztą gry
+ * niezależnie od liczby klatek na sekundę okna.
  *
  * Pozycja oznacza punkt Origin() klatki (domyślnie lewy górny róg) - wokół niego działa
  * Rotate() i Scale(). Paint() mnoży kolory klatki (domyślnie WHITE - bez zmian), a Fade()
@@ -57,17 +64,39 @@ class Sprite : public Entity {
     Sprite() { Paint(WHITE); }
 
     /**
-     * @brief Ustawia arkusz klatek.
-     * @param sheet Bitmapa (współdzielona); nullptr - nic nie jest rysowane.
-     * @param frameSize Rozmiar jednej klatki w pikselach; {0, 0} - cała bitmapa to jedna
-     * klatka.
+     * @brief Ustawia współdzielony arkusz klatek z animacjami.
+     * @details Bieżąca animacja zostaje, jeśli nowy arkusz ma animację o tej nazwie;
+     * w przeciwnym razie działa animacja domyślna (cały arkusz).
+     * @param sheet Arkusz; nullptr - nic nie jest rysowane.
      * @return Ten sam obiekt.
      */
     template <typename Self>
-    Self& Sheet(this Self& self, std::shared_ptr<const Bitmap> sheet, Vector2 frameSize = {0, 0}) {
+    Self& Sheet(this Self& self, std::shared_ptr<const SpriteSheet> sheet) {
+        self.own_.reset();
         self.sheet_ = std::move(sheet);
-        self.frameSize_ = frameSize;
-        self.ClampFrame();
+        self.SheetChanged();
+        return self;
+    }
+
+    /**
+     * @brief Ustawia arkusz z bitmapy podzielonej na siatkę klatek (prywatny dla sprite'a).
+     * @details Animacje zdefiniowane wcześniej przez Animation() zostają.
+     * @param sheet Bitmapa (współdzielona); nullptr - nic nie jest rysowane.
+     * @param frameSize Rozmiar jednej klatki w pikselach; {0, 0} - cała bitmapa to jedna
+     * klatka.
+     * @param margin Odstęp siatki od lewej i górnej krawędzi bitmapy.
+     * @param spacing Odstęp między klatkami.
+     * @return Ten sam obiekt.
+     */
+    template <typename Self>
+    Self& Sheet(
+        this Self& self,
+        std::shared_ptr<const Bitmap> sheet,
+        Vector2 frameSize = {0, 0},
+        Vector2 margin = {0, 0},
+        Vector2 spacing = {0, 0}
+    ) {
+        self.SetGrid(std::move(sheet), frameSize, margin, spacing);
         return self;
     }
 
@@ -79,29 +108,37 @@ class Sprite : public Entity {
      * Bez Assets w kontekście plik jest wczytywany bezpośrednio przez Bitmap::Load().
      * @param path Nazwa pliku w assets/ (np. "hero.png") albo pełna ścieżka.
      * @param frameSize Rozmiar jednej klatki; {0, 0} - cały obraz.
+     * @param margin Odstęp siatki od lewej i górnej krawędzi bitmapy.
+     * @param spacing Odstęp między klatkami.
      * @return Ten sam obiekt.
      */
     template <typename Self>
-    Self& Sheet(this Self& self, const std::string& path, Vector2 frameSize = {0, 0}) {
+    Self& Sheet(
+        this Self& self,
+        const std::string& path,
+        Vector2 frameSize = {0, 0},
+        Vector2 margin = {0, 0},
+        Vector2 spacing = {0, 0}
+    ) {
         if (Assets* assets = self.template Context<Assets>())
-            return self.Sheet(assets->Bitmap(path), frameSize);
-        return self.Sheet(Shared(Bitmap::Load(path)), frameSize);
+            return self.Sheet(assets->Bitmap(path), frameSize, margin, spacing);
+        return self.Sheet(Shared(Bitmap::Load(path)), frameSize, margin, spacing);
     }
 
     /** @brief Podaje arkusz klatek (albo nullptr). */
-    const std::shared_ptr<const Bitmap>& Sheet() const { return sheet_; }
+    const std::shared_ptr<const SpriteSheet>& Sheet() const { return sheet_; }
 
-    /** @brief Sprawdza, czy sprite ma niepusty arkusz. */
-    bool IsLoaded() const { return sheet_ && !sheet_->IsEmpty(); }
+    /** @brief Sprawdza, czy sprite ma arkusz z bitmapą i klatkami. */
+    bool IsLoaded() const { return sheet_ && sheet_->IsLoaded(); }
 
-    /** @brief Podaje rozmiar klatki w pikselach (cała bitmapa, gdy nie ustawiono). */
+    /** @brief Podaje rozmiar wyświetlanej klatki w pikselach. */
     Vector2 FrameSize() const;
 
     /** @brief Podaje liczbę klatek w arkuszu. */
-    int SheetFrames() const;
+    int SheetFrames() const { return sheet_ ? sheet_->FrameCount() : 0; }
 
     /**
-     * @brief Definiuje nazwaną animację (albo zmienia istniejącą).
+     * @brief Definiuje nazwaną animację z kolejnych klatek (albo zmienia istniejącą).
      * @param name Nazwa, np. "biegnie".
      * @param first Numer pierwszej klatki w arkuszu.
      * @param count Liczba kolejnych klatek.
@@ -118,7 +155,42 @@ class Sprite : public Entity {
         float fps,
         bool loop = true
     ) {
-        self.animations_[name] = {first, count, fps, loop};
+        self.MutableSheet().Clip(name, first, count, fps, loop ? Playback::Loop : Playback::Once);
+        self.ClipsChanged();
+        return self;
+    }
+
+    /**
+     * @brief Definiuje nazwaną animację z listy klatek (albo zmienia istniejącą).
+     * @param name Nazwa.
+     * @param frames Klatki arkusza w kolejności odtwarzania, np. {0, 1, 2, 1}.
+     * @param fps Szybkość w klatkach na sekundę.
+     * @param mode Sposób odtwarzania (pętla, raz, tam i z powrotem).
+     * @return Ten sam obiekt.
+     */
+    template <typename Self>
+    Self& Animation(
+        this Self& self,
+        const std::string& name,
+        std::vector<int> frames,
+        float fps,
+        Playback mode = Playback::Loop
+    ) {
+        self.MutableSheet().Clip(name, std::move(frames), fps, mode);
+        self.ClipsChanged();
+        return self;
+    }
+
+    /**
+     * @brief Definiuje nazwaną animację z pełnego opisu (czasy klatek, zdarzenia).
+     * @param name Nazwa.
+     * @param clip Opis animacji.
+     * @return Ten sam obiekt.
+     */
+    template <typename Self>
+    Self& Animation(this Self& self, const std::string& name, SpriteClip clip) {
+        self.MutableSheet().Clip(name, std::move(clip));
+        self.ClipsChanged();
         return self;
     }
 
@@ -144,7 +216,7 @@ class Sprite : public Entity {
      * wołać co klatkę (np. w OnUpdate() zależnie od klawiszy). Inna animacja zaczyna się od
      * pierwszej klatki. Nieznana nazwa jest pomijana, a ostrzeżenie trafia do logu (raz na
      * nazwę, żeby wywołanie co klatkę nie zalało logu).
-     * @param name Nazwa animacji (z Animation()) albo "" - cały arkusz.
+     * @param name Nazwa animacji (z arkusza albo Animation()) albo "" - cały arkusz.
      * @return Ten sam obiekt.
      */
     template <typename Self> Self& Play(this Self& self, const std::string& name) {
@@ -177,8 +249,7 @@ class Sprite : public Entity {
      */
     template <typename Self> Self& Stop(this Self& self) {
         self.playing_ = false;
-        self.frame_ = 0;
-        self.time_ = 0.0f;
+        self.Rewind(0);
         return self;
     }
 
@@ -191,9 +262,7 @@ class Sprite : public Entity {
      * @return Ten sam obiekt.
      */
     template <typename Self> Self& Frame(this Self& self, int frame) {
-        self.frame_ = frame;
-        self.time_ = 0.0f;
-        self.ClampFrame();
+        self.Rewind(frame);
         return self;
     }
 
@@ -205,7 +274,7 @@ class Sprite : public Entity {
 
     /**
      * @brief Mnoży szybkość wszystkich animacji (np. 0.5 - zwolnienie, 2 - przyspieszenie).
-     * @param multiplier Mnożnik (domyślnie 1).
+     * @param multiplier Mnożnik (domyślnie 1); 0 albo mniej zatrzymuje upływ czasu.
      * @return Ten sam obiekt.
      */
     template <typename Self> Self& Speed(this Self& self, float multiplier) {
@@ -259,7 +328,7 @@ class Sprite : public Entity {
     Vector2 Origin() const { return origin_; }
 
     /**
-     * @brief Ustawia zdarzenie końca animacji jednorazowej (loop = false).
+     * @brief Ustawia zdarzenie końca animacji jednorazowej (Playback::Once).
      * @param callback Funkcja otrzymująca sprite i nazwę zakończonej animacji.
      * @return Ten sam obiekt.
      */
@@ -267,6 +336,21 @@ class Sprite : public Entity {
     Self& OnFinish(this Self& self, Callback<Self, const std::string&> callback) {
         self.finish_ = [&self, fn = std::move(callback)](const std::string& name) {
             fn(self, name);
+        };
+        return self;
+    }
+
+    /**
+     * @brief Ustawia zdarzenie klatki (SpriteSheet::Event()), np. dźwięk kroku.
+     * @details Zachodzi, gdy animacja przejdzie do klatki ze zdarzeniem - także przy
+     * zapętleniu na klatkę 0, ale nie przy samym Play().
+     * @param callback Funkcja otrzymująca sprite i nazwę zdarzenia.
+     * @return Ten sam obiekt.
+     */
+    template <typename Self>
+    Self& OnFrameEvent(this Self& self, Callback<Self, const std::string&> callback) {
+        self.frameEvent_ = [&self, fn = std::move(callback)](const std::string& event) {
+            fn(self, event);
         };
         return self;
     }
@@ -282,16 +366,25 @@ class Sprite : public Entity {
     void Draw(PrimitiveRenderer& renderer) const override;
 
   private:
-    /** @brief Zakres klatek animacji. */
-    struct AnimationClip {
-        int first = 0;     /**< Pierwsza klatka w arkuszu. */
-        int count = 1;     /**< Liczba klatek. */
-        float fps = 10.0f; /**< Klatki na sekundę. */
-        bool loop = true;  /**< Czy w pętli. */
-    };
+    /** @brief Bieżąca animacja (dla "" i nazwy spoza arkusza - cały arkusz z Fps()). */
+    const SpriteClip& ActiveClip() const;
 
-    /** @brief Bieżąca animacja (dla "" i nieznanej nazwy - cały arkusz). */
-    AnimationClip Current() const;
+    /** @brief Ustawia prywatny arkusz z siatki, zachowując animacje z Animation(). */
+    void SetGrid(
+        std::shared_ptr<const Bitmap> bitmap,
+        Vector2 frame,
+        Vector2 margin,
+        Vector2 spacing
+    );
+
+    /** @brief Arkusz do zmiany: prywatny, w razie potrzeby kopia współdzielonego. */
+    SpriteSheet& MutableSheet();
+
+    /** @brief Odświeża wskaźnik bieżącej animacji po zmianie arkusza. */
+    void SheetChanged();
+
+    /** @brief Odświeża wskaźnik bieżącej animacji po zmianie animacji arkusza. */
+    void ClipsChanged();
 
     /** @brief Przełącza na animację, jeśli to inna niż bieżąca, i ją odtwarza. */
     void Start(const std::string& name);
@@ -299,22 +392,32 @@ class Sprite : public Entity {
     /** @brief Wznawia bieżącą animację. */
     void Resume();
 
-    /** @brief Przycina numer klatki do bieżącej animacji. */
-    void ClampFrame();
+    /** @brief Ustawia klatkę animacji (przyciętą) i zeruje jej czas. */
+    void Rewind(int frame);
 
-    std::shared_ptr<const Bitmap> sheet_;             /**< Arkusz klatek. */
-    Vector2 frameSize_{0, 0};                         /**< Rozmiar klatki; 0 - cały arkusz. */
-    std::map<std::string, AnimationClip> animations_; /**< Animacje według nazwy. */
-    std::string current_;                             /**< Bieżąca animacja. */
-    float fps_ = 10.0f;                               /**< Szybkość animacji domyślnej. */
-    float speed_ = 1.0f;                              /**< Mnożnik szybkości. */
-    float time_ = 0.0f;                               /**< Czas od zmiany klatki. */
-    int frame_ = 0;                                   /**< Klatka w bieżącej animacji. */
-    bool playing_ = false;                            /**< Czy animacja trwa. */
-    bool flipX_ = false;                              /**< Odbicie w poziomie. */
-    bool flipY_ = false;                              /**< Odbicie w pionie. */
-    Vector2 origin_{0, 0};                            /**< Punkt zaczepienia w klatce. */
-    std::function<void(const std::string&)> finish_;  /**< Koniec animacji jednorazowej. */
+    /**
+     * @brief Przechodzi do następnej klatki zgodnie z Playback.
+     * @return false, gdy animacja jednorazowa się skończyła.
+     */
+    bool Advance(const SpriteClip& clip);
+
+    std::shared_ptr<const SpriteSheet> sheet_; /**< Arkusz (może być współdzielony). */
+    std::shared_ptr<SpriteSheet> own_;         /**< Arkusz prywatny (== sheet_) albo nullptr. */
+    const SpriteClip* clip_ = nullptr;         /**< Bieżąca animacja w sheet_ albo nullptr. */
+    mutable SpriteClip defaultClip_;           /**< Animacja domyślna (cały arkusz). */
+    std::string current_;                      /**< Nazwa bieżącej animacji. */
+    std::uint32_t generation_ = 0;             /**< Licznik zmian animacji (dla callbacków). */
+    float fps_ = 10.0f;                        /**< Szybkość animacji domyślnej. */
+    float speed_ = 1.0f;                       /**< Mnożnik szybkości. */
+    float time_ = 0.0f;                        /**< Czas od zmiany klatki. */
+    int frame_ = 0;                            /**< Klatka w bieżącej animacji. */
+    int direction_ = 1;                        /**< Kierunek dla Playback::PingPong. */
+    bool playing_ = false;                     /**< Czy animacja trwa. */
+    bool flipX_ = false;                       /**< Odbicie w poziomie. */
+    bool flipY_ = false;                       /**< Odbicie w pionie. */
+    Vector2 origin_{0, 0};                     /**< Punkt zaczepienia w klatce. */
+    std::function<void(const std::string&)> finish_;     /**< Koniec animacji jednorazowej. */
+    std::function<void(const std::string&)> frameEvent_; /**< Zdarzenie klatki. */
     std::string missing_; /**< Ostatnia nieznana nazwa z Play() (ostrzeżenie tylko raz). */
 };
 

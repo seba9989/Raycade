@@ -26,7 +26,7 @@
  * | @ref shapes::Ellipse  | elipsę                                | `Radius()`, `Symmetric()`                                   |
  * | @ref shapes::Canvas   | bitmapę w RAM (flood/boundary fill)   | `Size()`, `Background()`, `Clear()`, `Edit()`, `Pixels()`    |
  * | @ref shapes::Surface  | dzieci rysowane do tekstury GPU       | `Size()`, `Background()`, `Smooth()`, `Target()`            |
- * | @ref shapes::Sprite   | klatkę z arkusza, z animacją          | `Sheet()`, `Animation()`, `Play()`, `Pause()`, `Stop()`, `Frame()`, `Fps()`, `Speed()`, `FlipX()`, `FlipY()`, `Origin()`, `OnFinish()` |
+ * | @ref shapes::Sprite   | klatkę z arkusza, z animacją          | `Sheet()` (SpriteSheet), `Animation()`, `Play()`, `Pause()`, `Stop()`, `Frame()`, `Fps()`, `Speed()`, `FlipX()`, `FlipY()`, `Origin()`, `OnFinish()`, `OnFrameEvent()` |
  * | @ref shapes::Text     | napis z czcionką (polskie znaki)      | `Content()`, `FontSize()`, `Spacing()`, `Font()`, `Size()`  |
  * | @ref shapes::Group    | nic - grupuje i przesuwa dzieci       | -                                                           |
  *

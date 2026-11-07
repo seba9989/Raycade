@@ -13,6 +13,7 @@ add_library(raycade STATIC
     src/render/ClipStack.cpp
     src/render/RenderTarget.cpp
     src/render/ShaderProgram.cpp
+    src/render/SpriteSheet.cpp
     src/render/Typeface.cpp
     src/render/primitive_renderer/Fill.cpp
     src/render/primitive_renderer/Polygon.cpp

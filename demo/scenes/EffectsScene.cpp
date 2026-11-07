@@ -88,7 +88,7 @@ class Ball : public shapes::Circle {
     }
 };
 
-/** @brief Rysuje arkusz 8 klatek koła z obracającą się szprychą (4 x 2 klatki). */
+/** @brief Rysuje bitmapę 8 klatek koła z obracającą się szprychą (4 x 2 klatki). */
 std::shared_ptr<const Bitmap> MakeWheelSheet() {
     Bitmap sheet{static_cast<int>(kFrame * 4), static_cast<int>(kFrame * 2), BLANK};
     PrimitiveRenderer renderer;
@@ -143,10 +143,15 @@ SCENE("efekty") {
 
     // ---------------- animacja bitmap ----------------
     title({40, 30}, "Animacja: LPM - pauza, X - odbicie");
-    const auto wheel = MakeWheelSheet();
+    // jeden opis animacji dla obu sprite'ów: siatka 4 x 2 klatek i nazwane animacje
+    const auto wheel =
+        std::make_shared<SpriteSheet>(SpriteSheet::Grid(MakeWheelSheet(), {kFrame, kFrame}));
+    wheel->Clip("kreci", 0, 8, 12).Clip("waha", 0, 5, 8, Playback::PingPong);
+    // każde przejście szprychy przez poziom (klatki 0 i 4) - zdarzenie klatki
+    wheel->Event("kreci", 0, "poziomo").Event("kreci", 4, "poziomo");
+    auto& turns = title({40, 250}, "obroty: 0").FontSize(16);
     scene.Spawn<shapes::Sprite>()
-        .Sheet(wheel, {kFrame, kFrame})
-        .Animation("kreci", 0, 8, 12)
+        .Sheet(wheel)
         .Play("kreci")
         .Origin({kFrame / 2, kFrame / 2})
         .Position({100, 140})
@@ -156,17 +161,19 @@ SCENE("efekty") {
                 self.Pause();
             else
                 self.Play();
+        })
+        .OnFrameEvent([&turns, count = 0](shapes::Sprite&, const std::string&) mutable {
+            turns.Content("obroty: " + std::to_string(++count / 2));
         });
     scene.Spawn<shapes::Sprite>()
-        .Sheet(wheel, {kFrame, kFrame})
-        .Fps(12)
+        .Sheet(wheel)
+        .Play("waha")
         .Speed(0.5f)
-        .Play()
         .Origin({kFrame / 2, kFrame / 2})
         .Position({230, 140})
         .Paint(SKYBLUE)
         .OnKeyPressed(KEY_X, [](shapes::Sprite& self) { self.FlipX(!self.IsFlipX()); });
-    title({40, 230}, "drugie: Speed(0.5), Paint(SKYBLUE)").FontSize(16);
+    title({40, 230}, "drugie: PingPong, Speed(0.5), Paint(SKYBLUE)").FontSize(16);
 
     // ---------------- przycinanie ----------------
     title({370, 30}, "Clip(): kółko myszy przewija");
