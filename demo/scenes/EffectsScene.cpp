@@ -245,6 +245,22 @@ SCENE("efekty") {
         .FontSize(18)
         .Paint(hasFont ? DARKGREEN : MAROON);
 
+    // tekst powiększany Scale() zostaje ostry (atlas w rozmiarze na ekranie), a znaki spoza
+    // przygotowanego zestawu (×, ·, €) czcionka dokłada sama przy pierwszym użyciu
+    scene.Spawn<shapes::Text>()
+        .Content("Skala ×2 · 50 €")
+        .FontSize(18)
+        .Anchor({0.5f, 0.5f})
+        .Paint(DARKBLUE)
+        .Position({870, 660})
+        .OnUpdate([previous = 1.0f](shapes::Text& self, float) mutable {
+            const float time = static_cast<float>(Engine::Get().Time());
+            const float scale = 1.4f + 0.4f * std::sin(time * 2.0f);
+            // Scale() mnoży bieżącą skalę - podajemy zmianę względem poprzedniej klatki
+            self.Scale({scale / previous, scale / previous});
+            previous = scale;
+        });
+
     engine.BindAction("nowa pilka", {bind::Key(KEY_B), bind::Gesture(GESTURE_DOUBLETAP)});
 
     scene.OnFixedUpdate([&scene](float step) {

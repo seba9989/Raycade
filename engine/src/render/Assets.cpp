@@ -41,19 +41,17 @@ std::shared_ptr<const ::Bitmap> Assets::Bitmap(const std::string& name) {
 
 std::shared_ptr<const Typeface> Assets::Font(
     const std::string& name,
-    int size,
-    const std::string& extraCharacters,
-    bool smooth
+    const TypefaceOptions& options
 ) {
-    // parametry są częścią klucza - inny rozmiar albo zestaw znaków to inna czcionka
+    // ustawienia są częścią klucza - inny zestaw znaków albo filtr to inna czcionka
     const std::string key =
-        name + '\x1f' + std::to_string(size) + '\x1f' + extraCharacters + (smooth ? "" : "\x1fp");
+        name + '\x1f' + options.characters + (options.smooth ? "" : "\x1fpoint");
     if (const auto it = fonts_.find(key); it != fonts_.end()) return it->second;
     if (!defaultTypeface_) defaultTypeface_ = std::make_shared<const Typeface>();
     if (failed_.contains(key)) return defaultTypeface_;
 
     const std::string path = Path(name);
-    auto font = Shared(Typeface::Load(path, size, extraCharacters, smooth));
+    auto font = Shared(Typeface::Load(path, options));
     if (!font) {
         Failed(key, path);
         return defaultTypeface_;

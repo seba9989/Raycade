@@ -68,18 +68,18 @@ class Assets {
 
     /**
      * @brief Podaje czcionkę z pliku TTF/OTF, wczytując ją przy pierwszym użyciu.
-     * @details Ten sam plik z innymi parametrami to osobna czcionka.
+     * @details Ten sam plik z innymi ustawieniami to osobna czcionka. Rozmiar nie jest
+     * parametrem - Typeface tworzy atlasy dla rozmiarów, w których tekst jest rysowany.
+     * @code{.cpp}
+     * auto pixel = assets.Font("pixel.ttf", {.smooth = false});
+     * @endcode
      * @param name Nazwa pliku (patrz Path()).
-     * @param size Rozmiar rasteryzacji glifów (patrz Typeface::Load()).
-     * @param extraCharacters Dodatkowe znaki UTF-8.
-     * @param smooth Filtr dwuliniowy (true) albo punktowy (false).
+     * @param options Dodatkowe znaki i filtr (patrz Typeface::Load()).
      * @return Czcionka albo font domyślny raylib, gdy pliku nie da się wczytać.
      */
     std::shared_ptr<const Typeface> Font(
         const std::string& name,
-        int size = 32,
-        const std::string& extraCharacters = "",
-        bool smooth = true
+        const TypefaceOptions& options = {}
     );
 
     /**
