@@ -226,6 +226,11 @@ Engine& Engine::Init() {
 
     ::SetTargetFPS(fps_);
     ::SetExitKey(exitKey_);
+    // monitor przed pozycją - pozycja okna jest liczona na całym pulpicie
+    if (monitor_ && *monitor_ >= 0 && *monitor_ < ::GetMonitorCount())
+        ::SetWindowMonitor(*monitor_);
+    else if (monitor_)
+        Log(LogLevel::Warning, "nie ma monitora " + std::to_string(*monitor_) + " - pominieto");
     if (windowPosition_)
         ::SetWindowPosition(static_cast<int>(windowPosition_->x),
                             static_cast<int>(windowPosition_->y));
@@ -613,6 +618,10 @@ bool Engine::IsWindowMaximized() const {
     return initialized_ && ::IsWindowMaximized();
 }
 
+bool Engine::IsWindowState(unsigned int flag) const {
+    return initialized_ && ::IsWindowState(flag);
+}
+
 Vector2 Engine::WindowPosition() const {
     return initialized_ ? ::GetWindowPosition() : Vector2{0, 0};
 }
@@ -657,6 +666,17 @@ std::string Engine::MonitorName(int monitor) const {
     if (!initialized_) return {};
     const char* name = ::GetMonitorName(monitor);
     return name ? name : "";
+}
+
+Engine& Engine::Monitor(int monitor) {
+    monitor_ = monitor;
+    if (!initialized_) return *this;
+    if (monitor < 0 || monitor >= ::GetMonitorCount()) {
+        Log(LogLevel::Warning, "nie ma monitora " + std::to_string(monitor) + " - pominieto");
+        return *this;
+    }
+    ::SetWindowMonitor(monitor);
+    return *this;
 }
 
 Engine& Engine::WindowPosition(int x, int y) {
@@ -877,6 +897,14 @@ float Engine::RandomFloat(float min, float max) const {
     constexpr int kSteps = 1'000'000;
     const float fraction = static_cast<float>(::GetRandomValue(0, kSteps)) / kSteps;
     return min + (max - min) * fraction;
+}
+
+std::vector<int> Engine::RandomSequence(unsigned int count, int min, int max) const {
+    int* values = ::LoadRandomSequence(count, min, max);
+    if (values == nullptr) return {};
+    std::vector<int> result(values, values + count);
+    ::UnloadRandomSequence(values);
+    return result;
 }
 
 std::string Engine::AssetPath(const std::string& name) const {

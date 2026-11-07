@@ -833,6 +833,14 @@ class Engine : public Contextable {
     bool IsWindowMinimized() const;
     /** @brief Czy okno jest zmaksymalizowane. */
     bool IsWindowMaximized() const;
+    /**
+     * @brief Sprawdza dowolną flagę stanu okna raylib.
+     * @details Ogólna wersja zapytań powyżej, np. dla FLAG_WINDOW_UNFOCUSED,
+     * FLAG_WINDOW_TRANSPARENT albo FLAG_BORDERLESS_WINDOWED_MODE.
+     * @param flag Flaga FLAG_*.
+     * @return Czy flaga jest włączona (false przed Init()).
+     */
+    bool IsWindowState(unsigned int flag) const;
     /** @brief Pozycja okna na pulpicie. */
     Vector2 WindowPosition() const;
     /** @brief Skala DPI okna (np. {1.5, 1.5} przy 150%). */
@@ -865,6 +873,15 @@ class Engine : public Contextable {
      * otwarciu okna. Pozostałe działają po Init().
      */
     /** @{ */
+
+    /**
+     * @brief Przenosi okno na wybrany monitor (w pełnym ekranie - pełny ekran na tym monitorze).
+     * @details Przed Init() wybór jest zapamiętywany i stosowany zaraz po utworzeniu okna.
+     * Numery monitorów: od 0 do MonitorCount() - 1.
+     * @param monitor Numer monitora.
+     * @return Ten sam silnik.
+     */
+    Engine& Monitor(int monitor);
 
     /**
      * @brief Ustawia pozycję okna na pulpicie.
@@ -1000,6 +1017,17 @@ class Engine : public Contextable {
      * @return Wylosowana liczba.
      */
     float RandomFloat(float min, float max) const;
+
+    /**
+     * @brief Losuje ciąg różnych liczb całkowitych z przedziału [min, max] (bez powtórzeń).
+     * @details Przydaje się do tasowania: kolejność kart, pozycje przeszkód bez nakładania.
+     * Korzysta z generatora RandomValue(), więc RandomSeed() działa i tutaj.
+     * @param count Liczba elementów (najwyżej max - min + 1).
+     * @param min Dolna granica.
+     * @param max Górna granica.
+     * @return Wylosowane liczby albo pusta lista, gdy @p count przekracza rozmiar przedziału.
+     */
+    std::vector<int> RandomSequence(unsigned int count, int min, int max) const;
 
     /**
      * @brief Zapisuje zrzut ekranu do pliku PNG.
@@ -1260,6 +1288,7 @@ class Engine : public Contextable {
     ::Input input_;                         /**< Stan i ustawienia urządzeń wejścia. */
     int exitKey_ = KEY_ESCAPE;              /**< Klawisz zamykający okno. */
     std::optional<Vector2> windowPosition_; /**< Pozycja okna do ustawienia przy Init(). */
+    std::optional<int> monitor_;            /**< Monitor do ustawienia przy Init(). */
     std::optional<float> opacity_;          /**< Przezroczystość okna do ustawienia przy Init(). */
     unsigned int windowFlags_ = 0;          /**< Flagi okna (FLAG_*) z Resizable() itd. */
     std::optional<std::pair<int, int>> minSize_; /**< Minimalny rozmiar okna. */

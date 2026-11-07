@@ -6,6 +6,8 @@
 
 #include <raylib.h>
 
+#include <raycade/math/AffineMatrix2D.hpp>
+
 #include <cmath>
 #include <functional>
 
@@ -108,6 +110,18 @@ class SceneCamera {
 
     /** @brief Sprawdza, czy kamera podąża za obiektem. */
     bool IsFollowing() const { return static_cast<bool>(follow_); }
+
+    /**
+     * @brief Podaje przekształcenie świat -> okno jako macierz silnika.
+     * @details Złożenie z macierzą obiektu daje drogę punktu lokalnego aż do okna, np.
+     * `camera.Matrix() * transform`. Odwrotność (AffineMatrix2D::InverseApply()) przelicza
+     * okno na świat jak ScreenToWorld().
+     * @return Macierz z GetCameraMatrix2D() (offset, obrót, zoom, cel).
+     */
+    AffineMatrix2D Matrix() const {
+        const ::Matrix m = ::GetCameraMatrix2D(camera_);
+        return {m.m0, m.m1, m.m4, m.m5, m.m12, m.m13};
+    }
 
     /**
      * @brief Przelicza punkt okna (np. kursor) na punkt świata.
