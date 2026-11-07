@@ -349,7 +349,7 @@ class Input {
         const auto* bindings = Find(actions_->actions, action);
         if (!bindings) return false;
         for (const InputBinding& b : *bindings)
-            if (b.kind != InputBinding::Kind::GamepadAxis && BindingPressed(b)) return true;
+            if (b.kind != InputBinding::Kind::PadAxis && BindingPressed(b)) return true;
         return AnalogDown(*bindings) && !WasAnalogDown(action);
     }
 
@@ -362,7 +362,7 @@ class Input {
         const auto* bindings = Find(actions_->actions, action);
         if (!bindings || ActionDown(action)) return false;
         for (const InputBinding& b : *bindings)
-            if (b.kind != InputBinding::Kind::GamepadAxis && BindingReleased(b)) return true;
+            if (b.kind != InputBinding::Kind::PadAxis && BindingReleased(b)) return true;
         return WasAnalogDown(action) && !AnalogDown(*bindings);
     }
 
@@ -437,9 +437,9 @@ class Input {
             return KeyDown(b.code);
         case InputBinding::Kind::Mouse:
             return MouseDown(b.code);
-        case InputBinding::Kind::GamepadButton:
+        case InputBinding::Kind::PadButton:
             return GamepadDown(b.gamepad, b.code);
-        case InputBinding::Kind::GamepadAxis:
+        case InputBinding::Kind::PadAxis:
             return gamepad_ &&
                    ::GetGamepadAxisMovement(b.gamepad, b.code) * b.direction > b.threshold;
         }
@@ -453,9 +453,9 @@ class Input {
             return KeyPressed(b.code);
         case InputBinding::Kind::Mouse:
             return MousePressed(b.code);
-        case InputBinding::Kind::GamepadButton:
+        case InputBinding::Kind::PadButton:
             return GamepadPressed(b.gamepad, b.code);
-        case InputBinding::Kind::GamepadAxis:
+        case InputBinding::Kind::PadAxis:
             return false;
         }
         return false;
@@ -468,9 +468,9 @@ class Input {
             return KeyReleased(b.code);
         case InputBinding::Kind::Mouse:
             return MouseReleased(b.code);
-        case InputBinding::Kind::GamepadButton:
+        case InputBinding::Kind::PadButton:
             return GamepadReleased(b.gamepad, b.code);
-        case InputBinding::Kind::GamepadAxis:
+        case InputBinding::Kind::PadAxis:
             return false;
         }
         return false;
@@ -479,7 +479,7 @@ class Input {
     /** @brief Czy któraś oś pada z listy jest teraz wychylona ponad próg. */
     bool AnalogDown(const std::vector<InputBinding>& bindings) const {
         return std::any_of(bindings.begin(), bindings.end(), [&](const InputBinding& b) {
-            return b.kind == InputBinding::Kind::GamepadAxis && BindingDown(b);
+            return b.kind == InputBinding::Kind::PadAxis && BindingDown(b);
         });
     }
 

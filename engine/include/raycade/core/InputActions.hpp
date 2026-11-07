@@ -14,7 +14,7 @@
  */
 struct InputBinding {
     /** @brief Rodzaj urządzenia. */
-    enum class Kind { Key, Mouse, GamepadButton, GamepadAxis };
+    enum class Kind { Key, Mouse, PadButton, PadAxis };
 
     Kind kind = Kind::Key;  /**< Rodzaj urządzenia. */
     int code = 0;           /**< KEY_*, MOUSE_BUTTON_*, GAMEPAD_BUTTON_* albo GAMEPAD_AXIS_*. */
@@ -43,7 +43,7 @@ inline InputBinding Mouse(int button) {
 
 /** @brief Przycisk pada (GAMEPAD_BUTTON_*). */
 inline InputBinding Pad(int button, int gamepad = 0) {
-    return {InputBinding::Kind::GamepadButton, button, gamepad};
+    return {InputBinding::Kind::PadButton, button, gamepad};
 }
 
 /**
@@ -54,7 +54,7 @@ inline InputBinding Pad(int button, int gamepad = 0) {
  * @param gamepad Numer pada.
  */
 inline InputBinding PadAxis(int axis, float direction, float threshold = 0.5f, int gamepad = 0) {
-    return {InputBinding::Kind::GamepadAxis, axis, gamepad, direction, threshold};
+    return {InputBinding::Kind::PadAxis, axis, gamepad, direction, threshold};
 }
 
 } // namespace bind

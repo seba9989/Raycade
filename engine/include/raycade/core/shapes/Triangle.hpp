@@ -18,11 +18,11 @@ class Triangle : public Entity {
      * @param c Trzeci wierzchołek.
      * @return Ten sam trójkąt.
      */
-    Triangle& Vertices(Vector2 a, Vector2 b, Vector2 c) {
-        a_ = a;
-        b_ = b;
-        c_ = c;
-        return *this;
+    template <typename Self> Self& Vertices(this Self& self, Vector2 a, Vector2 b, Vector2 c) {
+        self.a_ = a;
+        self.b_ = b;
+        self.c_ = c;
+        return self;
     }
 
     /** @copydoc Updatable::Contains */

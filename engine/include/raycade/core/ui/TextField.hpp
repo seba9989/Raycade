@@ -55,7 +55,7 @@ class TextField : public Entity, public Focusable {
         if (self.maxLength_ > 0 && self.codepoints_.size() > self.maxLength_)
             self.codepoints_.resize(self.maxLength_);
         self.caret_ = self.codepoints_.size();
-        self.scroll_ = 0;
+        self.firstVisible_ = 0;
         return self;
     }
 
@@ -94,8 +94,8 @@ class TextField : public Entity, public Focusable {
     /** @brief Reakcja na każdą zmianę tekstu przez użytkownika. */
     template <typename Self>
     Self& OnChange(this Self& self, Callback<Self, const std::string&> callback) {
-        self.change_ = [&self, callback = std::move(callback)](const std::string& text) {
-            callback(self, text);
+        self.change_ = [&self, fn = std::move(callback)](const std::string& text) {
+            fn(self, text);
         };
         return self;
     }
@@ -103,8 +103,8 @@ class TextField : public Entity, public Focusable {
     /** @brief Reakcja na Enter. */
     template <typename Self>
     Self& OnSubmit(this Self& self, Callback<Self, const std::string&> callback) {
-        self.submit_ = [&self, callback = std::move(callback)](const std::string& text) {
-            callback(self, text);
+        self.submit_ = [&self, fn = std::move(callback)](const std::string& text) {
+            fn(self, text);
         };
         return self;
     }
@@ -173,13 +173,13 @@ class TextField : public Entity, public Focusable {
         KeepCaretVisible();
         const std::size_t end = VisibleEnd();
         const std::string visible =
-            Encode(codepoints_.begin() + Offset(scroll_), codepoints_.begin() + Offset(end));
+            Encode(codepoints_.begin() + Offset(firstVisible_), codepoints_.begin() + Offset(end));
         ::DrawText(visible.c_str(), kPadding, textY, fontSize_, color_);
 
         // kursor miga co pół sekundy, ale zaraz po pisaniu jest zawsze widoczny
         const bool blinkOn = std::fmod(::GetTime() - blinkStart_, 1.0) < 0.5;
         if (Focused() && blinkOn) {
-            const float x = static_cast<float>(kPadding + Width(scroll_, caret_));
+            const float x = static_cast<float>(kPadding + Width(firstVisible_, caret_));
             renderer.Paint(color_).Fill().Rect({x, static_cast<float>(textY)},
                                                {2, static_cast<float>(fontSize_)});
         }
@@ -247,15 +247,15 @@ class TextField : public Entity, public Focusable {
 
     /** @brief Przewija tekst tak, żeby kursor był widoczny. */
     void KeepCaretVisible() const {
-        if (caret_ < scroll_) scroll_ = caret_;
-        while (scroll_ < caret_ && Width(scroll_, caret_) > InnerWidth())
-            ++scroll_;
+        if (caret_ < firstVisible_) firstVisible_ = caret_;
+        while (firstVisible_ < caret_ && Width(firstVisible_, caret_) > InnerWidth())
+            ++firstVisible_;
     }
 
     /** @brief Pierwszy znak, który już nie mieści się w polu. */
     std::size_t VisibleEnd() const {
-        std::size_t end = scroll_;
-        while (end < codepoints_.size() && Width(scroll_, end + 1) <= InnerWidth())
+        std::size_t end = firstVisible_;
+        while (end < codepoints_.size() && Width(firstVisible_, end + 1) <= InnerWidth())
             ++end;
         return end;
     }
@@ -263,10 +263,10 @@ class TextField : public Entity, public Focusable {
     /** @brief Ustawia kursor najbliżej miejsca kliknięcia. */
     void PlaceCaret(const Input& input) {
         const float x = ScreenToLocal(input.MousePosition()).x - kPadding;
-        std::size_t best = scroll_;
+        std::size_t best = firstVisible_;
         float bestDistance = std::fabs(x);
-        for (std::size_t i = scroll_ + 1; i <= codepoints_.size(); ++i) {
-            const float distance = std::fabs(x - static_cast<float>(Width(scroll_, i)));
+        for (std::size_t i = firstVisible_ + 1; i <= codepoints_.size(); ++i) {
+            const float distance = std::fabs(x - static_cast<float>(Width(firstVisible_, i)));
             if (distance < bestDistance) {
                 bestDistance = distance;
                 best = i;
@@ -278,7 +278,7 @@ class TextField : public Entity, public Focusable {
 
     std::vector<int> codepoints_;                    /**< Tekst jako kody znaków Unicode. */
     std::size_t caret_ = 0;                          /**< Pozycja kursora (w znakach). */
-    mutable std::size_t scroll_ = 0;                 /**< Pierwszy widoczny znak. */
+    mutable std::size_t firstVisible_ = 0;           /**< Pierwszy widoczny znak. */
     std::string placeholder_;                        /**< Napis w pustym polu. */
     Vector2 size_{260, 40};                          /**< Rozmiar pola. */
     int fontSize_ = 20;                              /**< Wielkość czcionki. */

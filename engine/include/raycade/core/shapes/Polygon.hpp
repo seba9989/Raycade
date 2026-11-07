@@ -24,9 +24,9 @@ class Polygon : public Entity {
      * @param vertices Punkty w kolejności obwodu.
      * @return Ten sam wielokąt.
      */
-    Polygon& Vertices(std::vector<Point2D> vertices) {
-        vertices_ = std::move(vertices);
-        return *this;
+    template <typename Self> Self& Vertices(this Self& self, std::vector<Point2D> vertices) {
+        self.vertices_ = std::move(vertices);
+        return self;
     }
 
     /**
@@ -34,9 +34,9 @@ class Polygon : public Entity {
      * @param edges Odcinki stykające się kolejno końcami i domknięte.
      * @return Ten sam wielokąt; dla niepoprawnego łańcucha - bez wierzchołków.
      */
-    Polygon& Edges(const std::vector<LineSegment>& edges) {
-        vertices_ = PolygonVertices(edges).value_or(std::vector<Point2D>{});
-        return *this;
+    template <typename Self> Self& Edges(this Self& self, const std::vector<LineSegment>& edges) {
+        self.vertices_ = PolygonVertices(edges).value_or(std::vector<Point2D>{});
+        return self;
     }
 
     /**
@@ -44,9 +44,9 @@ class Polygon : public Entity {
      * @param value Czy włączyć algorytm własny.
      * @return Ten sam wielokąt.
      */
-    Polygon& Incremental(bool value = true) {
-        incremental_ = value;
-        return *this;
+    template <typename Self> Self& Incremental(this Self& self, bool value = true) {
+        self.incremental_ = value;
+        return self;
     }
 
     /**

@@ -20,9 +20,9 @@ class Points : public Entity {
      * @param positions Pozycje lokalne.
      * @return Ten sam zbiór.
      */
-    Points& Positions(std::vector<Vector2> positions) {
-        positions_ = std::move(positions);
-        return *this;
+    template <typename Self> Self& Positions(this Self& self, std::vector<Vector2> positions) {
+        self.positions_ = std::move(positions);
+        return self;
     }
 
     /** @copydoc Updatable::Contains */

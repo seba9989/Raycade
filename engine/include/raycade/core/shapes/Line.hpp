@@ -16,9 +16,9 @@ class Line : public Entity {
      * @param position Pozycja lokalna.
      * @return Ten sam odcinek.
      */
-    Line& From(Vector2 position) {
-        from_ = position;
-        return *this;
+    template <typename Self> Self& From(this Self& self, Vector2 position) {
+        self.from_ = position;
+        return self;
     }
 
     /**
@@ -26,9 +26,9 @@ class Line : public Entity {
      * @param position Pozycja lokalna.
      * @return Ten sam odcinek.
      */
-    Line& To(Vector2 position) {
-        to_ = position;
-        return *this;
+    template <typename Self> Self& To(this Self& self, Vector2 position) {
+        self.to_ = position;
+        return self;
     }
 
     /**
@@ -36,9 +36,9 @@ class Line : public Entity {
      * @param value Czy włączyć algorytm własny.
      * @return Ten sam odcinek.
      */
-    Line& Incremental(bool value = true) {
-        incremental_ = value;
-        return *this;
+    template <typename Self> Self& Incremental(this Self& self, bool value = true) {
+        self.incremental_ = value;
+        return self;
     }
 
     /** @copydoc Updatable::Contains */

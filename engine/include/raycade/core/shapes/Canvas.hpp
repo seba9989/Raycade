@@ -28,9 +28,9 @@ class Canvas : public Entity {
      * @param size Szerokość i wysokość w pikselach.
      * @return To samo płótno.
      */
-    Canvas& Size(Vector2 size) {
-        bitmap_ = Bitmap{static_cast<int>(size.x), static_cast<int>(size.y), background_};
-        return *this;
+    template <typename Self> Self& Size(this Self& self, Vector2 size) {
+        self.bitmap_ = Bitmap{static_cast<int>(size.x), static_cast<int>(size.y), self.background_};
+        return self;
     }
 
     /**
@@ -38,19 +38,25 @@ class Canvas : public Entity {
      * @param color Kolor tła.
      * @return To samo płótno.
      */
-    Canvas& Background(Color color) {
-        background_ = color;
-        bitmap_.Clear(color);
-        return *this;
+    template <typename Self> Self& Background(this Self& self, Color color) {
+        self.background_ = color;
+        self.bitmap_.Clear(color);
+        return self;
     }
+
+    /**
+     * @brief Podaje kolor tła.
+     * @return Kolor używany przez Clear().
+     */
+    Color Background() const { return background_; }
 
     /**
      * @brief Czyści płótno bieżącym kolorem tła.
      * @return To samo płótno.
      */
-    Canvas& Clear() {
-        bitmap_.Clear(background_);
-        return *this;
+    template <typename Self> Self& Clear(this Self& self) {
+        self.bitmap_.Clear(self.background_);
+        return self;
     }
 
     /**

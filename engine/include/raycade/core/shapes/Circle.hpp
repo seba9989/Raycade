@@ -16,9 +16,9 @@ class Circle : public Entity {
      * @param radius Promień w pikselach.
      * @return Ten sam okrąg.
      */
-    Circle& Radius(float radius) {
-        radius_ = radius;
-        return *this;
+    template <typename Self> Self& Radius(this Self& self, float radius) {
+        self.radius_ = radius;
+        return self;
     }
 
     /**
@@ -26,9 +26,9 @@ class Circle : public Entity {
      * @param value true dla algorytmu własnego, false dla raylib.
      * @return Ten sam okrąg.
      */
-    Circle& Symmetric(bool value = true) {
-        symmetric_ = value;
-        return *this;
+    template <typename Self> Self& Symmetric(this Self& self, bool value = true) {
+        self.symmetric_ = value;
+        return self;
     }
 
     /** @copydoc Updatable::Contains */

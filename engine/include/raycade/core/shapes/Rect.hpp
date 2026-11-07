@@ -16,9 +16,9 @@ class Rect : public Entity {
      * @param size Wymiary w pikselach.
      * @return Ten sam prostokąt.
      */
-    Rect& Size(Vector2 size) {
-        size_ = size;
-        return *this;
+    template <typename Self> Self& Size(this Self& self, Vector2 size) {
+        self.size_ = size;
+        return self;
     }
 
     /** @copydoc Updatable::Contains */

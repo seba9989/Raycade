@@ -22,9 +22,9 @@ class Polyline : public Entity {
      * @param vertices Punkty w kolejności.
      * @return Ta sama łamana.
      */
-    Polyline& Vertices(std::vector<Vector2> vertices) {
-        vertices_ = std::move(vertices);
-        return *this;
+    template <typename Self> Self& Vertices(this Self& self, std::vector<Vector2> vertices) {
+        self.vertices_ = std::move(vertices);
+        return self;
     }
 
     /**
@@ -32,9 +32,9 @@ class Polyline : public Entity {
      * @param value Czy połączyć ostatni punkt z pierwszym.
      * @return Ta sama łamana.
      */
-    Polyline& Closed(bool value = true) {
-        closed_ = value;
-        return *this;
+    template <typename Self> Self& Closed(this Self& self, bool value = true) {
+        self.closed_ = value;
+        return self;
     }
 
     /**
@@ -42,9 +42,9 @@ class Polyline : public Entity {
      * @param value Czy włączyć algorytm własny.
      * @return Ta sama łamana.
      */
-    Polyline& Incremental(bool value = true) {
-        incremental_ = value;
-        return *this;
+    template <typename Self> Self& Incremental(this Self& self, bool value = true) {
+        self.incremental_ = value;
+        return self;
     }
 
     /**

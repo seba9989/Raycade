@@ -33,7 +33,7 @@ add_library(raycade_warnings INTERFACE)
 if(MSVC)
     target_compile_options(raycade_warnings INTERFACE /W4)
 else()
-    target_compile_options(raycade_warnings INTERFACE -Wall -Wextra -Wpedantic)
+    target_compile_options(raycade_warnings INTERFACE -Wall -Wextra -Wpedantic -Wshadow)
 endif()
 
 add_subdirectory(engine)

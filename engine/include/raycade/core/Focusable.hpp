@@ -116,9 +116,7 @@ class Focusable {
      * @return Ten sam obiekt.
      */
     template <typename Self> Self& OnFocus(this Self& self, Callback<Self> callback) {
-        static_cast<Focusable&>(self).focus_ = [&self, callback = std::move(callback)] {
-            callback(self);
-        };
+        static_cast<Focusable&>(self).focus_ = [&self, fn = std::move(callback)] { fn(self); };
         return self;
     }
 
@@ -128,9 +126,7 @@ class Focusable {
      * @return Ten sam obiekt.
      */
     template <typename Self> Self& OnBlur(this Self& self, Callback<Self> callback) {
-        static_cast<Focusable&>(self).blur_ = [&self, callback = std::move(callback)] {
-            callback(self);
-        };
+        static_cast<Focusable&>(self).blur_ = [&self, fn = std::move(callback)] { fn(self); };
         return self;
     }
 

@@ -77,7 +77,7 @@ class Updatable {
      * @return Ten sam obiekt.
      */
     template <typename Self> Self& OnUpdate(this Self& self, Callback<Self, float> callback) {
-        self.update_ = [&self, callback = std::move(callback)](float dt) { callback(self, dt); };
+        self.update_ = [&self, fn = std::move(callback)](float dt) { fn(self, dt); };
         return self;
     }
 
@@ -152,9 +152,7 @@ class Updatable {
      * @return Ten sam obiekt.
      */
     template <typename Self> Self& OnScroll(this Self& self, Callback<Self, float> callback) {
-        self.scroll_ = [&self, callback = std::move(callback)](float wheel) {
-            callback(self, wheel);
-        };
+        self.scroll_ = [&self, fn = std::move(callback)](float wheel) { fn(self, wheel); };
         return self;
     }
 
@@ -181,9 +179,7 @@ class Updatable {
      * @return Ten sam obiekt.
      */
     template <typename Self> Self& OnDrag(this Self& self, Callback<Self, Vector2> callback) {
-        self.drag_ = [&self, callback = std::move(callback)](Vector2 delta) {
-            callback(self, delta);
-        };
+        self.drag_ = [&self, fn = std::move(callback)](Vector2 delta) { fn(self, delta); };
         return self;
     }
 
@@ -210,10 +206,10 @@ class Updatable {
      */
     virtual void Tick([[maybe_unused]] float dt, [[maybe_unused]] const Input& input) {}
 
-    std::function<void(float)> update_;                       /**< Callback wykonywany co klatkę. */
-    std::function<void()> click_;                             /**< Reakcja na kliknięcie. */
-    std::function<void()> mouseEnter_;                        /**< Reakcja na wejście kursora. */
-    std::function<void()> mouseLeave_;                        /**< Reakcja na wyjście kursora. */
+    std::function<void(float)> update_; /**< Callback wykonywany co klatkę. */
+    std::function<void()> click_;       /**< Reakcja na kliknięcie. */
+    std::function<void()> mouseEnter_;  /**< Reakcja na wejście kursora. */
+    std::function<void()> mouseLeave_;  /**< Reakcja na wyjście kursora. */
     std::vector<std::pair<int, std::function<void()>>> keys_; /**< Reakcje na klawisze. */
     /** Reakcje na puszczenie klawiszy. */
     std::vector<std::pair<int, std::function<void()>>> keysReleased_;
@@ -245,7 +241,7 @@ class Updatable {
      */
     template <typename Self>
     static std::function<void()> Bind(Self& self, std::function<void(Self&)> callback) {
-        return [&self, callback = std::move(callback)] { callback(self); };
+        return [&self, fn = std::move(callback)] { fn(self); };
     }
 
     /** @name Czy obiekt obsługuje dane zdarzenie myszy (do wyboru odbiorcy przez scenę) */

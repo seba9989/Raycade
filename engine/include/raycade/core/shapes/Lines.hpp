@@ -20,9 +20,9 @@ class Lines : public Entity {
      * @param vertices Wierzchołki (0,1), (2,3) itd., lokalne względem pozycji obiektu.
      * @return Ten sam zbiór.
      */
-    Lines& Vertices(std::vector<Vector2> vertices) {
-        vertices_ = std::move(vertices);
-        return *this;
+    template <typename Self> Self& Vertices(this Self& self, std::vector<Vector2> vertices) {
+        self.vertices_ = std::move(vertices);
+        return self;
     }
 
     /**
@@ -30,9 +30,9 @@ class Lines : public Entity {
      * @param value Czy włączyć algorytm własny.
      * @return Ten sam zbiór.
      */
-    Lines& Incremental(bool value = true) {
-        incremental_ = value;
-        return *this;
+    template <typename Self> Self& Incremental(this Self& self, bool value = true) {
+        self.incremental_ = value;
+        return self;
     }
 
     /** @copydoc Updatable::Contains */

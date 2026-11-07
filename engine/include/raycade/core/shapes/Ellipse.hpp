@@ -16,9 +16,9 @@ class Ellipse : public Entity {
      * @param radius Wektor {promień poziomy, promień pionowy}.
      * @return Ta sama elipsa.
      */
-    Ellipse& Radius(Vector2 radius) {
-        radius_ = radius;
-        return *this;
+    template <typename Self> Self& Radius(this Self& self, Vector2 radius) {
+        self.radius_ = radius;
+        return self;
     }
 
     /**
@@ -26,9 +26,9 @@ class Ellipse : public Entity {
      * @param value true dla algorytmu własnego, false dla raylib.
      * @return Ta sama elipsa.
      */
-    Ellipse& Symmetric(bool value = true) {
-        symmetric_ = value;
-        return *this;
+    template <typename Self> Self& Symmetric(this Self& self, bool value = true) {
+        self.symmetric_ = value;
+        return self;
     }
 
     /** @copydoc Updatable::Contains */

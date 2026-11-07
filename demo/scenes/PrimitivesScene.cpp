@@ -37,8 +37,8 @@ SCENE("prymitywy") {
                 .Size({40, 25})
                 .Paint(YELLOW)
                 .Fill()
-                .Children([](shapes::Rect& self) { // wnuk: względem żółtego prostokąta
-                    self.Spawn<shapes::Circle>().Position({20, 12}).Radius(5).Paint(RED).Fill();
+                .Children([](shapes::Rect& rect) { // wnuk: względem żółtego prostokąta
+                    rect.Spawn<shapes::Circle>().Position({20, 12}).Radius(5).Paint(RED).Fill();
                 });
         });
 
