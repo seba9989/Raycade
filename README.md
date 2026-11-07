@@ -65,8 +65,10 @@ engine/
     shapes/  shapes.hpp     kształty (namespace shapes)
     ui/      ui.hpp         interfejs (namespace ui)
     scene/                  Scene, SceneCamera
+    engine/                 typy ustawień silnika, makro SCENE
     Engine.hpp              okno, pętla, sceny
   src/                    implementacja w tym samym układzie
+    engine/                 Engine podzielony na pliki: okno, sceny, wejście, pliki...
 demo/                     program demonstracyjny i sceny laboratoriów
 docs/                     Doxyfile, KONWENCJE.md
 ```

@@ -18,10 +18,12 @@ warstwy wcześniejsze na liście:
 | `ui/`        | elementy interfejsu z przestrzeni nazw `ui`                     | entity i jej zależności     |
 | `scene/`     | Scene, SceneCamera                                              | entity i jej zależności     |
 | `Engine.hpp` | pętla, okno, sceny, zasoby                                      | wszystkie powyższe          |
+| `engine/`    | typy ustawień (EngineTypes.hpp), makro SCENE (SceneMacro.hpp)   | dołącza je `Engine.hpp`     |
 
 Nagłówek zbiorczy katalogu leży obok niego (`shapes.hpp` obok `shapes/`, `ui.hpp` obok
 `ui/`). `<raycade>` (w `engine/umbrella/`) dołącza `Engine.hpp`, `shapes.hpp` i `ui.hpp`.
-Źródła w `engine/src/` odwzorowują ten sam układ; nagłówki prywatne implementacji (np.
+Źródła w `engine/src/` odwzorowują ten sam układ (implementacja `Engine` jest w `src/engine/`,
+podzielona na pliki `Engine*.cpp` według grup metod z dokumentacji klasy); nagłówki prywatne implementacji (np.
 `src/render/primitive_renderer/Pixel.hpp`) zostają w `src/`.
 
 W nagłówku zostaje tylko to, co musi lub powinno być inline: szablony (settery z deducing

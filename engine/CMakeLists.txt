@@ -1,6 +1,12 @@
 # Biblioteka Raycade (bez scen - te należą do gry, patrz makro SCENE).
 add_library(raycade STATIC
-    src/Engine.cpp
+    src/engine/Engine.cpp
+    src/engine/EngineFiles.cpp
+    src/engine/EngineInput.cpp
+    src/engine/EngineScaling.cpp
+    src/engine/EngineScenes.cpp
+    src/engine/EngineSystem.cpp
+    src/engine/EngineWindow.cpp
     src/math/Geometry.cpp
     src/render/Bitmap.cpp
     src/render/ClipStack.cpp
