@@ -1,0 +1,276 @@
+/**
+ * @file EffectsScene.cpp
+ * @brief Pokaz animacji bitmap, przycinania, shaderów, usuwania obiektów, kroku stałego i tekstu.
+ * @details
+ * - animacja: koło z arkusza 8 klatek (arkusz rysowany w programie na Bitmap); LPM na kole
+ *   wstrzymuje i wznawia animację, X odbija drugie koło,
+ * - przycinanie: lista w panelu z Clip() - kółko myszy przewija, wiersze poza panelem nie są
+ *   widoczne ani klikalne,
+ * - shadery: powierzchnia z falującym shaderem (uniform czasu), G włącza szarość całego obrazu
+ *   (Engine::PostShader()),
+ * - usuwanie i krok stały: piłki odbijają się z fizyką liczoną w OnFixedUpdate(); LPM na piłce
+ *   usuwa ją (Destroy()), B albo podwójne kliknięcie w boisko (gest GESTURE_DOUBLETAP) dodaje
+ *   nową,
+ * - tekst: napisy to obiekty shapes::Text; z plikiem `assets/font.ttf` (dowolny TTF) są
+ *   rysowane czcionką z polskimi znakami.
+ */
+
+#include <raycade>
+
+#include <algorithm>
+#include <cmath>
+#include <memory>
+#include <string>
+#include <vector>
+
+namespace {
+
+/** @brief Fala: przesunięcie współrzędnych tekstury zależne od czasu. */
+constexpr const char* kWaveShader = R"(#version 330
+in vec2 fragTexCoord;
+in vec4 fragColor;
+uniform sampler2D texture0;
+uniform vec4 colDiffuse;
+uniform float time;
+out vec4 finalColor;
+void main() {
+    vec2 uv = fragTexCoord;
+    uv.x += sin(uv.y * 25.0 + time * 4.0) * 0.015;
+    finalColor = texture(texture0, uv) * colDiffuse * fragColor;
+})";
+
+/** @brief Skala szarości całego obrazu. */
+constexpr const char* kGrayShader = R"(#version 330
+in vec2 fragTexCoord;
+in vec4 fragColor;
+uniform sampler2D texture0;
+uniform vec4 colDiffuse;
+out vec4 finalColor;
+void main() {
+    vec4 color = texture(texture0, fragTexCoord) * colDiffuse * fragColor;
+    float gray = dot(color.rgb, vec3(0.299, 0.587, 0.114));
+    finalColor = vec4(gray, gray, gray, color.a);
+})";
+
+/** @brief Boisko piłek (w pikselach gry). */
+constexpr Rectangle kField{40, 380, 920, 250};
+
+/** @brief Rozmiar klatki arkusza koła. */
+constexpr float kFrame = 48.0f;
+
+class Ball;
+
+/** @brief Stan sceny w kontekście: lista piłek do fizyki w kroku stałym. */
+struct Balls {
+    std::vector<Ball*> list; /**< Piłki na boisku (bez usuniętych). */
+    int removed = 0;         /**< Licznik usuniętych. */
+};
+
+/** @brief Piłka z prędkością; LPM ją usuwa. */
+class Ball : public shapes::Circle {
+  public:
+    Ball() {
+        Radius(18).Fill().OnClick([](Ball& self) {
+            // najpierw z listy fizyki - po końcu klatki wskaźnik będzie nieważny
+            if (Balls* balls = self.Context<Balls>()) {
+                std::erase(balls->list, &self);
+                ++balls->removed;
+            }
+            self.Destroy();
+        });
+    }
+
+    Vector2 velocity{0, 0}; /**< Prędkość w pikselach na sekundę. */
+
+  protected:
+    void OnMount() override {
+        if (Balls* balls = Context<Balls>()) balls->list.push_back(this);
+    }
+};
+
+/** @brief Rysuje arkusz 8 klatek koła z obracającą się szprychą (4 x 2 klatki). */
+std::shared_ptr<const Bitmap> MakeWheelSheet() {
+    Bitmap sheet{static_cast<int>(kFrame * 4), static_cast<int>(kFrame * 2), BLANK};
+    PrimitiveRenderer renderer;
+    renderer.Target(sheet);
+    for (int i = 0; i < 8; ++i) {
+        const Vector2 center{(static_cast<float>(i % 4) + 0.5f) * kFrame,
+                             (static_cast<float>(i / 4) + 0.5f) * kFrame};
+        const Vector2 spoke{18 * std::cos(static_cast<float>(i) * PI / 4.0f),
+                            18 * std::sin(static_cast<float>(i) * PI / 4.0f)};
+        renderer.Paint(ORANGE).Fill().Circle(center, 20);
+        renderer.Paint(DARKBROWN).Fill(false).Circle(center, 20);
+        renderer.Line(center, Vector2{center.x + spoke.x, center.y + spoke.y});
+        renderer.Line(center, Vector2{center.x - spoke.x, center.y - spoke.y});
+    }
+    return std::make_shared<const Bitmap>(std::move(sheet));
+}
+
+/** @brief Dodaje piłkę w punkcie z losową prędkością i kolorem. */
+void SpawnBall(Scene& scene, Vector2 position) {
+    Engine& engine = Engine::Get();
+    const Color colors[] = {RED, BLUE, DARKGREEN, PURPLE, ORANGE, MAROON};
+
+    scene.Spawn<Ball>().Position(position).Paint(colors[engine.RandomValue(0, 5)]).velocity = {
+        engine.RandomFloat(-250, 250), engine.RandomFloat(-300, -50)};
+}
+
+} // namespace
+
+/** @brief Konfiguruje scenę efektów. */
+SCENE("efekty") {
+    Engine& engine = Engine::Get();
+    scene.ProvideContext<Balls>();
+
+    // czcionka z polskimi znakami, jeśli jest w zasobach - dla wszystkich napisów sceny
+    auto font = Typeface::Load(engine.AssetPath("font.ttf"), 32);
+    const bool hasFont = font.has_value();
+    if (font)
+        scene.ProvideContext<DefaultTypeface>(std::make_shared<const Typeface>(std::move(*font)));
+    const auto title = [&scene](Vector2 position, std::string content) -> shapes::Text& {
+        return scene.Spawn<shapes::Text>()
+            .Content(std::move(content))
+            .FontSize(18)
+            .Paint(DARKGRAY)
+            .Position(position);
+    };
+
+    // ---------------- animacja bitmap ----------------
+    title({40, 30}, "Animacja: LPM pauza, X odbicie");
+    const auto wheel = MakeWheelSheet();
+    scene.Spawn<shapes::Sprite>()
+        .Sheet(wheel, {kFrame, kFrame})
+        .Animation("kreci", 0, 8, 12)
+        .Play("kreci")
+        .Origin({kFrame / 2, kFrame / 2})
+        .Position({100, 140})
+        .Scale({2, 2})
+        .OnClick([](shapes::Sprite& self) {
+            if (self.IsPlaying())
+                self.Pause();
+            else
+                self.Play();
+        });
+    scene.Spawn<shapes::Sprite>()
+        .Sheet(wheel, {kFrame, kFrame})
+        .Fps(12)
+        .Speed(0.5f)
+        .Play()
+        .Origin({kFrame / 2, kFrame / 2})
+        .Position({230, 140})
+        .Paint(SKYBLUE)
+        .OnKeyPressed(KEY_X, [](shapes::Sprite& self) { self.FlipX(!self.IsFlippedX()); });
+    title({40, 230}, "drugie: Speed(0.5), Paint(SKYBLUE)").FontSize(16);
+
+    // ---------------- przycinanie ----------------
+    title({370, 30}, "Clip(): kolko myszy przewija");
+    auto& panel = scene.Spawn<shapes::Group>().Position({370, 70}).Clip({0, 0, 260, 200});
+    panel.Spawn<shapes::Rect>().Size({260, 200}).Paint(LIGHTGRAY);
+    auto& list = panel.Spawn<shapes::Group>();
+    for (int i = 0; i < 12; ++i) {
+        list.Spawn<shapes::Rect>()
+            .Position({10, 10.0f + static_cast<float>(i) * 40})
+            .Size({240, 32})
+            .Paint(i % 2 ? BEIGE : Color{245, 222, 179, 255})
+            .Fill()
+            .OnClick([](shapes::Rect& self) { self.Paint(GOLD); })
+            .Children([i](shapes::Rect& row) {
+                row.Spawn<shapes::Text>()
+                    .Content("Wiersz " + std::to_string(i + 1) + " (LPM)")
+                    .FontSize(18)
+                    .Paint(DARKBROWN)
+                    .Position({10, 7});
+            });
+    }
+    // zdarzenie na tle panelu: przewijanie listy w granicach
+    panel.OnScroll([&list](shapes::Group&, float wheelMove) {
+        Vector2 position = list.Position();
+        position.y = std::clamp(position.y + wheelMove * 30, -290.0f, 0.0f);
+        list.Position(position);
+    });
+    panel.Spawn<shapes::Rect>().Size({260, 200}).Paint(DARKGRAY).Layer(1); // ramka nad listą
+
+    // ---------------- shadery ----------------
+    title({690, 30}, "Shader na Surface, G szarosc");
+    auto wave = std::make_shared<ShaderProgram>(ShaderProgram::FromCode("", kWaveShader));
+    auto gray = std::make_shared<ShaderProgram>(ShaderProgram::FromCode("", kGrayShader));
+    if (!wave->IsValid() || !gray->IsValid())
+        engine.Log(LogLevel::Warning, "shader demo nie dziala");
+    scene.Spawn<shapes::Surface>()
+        .Size({260, 200})
+        .Background(Fade(SKYBLUE, 0.4f))
+        .Position({690, 70})
+        .Shader(wave)
+        .Children([](shapes::Surface& surface) {
+            surface.Spawn<shapes::Circle>().Position({70, 100}).Radius(50).Paint(RED).Fill();
+            surface.Spawn<shapes::Rect>()
+                .Position({130, 40})
+                .Size({100, 120})
+                .Paint(DARKBLUE)
+                .Fill();
+            for (int x = 0; x < 260; x += 20)
+                surface.Spawn<shapes::Line>()
+                    .From({static_cast<float>(x), 0})
+                    .To({static_cast<float>(x), 200});
+        });
+
+    // ---------------- usuwanie obiektów i krok stały ----------------
+    title({40, 300}, "Krok staly + Destroy(): LPM usuwa pilke, B / podwojne klikniecie dodaje");
+    scene.Spawn<shapes::Rect>()
+        .Position({kField.x, kField.y})
+        .Size({kField.width, kField.height})
+        .Paint(DARKGRAY);
+    auto& counter = title({40, 330}, "");
+    for (int i = 0; i < 6; ++i)
+        SpawnBall(scene, {kField.x + 80.0f + static_cast<float>(i) * 140, kField.y + 60});
+
+    // ---------------- tekst ----------------
+    title({40, 650}, hasFont ? "Zażółć gęślą jaźń - czcionka z assets/font.ttf"
+                             : "Brak assets/font.ttf - font raylib bez polskich znakow")
+        .FontSize(18)
+        .Paint(hasFont ? DARKGREEN : MAROON);
+
+    engine.BindAction("nowa pilka", {bind::Key(KEY_B), bind::Gesture(GESTURE_DOUBLETAP)});
+
+    scene.OnFixedUpdate([&scene](float step) {
+        // fizyka w kroku stałym: wynik nie zależy od liczby klatek na sekundę
+        Balls* balls = scene.Context<Balls>();
+        for (Ball* ball : balls->list) {
+            ball->velocity.y += 600.0f * step;
+            Vector2 p = ball->Position();
+            p.x += ball->velocity.x * step;
+            p.y += ball->velocity.y * step;
+            const float r = ball->Radius();
+            if (p.x < kField.x + r || p.x > kField.x + kField.width - r) {
+                ball->velocity.x = -ball->velocity.x;
+                p.x = std::clamp(p.x, kField.x + r, kField.x + kField.width - r);
+            }
+            if (p.y > kField.y + kField.height - r) {
+                ball->velocity.y = -std::fabs(ball->velocity.y) * 0.9f;
+                p.y = kField.y + kField.height - r;
+            }
+            if (p.y < kField.y + r) {
+                ball->velocity.y = std::fabs(ball->velocity.y);
+                p.y = kField.y + r;
+            }
+            ball->Position(p);
+        }
+    });
+
+    scene.OnUpdate([&scene, &counter, wave, gray](float) {
+        Engine& e = Engine::Get();
+        wave->Uniform("time", static_cast<float>(e.Time()));
+        if (e.KeyPressed(KEY_G)) e.PostShader(e.PostShader() ? nullptr : gray);
+
+        if (e.ActionPressed("nowa pilka")) {
+            const Vector2 mouse = e.MousePosition();
+            const bool inField = ::CheckCollisionPointRec(mouse, kField);
+            SpawnBall(scene, inField ? mouse : Vector2{kField.x + kField.width / 2, kField.y + 40});
+        }
+        const Balls* balls = scene.Context<Balls>();
+        counter.Content("Pilki: " + std::to_string(balls->list.size()) +
+                        "   usuniete: " + std::to_string(balls->removed) +
+                        "   kroki stale: " + std::to_string(std::lround(1.0f / e.FixedStep())) +
+                        "/s   FPS: " + std::to_string(e.CurrentFps()));
+    });
+}

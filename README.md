@@ -20,7 +20,8 @@ int main() { return Engine::Get().StartScene("menu").Run(); }
 
 Projekt na zajęcia z Podstaw Grafiki Komputerowej. Program `demo/` pokazuje funkcje
 z laboratoriów: własne algorytmy odcinka, okręgu i elipsy, wypełnianie scanline, flood fill
-i boundary fill, przekształcenia, hierarchię obiektów, kamerę i obsługę wejścia.
+i boundary fill, przekształcenia, hierarchię obiektów, kamerę, obsługę wejścia, animację
+bitmap, przycinanie, shadery i krok stały.
 
 ## Wymagania
 
@@ -38,7 +39,7 @@ cmake --build build
 
 Z [devenv](https://devenv.sh/): `build`, `run`, `fmt`, `docs`, `clean`.
 
-Klawisze 1-7 przełączają sceny demo, F11 - pełny ekran. Opis każdej sceny jest na stronie
+Klawisze 1-8 przełączają sceny demo, F11 - pełny ekran. Opis każdej sceny jest na stronie
 głównej dokumentacji.
 
 ## Użycie we własnym projekcie

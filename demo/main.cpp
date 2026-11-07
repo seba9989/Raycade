@@ -52,8 +52,8 @@
  * @ref PrimitiveRenderer. W scenie `figury` porównano krzywe z raylib.
  *
  * @section obsluga Sceny demonstracyjne
- * Klawisze 1-7 wybierają `menu`, `prymitywy`, `figury`, `transformacje`, `kontekst`,
- * `trafienia` i `kamera` (lista jest też na scenie `menu`). F11 przełącza pełny ekran.
+ * Klawisze 1-8 wybierają `menu`, `prymitywy`, `figury`, `transformacje`, `kontekst`,
+ * `trafienia`, `kamera` i `efekty` (lista jest też na scenie `menu`). F11 przełącza pełny ekran.
  * Okno ma zmienny rozmiar: gra rysuje zawsze w 1000x700, a obraz jest skalowany do okna
  * z zachowaniem proporcji (Engine::ScaleMode(Scaling::Fit)), więc układ scen i kliknięcia
  * działają przy każdym rozmiarze okna i na pełnym ekranie.
@@ -75,6 +75,12 @@
  * przybliża, Q/E obracają widok, F przełącza podążanie, a R resetuje kamerę. Skrzynie można
  * przeciągać, a monety klikać przy dowolnym przybliżeniu i obrocie; przyciski w rogu są
  * obiektami ekranu (HUD).
+ * Na scenie `efekty` koło z arkusza klatek (shapes::Sprite) obraca się animacją - LPM ją
+ * wstrzymuje, X odbija drugie koło; lista w panelu z Clip() przewija się kółkiem myszy;
+ * powierzchnia faluje shaderem, a G włącza szarość całego obrazu (Engine::PostShader());
+ * piłki odbijają się z fizyką w kroku stałym (OnFixedUpdate()), LPM usuwa piłkę (Destroy()),
+ * a B albo podwójne kliknięcie (gest) dodaje nową. Z dowolnym plikiem TTF zapisanym jako
+ * `demo/assets/font.ttf` napisy sceny mają polskie znaki (Typeface).
  *
  * @section dokumentacja Dokumentacja
  * Dokumentację HTML generuje polecenie `docs` (devenv) albo, w katalogu głównym projektu:
@@ -116,11 +122,14 @@ int main() {
             if (engine.KeyPressed(KEY_FIVE)) engine.SwitchScene("kontekst");
             if (engine.KeyPressed(KEY_SIX)) engine.SwitchScene("trafienia");
             if (engine.KeyPressed(KEY_SEVEN)) engine.SwitchScene("kamera");
+            if (engine.KeyPressed(KEY_EIGHT)) engine.SwitchScene("efekty");
+            // szarość całego obrazu (G) jest częścią sceny efektów - poza nią ją wyłączamy
+            if (engine.ActiveScene() != "efekty" && engine.PostShader()) engine.PostShader(nullptr);
             if (engine.KeyPressed(KEY_F11)) engine.Fullscreen(!engine.IsFullscreen());
         })
         .OnDraw([&](PrimitiveRenderer&) {
             const std::string hud = "Scena: " + engine.ActiveScene() +
-                                    "   [1-7] zmiana sceny (lista w menu)   [F11] pelny ekran";
+                                    "   [1-8] zmiana sceny (lista w menu)   [F11] pelny ekran";
             const int bottom = static_cast<int>(engine.ViewSize().y);
             ::DrawText(hud.c_str(), 20, bottom - 32, 18, DARKGRAY);
         })
