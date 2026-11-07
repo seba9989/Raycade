@@ -1,16 +1,21 @@
 cmake_minimum_required(VERSION 3.24)
-project(silnik LANGUAGES C CXX)
+project(raycade LANGUAGES C CXX)
 
-# C++23: jawny parametr obiektu (deducing this) w setterach klas bazowych.
-# Wymaga GCC 14+, Clang 18+ albo MSVC z Visual Studio 2022 17.2+.
-set(CMAKE_CXX_STANDARD 23)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+# Wymagany standard (C++23, deducing this) ustawia sama biblioteka przez
+# target_compile_features - wystarczy GCC 14+, Clang 18+ albo MSVC z VS 2022 17.2+.
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# Demo budujemy tylko wtedy, gdy ten katalog jest głównym projektem. Inny projekt
+# (np. silnik 3D) może dołączyć bibliotekę przez add_subdirectory() bez scen demo.
+option(RAYCADE_BUILD_DEMO "Buduj program demonstracyjny" ${PROJECT_IS_TOP_LEVEL})
+
 # raylib z systemu (devenv/Nix). Jeśli go nie ma, np. u prowadzącego
-# na Windowsie, pobieramy i kompilujemy go automatycznie.
-find_package(raylib 5.0 QUIET)
-if(NOT raylib_FOUND)
+# na Windowsie, pobieramy i kompilujemy go automatycznie. Projekt nadrzędny
+# może też dostarczyć własny cel raylib.
+if(NOT TARGET raylib)
+    find_package(raylib 5.0 QUIET)
+endif()
+if(NOT TARGET raylib)
     message(STATUS "raylib nie znaleziony w systemie - pobieranie przez FetchContent")
     include(FetchContent)
     FetchContent_Declare(
@@ -23,20 +28,15 @@ if(NOT raylib_FOUND)
     FetchContent_MakeAvailable(raylib)
 endif()
 
-file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp)
-add_executable(silnik ${SOURCES})
-target_include_directories(silnik PRIVATE src)
-target_link_libraries(silnik PRIVATE raylib)
-
+# Wspólne ostrzeżenia kompilatora dla biblioteki i demo (cel bez źródeł).
+add_library(raycade_warnings INTERFACE)
 if(MSVC)
-    target_compile_options(silnik PRIVATE /W4 /utf-8)
+    target_compile_options(raycade_warnings INTERFACE /W4)
 else()
-    target_compile_options(silnik PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_options(raycade_warnings INTERFACE -Wall -Wextra -Wpedantic -Wshadow)
 endif()
 
-# Zasoby (bitmapy, sprite sheety) kopiowane obok pliku wykonywalnego
-if(EXISTS ${CMAKE_SOURCE_DIR}/assets)
-    add_custom_command(TARGET silnik POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-                ${CMAKE_SOURCE_DIR}/assets $<TARGET_FILE_DIR:silnik>/assets)
+add_subdirectory(engine)
+if(RAYCADE_BUILD_DEMO)
+    add_subdirectory(demo)
 endif()
