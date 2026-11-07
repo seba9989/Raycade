@@ -25,6 +25,7 @@ add_library(raycade STATIC
     src/shapes/Polygon.cpp
     src/shapes/Polyline.cpp
     src/shapes/Rect.cpp
+    src/shapes/Sprite.cpp
     src/shapes/Surface.cpp
     src/shapes/Triangle.cpp
     src/ui/TextField.cpp
