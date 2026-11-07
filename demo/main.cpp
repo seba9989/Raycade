@@ -96,7 +96,7 @@
 int main() {
     Engine& engine = Engine::Get()
                          .Title("Raycade demo")
-                         .VSync(false) // V-Sync wyłączony; podwójne buforowanie działa zawsze
+                         .VSync(false)      // V-Sync wyłączony; podwójne buforowanie działa zawsze
                          .Window(1000, 700) // albo .Fullscreen()
                          .MinSize(500, 350)
                          .Resolution(1000, 700)

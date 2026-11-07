@@ -238,12 +238,16 @@ int Engine::Run() {
     LoadStartScene();
     double previous = ::GetTime();
     loadSeconds_ = 0.0;
+    frameCount_ = 0;
 
     while (!::WindowShouldClose()) {
         // Własny pomiar zamiast GetFrameTime(): raylib wlicza czas wczytywania sceny do klatki
         // dopiero z opóźnieniem. Odejmujemy go, żeby obiekty nie "skoczyły" o duże dt.
         const double now = ::GetTime();
-        const float dt = static_cast<float>(std::max(0.0, now - previous - loadSeconds_));
+        float dt = static_cast<float>(std::max(0.0, now - previous - loadSeconds_));
+        // długa przerwa (debugger, przeciąganie okna) nie może przesunąć obiektów o kilka sekund
+        if (maxDeltaTime_ > 0.0f) dt = std::min(dt, maxDeltaTime_);
+        frameTime_ = dt;
         previous = now;
         loadSeconds_ = 0.0;
         const auto found = scenes_.find(active_);
@@ -285,6 +289,7 @@ int Engine::Run() {
 
         // zmiany scen między klatkami, poza pętlą po obiektach
         ApplySceneChanges();
+        ++frameCount_;
     }
 
     Shutdown();
@@ -676,6 +681,10 @@ std::string Engine::ClipboardText() const {
 Engine& Engine::ClipboardText(const std::string& text) {
     if (RequireWindow("ClipboardText")) ::SetClipboardText(text.c_str());
     return *this;
+}
+
+double Engine::Time() const {
+    return initialized_ ? ::GetTime() : 0.0;
 }
 
 int Engine::CurrentFps() const {

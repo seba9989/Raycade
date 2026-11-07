@@ -6,6 +6,7 @@
 
 #include <raylib.h>
 
+#include <cstdint>
 #include <fstream>
 #include <functional>
 #include <map>
@@ -842,6 +843,45 @@ class Engine : public Contextable {
     /** @{ */
 
     /**
+     * @brief Podaje czas od otwarcia okna.
+     * @details Zegar raylib (GetTime()) - rośnie także podczas wczytywania scen. Przydaje się
+     * do animacji zależnych od czasu (miganie, fale) i do mierzenia odstępów.
+     * @return Czas w sekundach albo 0 przed Init().
+     */
+    double Time() const;
+
+    /**
+     * @brief Podaje czas trwania bieżącej klatki - to samo dt, które dostaje OnUpdate().
+     * @details Bez czasu wczytywania scen i ograniczone przez MaxDeltaTime(). Pozwala
+     * odczytać dt poza callbackami (np. w Draw()).
+     * @return Czas klatki w sekundach.
+     */
+    float FrameTime() const { return frameTime_; }
+
+    /**
+     * @brief Podaje numer bieżącej klatki.
+     * @return Liczba klatek od uruchomienia Run(), od 0 dla pierwszej klatki.
+     */
+    std::uint64_t FrameCount() const { return frameCount_; }
+
+    /**
+     * @brief Ogranicza czas klatki przekazywany do logiki gry.
+     * @details Po zatrzymaniu programu w debuggerze, przeciąganiu okna albo chwilowym
+     * przycięciu systemu dt może urosnąć do kilku sekund, a obiekty "przeskoczyłyby" przez
+     * ściany. Dłuższa klatka jest liczona jako @p seconds (gra na moment zwalnia zamiast
+     * skakać).
+     * @param seconds Największe dt w sekundach (domyślnie 0.1); 0 wyłącza ograniczenie.
+     * @return Ten sam silnik.
+     */
+    Engine& MaxDeltaTime(float seconds) {
+        maxDeltaTime_ = seconds > 0.0f ? seconds : 0.0f;
+        return *this;
+    }
+
+    /** @brief Podaje ograniczenie czasu klatki (0 - bez ograniczenia). */
+    float MaxDeltaTime() const { return maxDeltaTime_; }
+
+    /**
      * @brief Pobiera zmierzoną liczbę klatek na sekundę.
      * @details W odróżnieniu od Fps(), które podaje wartość docelową.
      * @return Średnia z ostatnich klatek.
@@ -1092,8 +1132,8 @@ class Engine : public Contextable {
     ::Input input_;                         /**< Stan i ustawienia urządzeń wejścia. */
     int exitKey_ = KEY_ESCAPE;              /**< Klawisz zamykający okno. */
     std::optional<Vector2> windowPosition_; /**< Pozycja okna do ustawienia przy Init(). */
-    std::optional<float> opacity_; /**< Przezroczystość okna do ustawienia przy Init(). */
-    unsigned int windowFlags_ = 0; /**< Flagi okna (FLAG_*) z Resizable() itd. */
+    std::optional<float> opacity_;          /**< Przezroczystość okna do ustawienia przy Init(). */
+    unsigned int windowFlags_ = 0;          /**< Flagi okna (FLAG_*) z Resizable() itd. */
     std::optional<std::pair<int, int>> minSize_; /**< Minimalny rozmiar okna. */
     std::optional<std::pair<int, int>> maxSize_; /**< Maksymalny rozmiar okna. */
     std::string icon_;                           /**< Ścieżka ikony do ustawienia przy Init(). */
@@ -1131,6 +1171,9 @@ class Engine : public Contextable {
     PrimitiveRenderer primitives_; /**< Renderer używany do rysowania scen. */
     /** Czas wczytywania scen w bieżącej klatce, odejmowany od dt następnej. */
     double loadSeconds_ = 0.0;
+    float frameTime_ = 0.0f;       /**< dt bieżącej klatki (po poprawkach). */
+    float maxDeltaTime_ = 0.1f;    /**< Największe dt przekazywane do logiki; 0 - bez limitu. */
+    std::uint64_t frameCount_ = 0; /**< Numer bieżącej klatki. */
     std::set<std::string> unload_; /**< Sceny do zwolnienia na koniec klatki. */
     std::set<std::string> reload_; /**< Sceny do ponownego wczytania na koniec klatki. */
 
