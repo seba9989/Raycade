@@ -505,6 +505,20 @@ class Engine : public Contextable {
     int Run();
 
     /**
+     * @brief Kończy pętlę gry po bieżącej klatce (np. przycisk "Wyjście" w menu).
+     * @details Klatka jest dokończona (rysowanie, zmiany scen), potem Run() sprząta i zwraca 0
+     * - tak samo jak po zamknięciu okna.
+     * @return Ten sam silnik.
+     */
+    Engine& Quit() {
+        quit_ = true;
+        return *this;
+    }
+
+    /** @brief Sprawdza, czy zlecono zakończenie pętli (Quit()). */
+    bool IsQuitting() const { return quit_; }
+
+    /**
      * @brief Zwalnia sceny, tekstury i okno.
      * @details Sceny są usuwane przed zamknięciem okna, bo tekstury bitmap wymagają
      * aktywnego kontekstu OpenGL. Ponowne wywołanie jest bezpieczne.
@@ -1323,6 +1337,7 @@ class Engine : public Contextable {
 
     std::ofstream log_;        /**< Otwarty plik logu. */
     bool initialized_ = false; /**< Czy okno zostało utworzone. */
+    bool quit_ = false;        /**< Czy zakończyć pętlę po bieżącej klatce. */
 
     std::map<std::string, ::Scene> scenes_; /**< Utworzone sceny według nazw. */
     std::string active_;                    /**< Nazwa aktywnej sceny. */

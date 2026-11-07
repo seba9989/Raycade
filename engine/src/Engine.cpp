@@ -252,7 +252,8 @@ int Engine::Run() {
     loadSeconds_ = 0.0;
     frameCount_ = 0;
 
-    while (!::WindowShouldClose()) {
+    quit_ = false;
+    while (!quit_ && !::WindowShouldClose()) {
         // Własny pomiar zamiast GetFrameTime(): raylib wlicza czas wczytywania sceny do klatki
         // dopiero z opóźnieniem. Odejmujemy go, żeby obiekty nie "skoczyły" o duże dt.
         const double now = ::GetTime();
