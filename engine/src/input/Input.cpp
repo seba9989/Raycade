@@ -48,7 +48,7 @@ bool Input::ActionPressed(const std::string& action) const {
     const auto* bindings = Find(actions_->actions, action);
     if (!bindings) return false;
     for (const InputBinding& b : *bindings)
-        if (b.kind != InputBinding::Kind::PadAxis && BindingPressed(b)) return true;
+        if (!IsEdgeTracked(b) && BindingPressed(b)) return true;
     return AnalogDown(*bindings) && !WasAnalogDown(action);
 }
 
@@ -56,7 +56,7 @@ bool Input::ActionReleased(const std::string& action) const {
     const auto* bindings = Find(actions_->actions, action);
     if (!bindings || ActionDown(action)) return false;
     for (const InputBinding& b : *bindings)
-        if (b.kind != InputBinding::Kind::PadAxis && BindingReleased(b)) return true;
+        if (!IsEdgeTracked(b) && BindingReleased(b)) return true;
     return WasAnalogDown(action) && !AnalogDown(*bindings);
 }
 
@@ -92,6 +92,8 @@ bool Input::BindingDown(const InputBinding& b) const {
         return GamepadDown(b.gamepad, b.code);
     case InputBinding::Kind::PadAxis:
         return GamepadAxis(b.gamepad, b.code) * b.direction > b.threshold;
+    case InputBinding::Kind::Gesture:
+        return GestureDetected(b.code);
     }
     return false;
 }
@@ -105,6 +107,7 @@ bool Input::BindingPressed(const InputBinding& b) const {
     case InputBinding::Kind::PadButton:
         return GamepadPressed(b.gamepad, b.code);
     case InputBinding::Kind::PadAxis:
+    case InputBinding::Kind::Gesture:
         return false;
     }
     return false;
@@ -119,15 +122,15 @@ bool Input::BindingReleased(const InputBinding& b) const {
     case InputBinding::Kind::PadButton:
         return GamepadReleased(b.gamepad, b.code);
     case InputBinding::Kind::PadAxis:
+    case InputBinding::Kind::Gesture:
         return false;
     }
     return false;
 }
 
 bool Input::AnalogDown(const std::vector<InputBinding>& bindings) const {
-    return std::any_of(bindings.begin(), bindings.end(), [&](const InputBinding& b) {
-        return b.kind == InputBinding::Kind::PadAxis && BindingDown(b);
-    });
+    return std::any_of(bindings.begin(), bindings.end(),
+                       [&](const InputBinding& b) { return IsEdgeTracked(b) && BindingDown(b); });
 }
 
 void Input::Transform(Vector2 offset, Vector2 scale) {

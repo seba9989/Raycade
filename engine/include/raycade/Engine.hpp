@@ -350,6 +350,18 @@ class Engine : public Contextable {
     }
 
     /**
+     * @brief Wybiera gesty rozpoznawane przez raylib (domyślnie wszystkie).
+     * @details Wyłączenie zbędnych gestów usuwa pomyłki, np. GESTURE_HOLD przy zwykłym
+     * kliknięciu. Gesty odczytuje Input::GestureDetected() i bind::Gesture().
+     * @param flags Suma flag GESTURE_*, np. `GESTURE_TAP | GESTURE_SWIPE_LEFT`.
+     * @return Ten sam silnik.
+     */
+    Engine& Gestures(unsigned int flags) {
+        ::SetGesturesEnabled(flags);
+        return *this;
+    }
+
+    /**
      * @brief Ustawia klawisz zamykający okno (domyślnie ESC).
      * @details Można wywołać przed Init(). KEY_NULL (0) wyłącza zamykanie klawiszem.
      * @param key Kod klawisza raylib.
@@ -1225,11 +1237,11 @@ class Engine : public Contextable {
     std::shared_ptr<ShaderProgram> postShader_; /**< Shader całego obrazu gry. */
     std::string logFile_ = "engine.log";        /**< Ścieżka pliku logu; pusta wyłącza zapis. */
 
-    std::function<void(float)> update_;      /**< Globalna logika co klatkę. */
-    std::function<void(float)> fixedUpdate_; /**< Globalna logika ze stałym krokiem. */
-    float fixedStep_ = 1.0f / 60.0f;         /**< Długość kroku stałego; 0 - wyłączony. */
-    float fixedAccumulator_ = 0.0f;          /**< Czas zebrany do następnego kroku. */
-    int maxFixedSteps_ = 5;                  /**< Limit kroków stałych na klatkę. */
+    std::function<void(float)> update_;            /**< Globalna logika co klatkę. */
+    std::function<void(float)> fixedUpdate_;       /**< Globalna logika ze stałym krokiem. */
+    float fixedStep_ = 1.0f / 60.0f;               /**< Długość kroku stałego; 0 - wyłączony. */
+    float fixedAccumulator_ = 0.0f;                /**< Czas zebrany do następnego kroku. */
+    int maxFixedSteps_ = 5;                        /**< Limit kroków stałych na klatkę. */
     std::function<void(PrimitiveRenderer&)> draw_; /**< Globalne rysowanie po scenie. */
 
     std::ofstream log_;        /**< Otwarty plik logu. */

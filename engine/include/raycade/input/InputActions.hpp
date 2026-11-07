@@ -9,16 +9,17 @@
 #include <vector>
 
 /**
- * @brief Jedno źródło akcji: klawisz, przycisk myszy, przycisk pada albo wychylenie osi pada.
+ * @brief Jedno źródło akcji: klawisz, przycisk myszy, przycisk pada, wychylenie osi pada
+ * albo gest (dotyk lub mysz).
  * @details Tworzy się je funkcjami z przestrzeni nazw @ref bind.
  */
 struct InputBinding {
     /** @brief Rodzaj urządzenia. */
-    enum class Kind { Key, Mouse, PadButton, PadAxis };
+    enum class Kind { Key, Mouse, PadButton, PadAxis, Gesture };
 
-    Kind kind = Kind::Key;  /**< Rodzaj urządzenia. */
-    int code = 0;           /**< KEY_*, MOUSE_BUTTON_*, GAMEPAD_BUTTON_* albo GAMEPAD_AXIS_*. */
-    int gamepad = 0;        /**< Numer pada. */
+    Kind kind = Kind::Key; /**< Rodzaj urządzenia. */
+    int code = 0;    /**< KEY_*, MOUSE_BUTTON_*, GAMEPAD_BUTTON_*, GAMEPAD_AXIS_* albo GESTURE_*. */
+    int gamepad = 0; /**< Numer pada. */
     float direction = 1.0f; /**< Dla osi jako przycisku: +1 albo -1 (kierunek wychylenia). */
     float threshold = 0.5f; /**< Dla osi: wychylenie, od którego liczy się jako wciśnięta. */
 };
@@ -57,6 +58,19 @@ inline InputBinding PadAxis(int axis, float direction, float threshold = 0.5f, i
     return {InputBinding::Kind::PadAxis, axis, gamepad, direction, threshold};
 }
 
+/**
+ * @brief Gest raylib (GESTURE_TAP, GESTURE_SWIPE_LEFT, GESTURE_HOLD...).
+ * @details Gest trwa, dopóki raylib go zgłasza (Down), a Pressed/Released są liczone ze zmiany
+ * między klatkami - jak przy osiach pada. Na komputerze gesty działają też myszą.
+ * @code{.cpp}
+ * engine.BindAction("skok", {bind::Key(KEY_SPACE), bind::Gesture(GESTURE_SWIPE_UP)});
+ * @endcode
+ * @param gesture Gest (GESTURE_*).
+ */
+inline InputBinding Gesture(int gesture) {
+    return {InputBinding::Kind::Gesture, gesture};
+}
+
 } // namespace bind
 
 /**
@@ -76,6 +90,6 @@ struct InputAxis {
 struct InputActionMap {
     std::map<std::string, std::vector<InputBinding>> actions; /**< Akcje według nazwy. */
     std::map<std::string, InputAxis> axes;                    /**< Osie według nazwy. */
-    /** Stan wychyleń osi pada z poprzedniej klatki (do Pressed/Released dla PadAxis). */
+    /** Stan osi pada i gestów z poprzedniej klatki (do Pressed/Released dla PadAxis i Gesture). */
     std::map<std::string, bool> analogDown;
 };

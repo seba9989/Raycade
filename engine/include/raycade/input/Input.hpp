@@ -303,6 +303,48 @@ class Input {
      */
     int TouchPointId(int index) const { return touch_ ? ::GetTouchPointId(index) : -1; }
 
+    /**
+     * @brief Sprawdza, czy raylib wykrył teraz gest (dotyk albo mysz).
+     * @details Gesty rozpoznaje raylib (moduł rgestures); na komputerze działają też myszą
+     * (lewy przycisk). Wyłącznik Touch(false) wyłącza także gesty. Które gesty są
+     * rozpoznawane, ustawia Engine::Gestures().
+     * @param gesture Gest (GESTURE_TAP, GESTURE_DOUBLETAP, GESTURE_HOLD, GESTURE_DRAG,
+     * GESTURE_SWIPE_*, GESTURE_PINCH_IN, GESTURE_PINCH_OUT).
+     * @return Czy bieżący gest to @p gesture.
+     */
+    bool GestureDetected(int gesture) const {
+        return touch_ && ::IsGestureDetected(static_cast<unsigned int>(gesture));
+    }
+
+    /** @brief Pobiera bieżący gest (GESTURE_*), GESTURE_NONE gdy brak. */
+    int Gesture() const { return touch_ ? ::GetGestureDetected() : GESTURE_NONE; }
+
+    /** @brief Pobiera czas trwania gestu GESTURE_HOLD w sekundach. */
+    float GestureHoldDuration() const { return touch_ ? ::GetGestureHoldDuration() : 0.0f; }
+
+    /**
+     * @brief Pobiera wektor przeciągnięcia (GESTURE_DRAG, GESTURE_SWIPE_*).
+     * @return Przesunięcie w ułamkach rozmiaru ekranu (1 = cała szerokość / wysokość).
+     */
+    Vector2 GestureDragVector() const { return touch_ ? ::GetGestureDragVector() : Vector2{0, 0}; }
+
+    /**
+     * @brief Pobiera kierunek przeciągnięcia.
+     * @return Kąt w radianach (0 - w prawo).
+     */
+    float GestureDragAngle() const { return touch_ ? ::GetGestureDragAngle() * DEG2RAD : 0.0f; }
+
+    /**
+     * @brief Pobiera zmianę rozstawu palców w geście GESTURE_PINCH_IN / GESTURE_PINCH_OUT.
+     * @return Wektor między palcami w ułamkach rozmiaru ekranu.
+     */
+    Vector2 GesturePinchVector() const {
+        return touch_ ? ::GetGesturePinchVector() : Vector2{0, 0};
+    }
+
+    /** @brief Pobiera kąt linii między palcami w geście szczypania (radiany). */
+    float GesturePinchAngle() const { return touch_ ? ::GetGesturePinchAngle() * DEG2RAD : 0.0f; }
+
     /** @} */
 
     /**
@@ -351,7 +393,8 @@ class Input {
 
     /**
      * @brief Sprawdza, czy akcję naciśnięto w tej klatce.
-     * @details Dla wychyleń osi pada (bind::PadAxis) liczy się przekroczenie progu w tej klatce.
+     * @details Dla wychyleń osi pada (bind::PadAxis) liczy się przekroczenie progu w tej klatce,
+     * a dla gestów (bind::Gesture) - pierwsza klatka gestu.
      * @param action Nazwa akcji.
      * @return Stan naciśnięcia.
      */
@@ -425,22 +468,30 @@ class Input {
     /** @brief Czy pojedyncze źródło jest wciśnięte. */
     bool BindingDown(const InputBinding& b) const;
 
-    /** @brief Czy źródło (poza osią pada) naciśnięto w tej klatce. */
+    /** @brief Czy źródło (poza osią pada i gestem) naciśnięto w tej klatce. */
     bool BindingPressed(const InputBinding& b) const;
 
-    /** @brief Czy źródło (poza osią pada) puszczono w tej klatce. */
+    /** @brief Czy źródło (poza osią pada i gestem) puszczono w tej klatce. */
     bool BindingReleased(const InputBinding& b) const;
 
-    /** @brief Czy któraś oś pada z listy jest teraz wychylona ponad próg. */
+    /**
+     * @brief Czy źródło nie ma własnych zdarzeń naciśnięcia (oś pada, gest) - jego Pressed
+     * i Released liczy się ze zmiany stanu między klatkami.
+     */
+    static bool IsEdgeTracked(const InputBinding& b) {
+        return b.kind == InputBinding::Kind::PadAxis || b.kind == InputBinding::Kind::Gesture;
+    }
+
+    /** @brief Czy któraś oś pada albo gest z listy jest teraz aktywny. */
     bool AnalogDown(const std::vector<InputBinding>& bindings) const;
 
-    /** @brief Stan wychyleń osi pada akcji z poprzedniej klatki. */
+    /** @brief Stan osi pada i gestów akcji z poprzedniej klatki. */
     bool WasAnalogDown(const std::string& action) const {
         const auto it = actions_->analogDown.find(action);
         return it != actions_->analogDown.end() && it->second;
     }
 
-    /** @brief Zapamiętuje stan wychyleń osi pada (wywoływane przez Engine na końcu klatki). */
+    /** @brief Zapamiętuje stan osi pada i gestów (wywoływane przez Engine na końcu klatki). */
     void UpdateActionState() {
         for (const auto& [name, bindings] : actions_->actions)
             actions_->analogDown[name] = AnalogDown(bindings);
