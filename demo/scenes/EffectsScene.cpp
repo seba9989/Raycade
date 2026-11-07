@@ -11,8 +11,8 @@
  * - usuwanie i krok stały: piłki odbijają się z fizyką liczoną w OnFixedUpdate(); LPM na piłce
  *   usuwa ją (Destroy()), B albo podwójne kliknięcie w boisko (gest GESTURE_DOUBLETAP) dodaje
  *   nową,
- * - tekst: napisy to obiekty shapes::Text; z plikiem `assets/font.ttf` (dowolny TTF) są
- *   rysowane czcionką z polskimi znakami.
+ * - tekst: napisy to obiekty shapes::Text rysowane czcionką z polskimi znakami z pliku
+ *   `assets/font.ttf` (w repozytorium DejaVu Sans; bez niego - font raylib).
  */
 
 #include <raycade>

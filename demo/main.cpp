@@ -79,8 +79,9 @@
  * wstrzymuje, X odbija drugie koło; lista w panelu z Clip() przewija się kółkiem myszy;
  * powierzchnia faluje shaderem, a G włącza szarość całego obrazu (Engine::PostShader());
  * piłki odbijają się z fizyką w kroku stałym (OnFixedUpdate()), LPM usuwa piłkę (Destroy()),
- * a B albo podwójne kliknięcie (gest) dodaje nową. Z dowolnym plikiem TTF zapisanym jako
- * `demo/assets/font.ttf` napisy sceny mają polskie znaki (Typeface).
+ * a B albo podwójne kliknięcie (gest) dodaje nową. Napisy sceny mają polskie znaki dzięki
+ * czcionce `demo/assets/font.ttf` (DejaVu Sans, licencja w `demo/assets/FONT-LICENSE.txt`);
+ * można ją podmienić na dowolny inny plik TTF (Typeface).
  *
  * @section dokumentacja Dokumentacja
  * Dokumentację HTML generuje polecenie `docs` (devenv) albo, w katalogu głównym projektu:
