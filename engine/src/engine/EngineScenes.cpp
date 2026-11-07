@@ -127,7 +127,8 @@ Engine& Engine::ReloadScene(const std::string& name) {
  * 1. przełączenie na scenę z SwitchScene() (wczytanie, jeśli trzeba),
  * 2. zwolnienie scen z UnloadScene() i ReloadScene(),
  * 3. ponowne wczytanie scen z ReloadScene(),
- * 4. jeśli aktywna scena została zwolniona - wczytanie jej od nowa (restart).
+ * 4. jeśli aktywna scena została zwolniona - wczytanie jej od nowa (restart),
+ * 5. zwolnienie zasobów (Assets::Purge()), których nie używa już żadna scena.
  *
  * Dzięki temu scena może w jednym zdarzeniu przełączyć na inną i zwolnić samą siebie:
  * `engine.SwitchScene("menu").UnloadScene("poziom1");`
@@ -155,4 +156,8 @@ void Engine::ApplySceneChanges() {
         Load(name);
 
     if (!active_.empty() && !scenes_.contains(active_)) Load(active_);
+
+    // dopiero po wczytaniu: zasób użyty także przez nową scenę zostaje w pamięci
+    if (const std::size_t released = assets_.Purge(); released > 0)
+        Log("Zwolniono nieuzywane zasoby: " + std::to_string(released));
 }

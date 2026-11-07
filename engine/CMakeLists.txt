@@ -8,6 +8,7 @@ add_library(raycade STATIC
     src/engine/EngineSystem.cpp
     src/engine/EngineWindow.cpp
     src/math/Geometry.cpp
+    src/render/Assets.cpp
     src/render/Bitmap.cpp
     src/render/ClipStack.cpp
     src/render/RenderTarget.cpp

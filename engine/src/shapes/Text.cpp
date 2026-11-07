@@ -15,11 +15,11 @@ Vector2 Text::Size() const {
 bool Text::Contains(Vector2 point) const {
     const auto local = TryToLocal(point);
     const Vector2 size = Size();
-    return local && ::CheckCollisionPointRec(*local, {0, 0, size.x, size.y});
+    return local && ::CheckCollisionPointRec(*local, {-origin_.x, -origin_.y, size.x, size.y});
 }
 
 void Text::Draw(PrimitiveRenderer&) const {
-    Face().Draw(content_, {0, 0}, fontSize_, Spacing(), color_);
+    Face().Draw(content_, {-origin_.x, -origin_.y}, fontSize_, Spacing(), color_);
 }
 
 } // namespace shapes

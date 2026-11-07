@@ -105,6 +105,7 @@ Engine& Engine::Init() {
     if (minSize_) ::SetWindowMinSize(minSize_->first, minSize_->second);
     if (maxSize_) ::SetWindowMaxSize(maxSize_->first, maxSize_->second);
     initialized_ = true;
+    SetContext(assets_); // Shutdown() czyści kontekst - po ponownym Init() wpis wraca
     ApplyIcon();
     if (scaling_ != Scaling::None) CreateTarget();
     Log("Silnik zainicjalizowany (podwojne buforowanie, V-Sync: " +
@@ -202,7 +203,8 @@ void Engine::Shutdown() {
     pending_.clear();
     unload_.clear();
     reload_.clear();
-    ClearContext(); // wartości globalne też mogą trzymać tekstury
+    ClearContext();  // wartości globalne też mogą trzymać tekstury
+    assets_.Clear(); // na końcu: sceny i kontekst mogły trzymać zasoby z pamięci podręcznej
     if (recording_) {
         ::StopAutomationEventRecording();
         ::UnloadAutomationEventList(recordList_);

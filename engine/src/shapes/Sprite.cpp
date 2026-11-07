@@ -31,7 +31,13 @@ Sprite::AnimationClip Sprite::Current() const {
 }
 
 void Sprite::Start(const std::string& name) {
-    if (!name.empty() && !animations_.contains(name)) return;
+    if (!name.empty() && !animations_.contains(name)) {
+        if (name != missing_) {
+            missing_ = name;
+            ::TraceLog(LOG_WARNING, "Sprite: nieznana animacja \"%s\"", name.c_str());
+        }
+        return;
+    }
     if (name == current_) {
         if (!playing_) Resume();
         return;

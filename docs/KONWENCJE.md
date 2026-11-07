@@ -11,7 +11,7 @@ warstwy wcześniejsze na liście:
 | Katalog      | Zawartość                                                       | Może dołączać               |
 |--------------|-----------------------------------------------------------------|-----------------------------|
 | `math/`      | AffineMatrix2D, Point2D, LineSegment, algorytmy geometrii       | -                           |
-| `render/`    | Bitmap, RenderTarget, ClipStack, ShaderProgram, Typeface, PrimitiveRenderer | math            |
+| `render/`    | Bitmap, Assets, RenderTarget, ClipStack, ShaderProgram, Typeface, PrimitiveRenderer | math    |
 | `input/`     | Input, akcje i osie                                             | -                           |
 | `entity/`    | Entity i klasy bazowe (Transformable, Drawable, Updatable...)   | math, render, input         |
 | `shapes/`    | kształty z przestrzeni nazw `shapes`                            | entity i jej zależności     |
@@ -100,6 +100,20 @@ auto wave = Shared(ShaderProgram::Load("", "assets/wave.fs")); // nullptr przy b
 
 Zasoby tylko do odczytu (Bitmap, Typeface) przekazuje się jako `std::shared_ptr<const T>`,
 a ShaderProgram bez `const`, bo ustawia się w nim uniformy.
+
+Bitmapy i czcionki z plików gry pobiera się przez pamięć podręczną `Engine::Assets()`, a nie
+przez `Load()` w konfiguracji sceny. Nazwa jest liczona od katalogu `assets/`, ten sam plik
+wczytuje się raz, a brakujący daje zasób zastępczy (szachownica, font raylib) i jeden wpis
+w logu zamiast `nullptr`:
+
+```cpp
+auto hero = engine.Assets().Bitmap("hero.png");
+auto font = engine.Assets().Font("font.ttf");
+```
+
+`Load()` zostaje dla zasobów spoza gry (np. plik wskazany przez użytkownika) i dla kodu, który
+sam chce obsłużyć błąd. `ShaderProgram` nie przechodzi przez `Assets`, bo jego uniformy są
+stanem obiektu, który go używa.
 
 ## Obsługa błędów (Engine)
 

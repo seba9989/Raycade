@@ -44,12 +44,15 @@ class Typeface {
      * @param size Rozmiar rasteryzacji glifów w pikselach (domyślnie 32).
      * @param extraCharacters Dodatkowe znaki UTF-8 (np. "€°ß"); ASCII i polskie litery są
      * zawsze.
+     * @param smooth true - filtr dwuliniowy (gładkie krawędzie przy skalowaniu), false - filtr
+     * punktowy (ostre piksele, dla fontów pikselowych).
      * @return Czcionka albo brak wartości, gdy pliku nie da się wczytać.
      */
     static std::optional<Typeface> Load(
         const std::string& path,
         int size = 32,
-        const std::string& extraCharacters = ""
+        const std::string& extraCharacters = "",
+        bool smooth = true
     );
 
     /**
@@ -75,11 +78,13 @@ class Typeface {
 
     /**
      * @brief Podaje domyślny odstęp między znakami dla rozmiaru tekstu.
-     * @details Tak samo jak DrawText() z raylib: rozmiar / 10, co najmniej 1 piksel.
+     * @details Font z pliku TTF/OTF ma własne odstępy (advance) zapisane w glifach, więc
+     * dodatkowy odstęp wynosi 0. Font domyślny raylib ich nie ma - dla niego, tak jak w
+     * DrawText(), odstęp to rozmiar / 10, co najmniej 1 piksel.
      * @param size Rozmiar tekstu w pikselach.
      * @return Odstęp w pikselach.
      */
-    static float DefaultSpacing(float size);
+    float DefaultSpacing(float size) const;
 
     /**
      * @brief Mierzy tekst (także wielowierszowy, z '\n').

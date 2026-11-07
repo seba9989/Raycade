@@ -10,6 +10,7 @@
 #include <utility>
 
 #include <raycade/entity/Entity.hpp>
+#include <raycade/render/Assets.hpp>
 #include <raycade/render/Bitmap.hpp>
 
 namespace shapes {
@@ -27,7 +28,7 @@ namespace shapes {
  * Arkusz jest współdzielony (std::shared_ptr), więc wiele obiektów może używać jednej bitmapy
  * w pamięci i jednej tekstury na karcie graficznej:
  * @code{.cpp}
- * std::shared_ptr<const Bitmap> coin = Shared(Bitmap::Load(engine.AssetPath("coin.png")));
+ * std::shared_ptr<const Bitmap> coin = engine.Assets().Bitmap("coin.png");
  * for (int i = 0; i < 10; ++i)
  *     scene.Spawn<shapes::Sprite>().Sheet(coin, {16, 16}).Fps(8).Play().Position({i * 40.0f, 0});
  * @endcode
@@ -37,7 +38,7 @@ namespace shapes {
  * koloru daje półprzezroczystość.
  * @code{.cpp}
  * scene.Spawn<shapes::Sprite>()
- *     .Sheet(engine.AssetPath("hero.png"), {32, 32}) // klatki 32x32
+ *     .Sheet("hero.png", {32, 32})           // klatki 32x32, plik z assets/
  *     .Animation("stoi", 0, 4, 6)            // klatki 0-3, 6 FPS, w pętli
  *     .Animation("biegnie", 4, 6, 12)        // klatki 4-9, 12 FPS
  *     .Animation("skok", 10, 3, 10, false)   // klatki 10-12, raz
@@ -71,17 +72,19 @@ class Sprite : public Entity {
     }
 
     /**
-     * @brief Wczytuje arkusz z pliku graficznego (skrót dla Bitmap::Load()).
-     * @details Gdy pliku nie da się wczytać, raylib zapisuje przyczynę w logu, a sprite nie ma
-     * arkusza (IsLoaded() == false)
-     * i niczego nie rysuje. Kilka sprite'ów z tym samym obrazem lepiej utworzyć z jednej
-     * bitmapy przez Sheet(std::shared_ptr<const Bitmap>, ...).
-     * @param path Ścieżka pliku.
+     * @brief Ustawia arkusz z pliku graficznego przez pamięć podręczną zasobów.
+     * @details Plik pobiera Assets z kontekstu (Engine::Assets()), więc wiele sprite'ów
+     * z tym samym plikiem dzieli jedną bitmapę, a nazwa względna jest liczona od katalogu
+     * assets/. Brakujący plik daje szachownicę zastępczą (Assets::Missing()) i wpis w logu.
+     * Bez Assets w kontekście plik jest wczytywany bezpośrednio przez Bitmap::Load().
+     * @param path Nazwa pliku w assets/ (np. "hero.png") albo pełna ścieżka.
      * @param frameSize Rozmiar jednej klatki; {0, 0} - cały obraz.
      * @return Ten sam obiekt.
      */
     template <typename Self>
     Self& Sheet(this Self& self, const std::string& path, Vector2 frameSize = {0, 0}) {
+        if (Assets* assets = self.template Context<Assets>())
+            return self.Sheet(assets->Bitmap(path), frameSize);
         return self.Sheet(Shared(Bitmap::Load(path)), frameSize);
     }
 
@@ -139,7 +142,8 @@ class Sprite : public Entity {
      * @brief Odtwarza animację o podanej nazwie.
      * @details Jeśli ta animacja już trwa, nic się nie dzieje - dzięki temu Play() można
      * wołać co klatkę (np. w OnUpdate() zależnie od klawiszy). Inna animacja zaczyna się od
-     * pierwszej klatki. Nieznana nazwa jest pomijana.
+     * pierwszej klatki. Nieznana nazwa jest pomijana, a ostrzeżenie trafia do logu (raz na
+     * nazwę, żeby wywołanie co klatkę nie zalało logu).
      * @param name Nazwa animacji (z Animation()) albo "" - cały arkusz.
      * @return Ten sam obiekt.
      */
@@ -311,6 +315,7 @@ class Sprite : public Entity {
     bool flipY_ = false;                              /**< Odbicie w pionie. */
     Vector2 origin_{0, 0};                            /**< Punkt zaczepienia w klatce. */
     std::function<void(const std::string&)> finish_;  /**< Koniec animacji jednorazowej. */
+    std::string missing_; /**< Ostatnia nieznana nazwa z Play() (ostrzeżenie tylko raz). */
 };
 
 } // namespace shapes

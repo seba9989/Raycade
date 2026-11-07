@@ -1,0 +1,119 @@
+/**
+ * @file Assets.hpp
+ * @brief Klasa Assets - pamięć podręczna zasobów z plików (bitmapy, czcionki).
+ */
+#pragma once
+
+#include <cstddef>
+#include <memory>
+#include <set>
+#include <string>
+#include <unordered_map>
+
+#include <raycade/render/Bitmap.hpp>
+#include <raycade/render/Typeface.hpp>
+
+/**
+ * @brief Wczytuje zasoby z plików raz i udostępnia je wszystkim obiektom.
+ * @details Ten sam plik pobrany drugi raz to ten sam obiekt w pamięci (i ta sama tekstura na
+ * karcie graficznej), więc dziesięć sprite'ów z "coin.png" nie wczytuje pliku dziesięć razy.
+ * Zasoby są zwracane jako `std::shared_ptr<const T>`, czyli tak, jak przyjmują je obiekty sceny.
+ *
+ * Nazwy względne są liczone od katalogu Directory() - silnik ustawia tam katalog assets/ obok
+ * pliku wykonywalnego (Engine::AssetPath()). Ścieżka bezwzględna jest używana bez zmian.
+ *
+ * Plik, którego nie da się wczytać, nie daje nullptr: bitmapa zostaje zastąpiona szachownicą
+ * magenta-czarną (Missing()), a czcionka - fontem domyślnym raylib. Błąd jest widoczny na
+ * ekranie, a w logu pojawia się jeden wpis na plik, nawet jeśli gra prosi o niego co klatkę.
+ *
+ * Silnik zwalnia nieużywane zasoby (Purge()) po zwolnieniu albo ponownym wczytaniu sceny,
+ * a wszystkie (Clear()) - przy zamykaniu, przed zamknięciem okna.
+ * @code{.cpp}
+ * Assets& assets = Engine::Get().Assets();
+ * auto coin = assets.Bitmap("coin.png");
+ * auto font = assets.Font("Roboto.ttf");
+ * for (int i = 0; i < 10; ++i)
+ *     scene.Spawn<shapes::Sprite>().Sheet(coin, {16, 16}).Play().Position({i * 40.0f, 0});
+ * @endcode
+ *
+ * Silnik udostępnia swoje Assets w kontekście (Contextable), dlatego shapes::Sprite::Sheet()
+ * z nazwą pliku korzysta z tej samej pamięci podręcznej. Poddrzewo może podać własne:
+ * `menu.SetContext(menuAssets)`.
+ */
+class Assets {
+  public:
+    /**
+     * @brief Ustawia katalog, od którego liczone są nazwy względne.
+     * @param directory Katalog (z ukośnikiem na końcu albo bez); pusty - katalog roboczy.
+     * @return Ten sam obiekt.
+     */
+    Assets& Directory(std::string directory);
+
+    /** @brief Podaje katalog zasobów. */
+    const std::string& Directory() const { return directory_; }
+
+    /**
+     * @brief Zamienia nazwę zasobu na ścieżkę pliku.
+     * @param name Nazwa względna (np. "postac/hero.png") albo ścieżka bezwzględna.
+     * @return Ścieżka pliku.
+     */
+    std::string Path(const std::string& name) const;
+
+    /**
+     * @brief Podaje bitmapę z pliku, wczytując ją przy pierwszym użyciu.
+     * @param name Nazwa pliku (patrz Path()).
+     * @return Bitmapa albo Missing(), gdy pliku nie da się wczytać.
+     */
+    std::shared_ptr<const ::Bitmap> Bitmap(const std::string& name);
+
+    /**
+     * @brief Podaje czcionkę z pliku TTF/OTF, wczytując ją przy pierwszym użyciu.
+     * @details Ten sam plik z innymi parametrami to osobna czcionka.
+     * @param name Nazwa pliku (patrz Path()).
+     * @param size Rozmiar rasteryzacji glifów (patrz Typeface::Load()).
+     * @param extraCharacters Dodatkowe znaki UTF-8.
+     * @param smooth Filtr dwuliniowy (true) albo punktowy (false).
+     * @return Czcionka albo font domyślny raylib, gdy pliku nie da się wczytać.
+     */
+    std::shared_ptr<const Typeface> Font(
+        const std::string& name,
+        int size = 32,
+        const std::string& extraCharacters = "",
+        bool smooth = true
+    );
+
+    /**
+     * @brief Podaje zastępczą bitmapę (szachownica 16 x 16, magenta i czarny).
+     * @return Wspólna bitmapa zastępcza.
+     */
+    std::shared_ptr<const ::Bitmap> Missing();
+
+    /** @brief Podaje liczbę zasobów w pamięci podręcznej. */
+    std::size_t Count() const { return bitmaps_.size() + fonts_.size(); }
+
+    /**
+     * @brief Zwalnia zasoby, których nie używa już nikt poza pamięcią podręczną.
+     * @details Zapomina też pliki, których nie udało się wczytać - następna prośba spróbuje
+     * ponownie (np. po skopiowaniu brakującego pliku).
+     * @return Liczba zwolnionych zasobów.
+     */
+    std::size_t Purge();
+
+    /**
+     * @brief Zwalnia wszystkie zasoby z pamięci podręcznej.
+     * @details Obiekty, które nadal trzymają zasób, zachowują go do swojego końca.
+     * @return Ten sam obiekt.
+     */
+    Assets& Clear();
+
+  private:
+    /** @brief Zapisuje błąd wczytania w logu (raz na klucz). */
+    bool Failed(const std::string& key, const std::string& path);
+
+    std::string directory_; /**< Katalog nazw względnych. */
+    std::unordered_map<std::string, std::shared_ptr<const ::Bitmap>> bitmaps_; /**< Bitmapy. */
+    std::unordered_map<std::string, std::shared_ptr<const Typeface>> fonts_;   /**< Czcionki. */
+    std::set<std::string> failed_;                    /**< Klucze, których nie wczytano. */
+    std::shared_ptr<const ::Bitmap> missing_;         /**< Bitmapa zastępcza. */
+    std::shared_ptr<const Typeface> defaultTypeface_; /**< Font raylib dla błędów. */
+};

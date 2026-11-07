@@ -12,7 +12,8 @@
 std::optional<Typeface> Typeface::Load(
     const std::string& path,
     int size,
-    const std::string& extraCharacters
+    const std::string& extraCharacters,
+    bool smooth
 ) {
     // raylib wczytuje tylko podane znaki - bez listy byłoby samo ASCII 32-126
     std::string characters;
@@ -27,8 +28,8 @@ std::optional<Typeface> Typeface::Load(
     ::UnloadCodepoints(codepoints);
     if (!::IsFontValid(font)) return std::nullopt;
 
-    // gładkie krawędzie glifów przy skalowaniu tekstu
-    ::SetTextureFilter(font.texture, TEXTURE_FILTER_BILINEAR);
+    // gładkie krawędzie glifów przy skalowaniu tekstu albo ostre piksele (font pikselowy)
+    ::SetTextureFilter(font.texture, smooth ? TEXTURE_FILTER_BILINEAR : TEXTURE_FILTER_POINT);
     Typeface result;
     result.font_ = font;
     result.loaded_ = true;
@@ -72,7 +73,8 @@ const ::Font& Typeface::Raw() const {
     return fallback;
 }
 
-float Typeface::DefaultSpacing(float size) {
+float Typeface::DefaultSpacing(float size) const {
+    if (loaded_) return 0.0f; // TTF/OTF: odstępy są już w glifach
     return std::max(1.0f, std::floor(size / 10.0f));
 }
 

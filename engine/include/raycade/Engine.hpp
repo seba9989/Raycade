@@ -14,7 +14,7 @@
  * - EngineScenes.cpp - sceny,
  * - EngineSystem.cpp - schowek oraz czas, losowość i różne (w tym Screenshot(),
  *   EventWaiting()),
- * - EngineFiles.cpp - pliki i katalogi.
+ * - EngineFiles.cpp - pliki, katalogi i zasoby (Assets()).
  */
 #pragma once
 
@@ -33,6 +33,7 @@
 #include <vector>
 
 #include <raycade/input/Input.hpp>
+#include <raycade/render/Assets.hpp>
 #include <raycade/render/Bitmap.hpp>
 #include <raycade/render/PrimitiveRenderer.hpp>
 #include <raycade/render/RenderTarget.hpp>
@@ -1105,6 +1106,23 @@ class Engine : public Contextable {
     std::string AssetPath(const std::string& name) const;
 
     /**
+     * @brief Udostępnia pamięć podręczną zasobów (bitmapy, czcionki).
+     * @details Nazwy względne są liczone od katalogu assets/ (AssetPath()). Ten sam plik
+     * wczytuje się raz - kolejne prośby zwracają ten sam obiekt. Nieużywane zasoby są
+     * zwalniane po zwolnieniu albo ponownym wczytaniu sceny, a wszystkie - w Shutdown(),
+     * przed zamknięciem okna. Assets są też w kontekście silnika (`Context<Assets>()`).
+     * @code{.cpp}
+     * auto hero = engine.Assets().Bitmap("hero.png");
+     * auto font = engine.Assets().Font("font.ttf");
+     * @endcode
+     * @return Pamięć podręczna zasobów.
+     */
+    ::Assets& Assets() { return assets_; }
+
+    /** @copydoc Assets() */
+    const ::Assets& Assets() const { return assets_; }
+
+    /**
      * @brief Wczytuje cały plik tekstowy.
      * @param path Ścieżka pliku.
      * @return Treść albo brak wartości, gdy pliku nie da się odczytać.
@@ -1274,7 +1292,7 @@ class Engine : public Contextable {
 
   private:
     /** @brief Prywatny konstruktor - instancję zwraca wyłącznie Get(). */
-    Engine() = default;
+    Engine();
     /** @brief Destruktor wywołuje Shutdown(). */
     ~Engine() { Shutdown(); }
 
@@ -1358,6 +1376,7 @@ class Engine : public Contextable {
     bool quit_ = false;        /**< Czy zakończyć pętlę po bieżącej klatce. */
     std::string screenshot_;   /**< Ścieżka zrzutu do wykonania na końcu klatki. */
 
+    ::Assets assets_;                       /**< Pamięć podręczna zasobów z plików. */
     std::map<std::string, ::Scene> scenes_; /**< Utworzone sceny według nazw. */
     std::string active_;                    /**< Nazwa aktywnej sceny. */
     std::string pending_; /**< Scena, na którą przełączamy po zakończeniu klatki. */

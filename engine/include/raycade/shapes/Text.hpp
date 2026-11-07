@@ -14,11 +14,13 @@
 namespace shapes {
 
 /**
- * @brief Napis (także wielowierszowy, z '\n'), którego pozycja oznacza lewy górny róg.
+ * @brief Napis (także wielowierszowy, z '\n'), którego pozycja oznacza punkt Origin().
  * @details W odróżnieniu od ::DrawText() w OnDraw() napis jest obiektem sceny: przesuwa się
  * z rodzicem i kamerą, obraca, skaluje, ma warstwę i reaguje na mysz w swoim prostokącie.
- * Kolor ustawia Paint(). Czcionkę wybiera Font(); bez niej napis używa DefaultTypeface
- * z kontekstu, a na końcu fontu raylib (bez polskich znaków - patrz Typeface).
+ * Kolor ustawia Paint(). Origin() wskazuje punkt napisu, który leży w pozycji obiektu i wokół
+ * którego działa obrót i skala (domyślnie lewy górny róg). Czcionkę wybiera Font(); bez niej napis
+ * używa DefaultTypeface z kontekstu, a na końcu fontu raylib (bez polskich znaków - patrz
+ * Typeface).
  * @code{.cpp}
  * scene.Spawn<shapes::Text>()
  *     .Content("Wynik: 0")
@@ -58,7 +60,8 @@ class Text : public Entity {
 
     /**
      * @brief Ustawia odstęp między znakami.
-     * @param spacing Odstęp w pikselach; ujemna wartość - domyślny (FontSize() / 10).
+     * @param spacing Odstęp w pikselach; ujemna wartość - domyślny
+     * (Typeface::DefaultSpacing(): 0 dla TTF/OTF, FontSize() / 10 dla fontu raylib).
      * @return Ten sam obiekt.
      */
     template <typename Self> Self& Spacing(this Self& self, float spacing) {
@@ -67,7 +70,7 @@ class Text : public Entity {
     }
 
     /** @brief Podaje odstęp między znakami (już z domyślną wartością). */
-    float Spacing() const { return spacing_ < 0 ? Typeface::DefaultSpacing(fontSize_) : spacing_; }
+    float Spacing() const { return spacing_ < 0 ? Face().DefaultSpacing(fontSize_) : spacing_; }
 
     /**
      * @brief Ustawia czcionkę napisu.
@@ -81,6 +84,21 @@ class Text : public Entity {
 
     /** @brief Podaje czcionkę ustawioną na napisie (nullptr - z kontekstu albo domyślna). */
     const std::shared_ptr<const Typeface>& Font() const { return font_; }
+
+    /**
+     * @brief Ustawia punkt zaczepienia napisu (piksele od jego lewego górnego rogu).
+     * @details Pozycja obiektu wskazuje ten punkt, a obrót i skala działają wokół niego - tak
+     * samo jak shapes::Sprite::Origin().
+     * @param origin Punkt w pikselach napisu.
+     * @return Ten sam obiekt.
+     */
+    template <typename Self> Self& Origin(this Self& self, Vector2 origin) {
+        self.origin_ = origin;
+        return self;
+    }
+
+    /** @brief Podaje punkt zaczepienia napisu. */
+    Vector2 Origin() const { return origin_; }
 
     /**
      * @brief Mierzy napis.
@@ -105,6 +123,7 @@ class Text : public Entity {
     float fontSize_ = 20.0f;               /**< Wysokość tekstu. */
     float spacing_ = -1.0f;                /**< Odstęp między znakami; < 0 - domyślny. */
     std::shared_ptr<const Typeface> font_; /**< Czcionka albo nullptr. */
+    Vector2 origin_{0, 0};                 /**< Punkt zaczepienia. */
 };
 
 } // namespace shapes

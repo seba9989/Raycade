@@ -100,7 +100,8 @@ class TextField : public Entity, public Focusable {
 
     /**
      * @brief Ustawia odstęp między znakami, jak shapes::Text::Spacing().
-     * @param spacing Odstęp w pikselach; ujemna wartość - domyślny (FontSize() / 10).
+     * @param spacing Odstęp w pikselach; ujemna wartość - domyślny
+     * (Typeface::DefaultSpacing(): 0 dla TTF/OTF, FontSize() / 10 dla fontu raylib).
      * @return Ten sam obiekt.
      */
     template <typename Self> Self& Spacing(this Self& self, float spacing) {
@@ -109,7 +110,7 @@ class TextField : public Entity, public Focusable {
     }
 
     /** @brief Podaje odstęp między znakami (już z domyślną wartością). */
-    float Spacing() const { return spacing_ < 0 ? Typeface::DefaultSpacing(fontSize_) : spacing_; }
+    float Spacing() const { return spacing_ < 0 ? Face().DefaultSpacing(fontSize_) : spacing_; }
 
     /** @brief Ogranicza liczbę znaków (0 - bez limitu). */
     template <typename Self> Self& MaxLength(this Self& self, std::size_t length) {

@@ -129,9 +129,10 @@ SCENE("efekty") {
     // czcionka z polskimi znakami (w repozytorium DejaVu Sans) - dla wszystkich napisów sceny.
     // Napisy mają polskie litery; bez pliku czcionki font raylib pokaże w ich miejscu "?",
     // a dolny napis (bez polskich liter) wyjaśnia dlaczego.
-    std::shared_ptr<const Typeface> font = Shared(Typeface::Load(engine.AssetPath("font.ttf"), 32));
-    const bool hasFont = font != nullptr;
-    if (font) scene.ProvideContext<DefaultTypeface>(font);
+    // Assets wczytuje plik raz - ponowne wejście do sceny używa tej samej czcionki
+    std::shared_ptr<const Typeface> font = engine.Assets().Font("font.ttf");
+    const bool hasFont = !font->IsDefault();
+    scene.ProvideContext<DefaultTypeface>(font);
     const auto title = [&scene](Vector2 position, std::string content) -> shapes::Text& {
         return scene.Spawn<shapes::Text>()
             .Content(std::move(content))
