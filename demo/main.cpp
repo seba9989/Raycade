@@ -52,11 +52,11 @@
  * @ref PrimitiveRenderer. W scenie `figury` porównano krzywe z raylib.
  *
  * @section obsluga Sceny demonstracyjne
- * Klawisze 1-8 wybierają `menu`, `prymitywy`, `figury`, `transformacje`, `kontekst`,
- * `trafienia`, `kamera` i `efekty` (lista jest też na scenie `menu`). F11 przełącza pełny ekran.
- * Okno ma zmienny rozmiar: gra rysuje zawsze w 1000x700, a obraz jest skalowany do okna
- * z zachowaniem proporcji (Engine::ScaleMode(Scaling::Fit)), więc układ scen i kliknięcia
- * działają przy każdym rozmiarze okna i na pełnym ekranie.
+ * Klawisze 1-9 wybierają `menu`, `prymitywy`, `figury`, `transformacje`, `kontekst`,
+ * `trafienia`, `kamera`, `efekty` i `formularz`, a 0 - `sprite` (lista jest też na scenie
+ * `menu`). F11 przełącza pełny ekran. Okno ma zmienny rozmiar: gra rysuje zawsze w 1000x700,
+ * a obraz jest skalowany do okna z zachowaniem proporcji (Engine::ScaleMode(Scaling::Fit)), więc
+ * układ scen i kliknięcia działają przy każdym rozmiarze okna i na pełnym ekranie.
  * Na scenie `prymitywy` strzałki przesuwają prostokąt, L zmienia warstwę,
  * PPM przesuwa koniec odcinka, a spacja przełącza jego algorytm.
  * Na scenie `figury` LPM uruchamia flood fill na płótnie, Shift+LPM
@@ -82,6 +82,20 @@
  * a B albo podwójne kliknięcie (gest) dodaje nową. Napisy sceny mają polskie znaki dzięki
  * czcionce `demo/assets/font.ttf` (DejaVu Sans, licencja w `demo/assets/FONT-LICENSE.txt`);
  * można ją podmienić na dowolny inny plik TTF (Typeface).
+ * Na scenie `formularz` dwa pola tekstowe (ui::TextField) zbierają imię i e-mail: Tab
+ * przechodzi między polami, Enter w imieniu przenosi do e-maila, a w e-mailu - tak jak
+ * przycisk "Zapisz" - sprawdza dane i dopisuje osobę do listy. Pole z fokusem przejmuje
+ * klawiaturę (cyfry nie przełączają wtedy scen), Escape zdejmuje fokus.
+ * Scena `sprite` służy do testowania shapes::Sprite i SpriteSheet. Arkusz wczytuje przez
+ * Engine::Assets() z pliku `demo/assets/sprite-test.json` w formacie eksportu Aseprite (klatki
+ * z czasami i tagi animacji), a obraz - z `sprite-test.png` wskazanego w JSON; podgląd arkusza
+ * pokazuje ramką bieżącą klatkę. Postać sterują klawisze: Q, W, E, R, C animacje z tagów
+ * (forward, pingpong, repeat, reverse), T lista klatek dopisana w kodzie, spacja pauza, S stop,
+ * strzałki klatka i szybkość, X/Y odbicie, Z obrót, a L wczytuje obraz od nowa - po edycji PNG
+ * w programie graficznym wszystkie sprite'y ze wspólnym arkuszem pokazują nową wersję. Są też
+ * dziennik zdarzeń klatek, 16 sprite'ów z jednym arkuszem oraz przypadki brzegowe: prywatna
+ * kopia opisu, Sheet() z nazwą obrazu i z nazwą JSON (te same obiekty z Assets), brakujący
+ * plik i obrót wokół Origin().
  *
  * @section dokumentacja Dokumentacja
  * Dokumentację HTML generuje polecenie `docs` (devenv) albo, w katalogu głównym projektu:
@@ -124,13 +138,15 @@ int main() {
             if (engine.KeyPressed(KEY_SIX)) engine.SwitchScene("trafienia");
             if (engine.KeyPressed(KEY_SEVEN)) engine.SwitchScene("kamera");
             if (engine.KeyPressed(KEY_EIGHT)) engine.SwitchScene("efekty");
+            if (engine.KeyPressed(KEY_NINE)) engine.SwitchScene("formularz");
+            if (engine.KeyPressed(KEY_ZERO)) engine.SwitchScene("sprite");
             // szarość całego obrazu (G) jest częścią sceny efektów - poza nią ją wyłączamy
             if (engine.ActiveScene() != "efekty" && engine.PostShader()) engine.PostShader(nullptr);
             if (engine.KeyPressed(KEY_F11)) engine.Fullscreen(!engine.IsFullscreen());
         })
         .OnDraw([&](PrimitiveRenderer&) {
             const std::string hud = "Scena: " + engine.ActiveScene() +
-                                    "   [1-8] zmiana sceny (lista w menu)   [F11] pelny ekran";
+                                    "   [0-9] zmiana sceny (lista w menu)   [F11] pelny ekran";
             const int bottom = static_cast<int>(engine.ViewSize().y);
             ::DrawText(hud.c_str(), 20, bottom - 32, 18, DARKGRAY);
         })

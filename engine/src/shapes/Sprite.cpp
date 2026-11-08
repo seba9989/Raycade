@@ -5,8 +5,22 @@
 #include <raycade/shapes/Sprite.hpp>
 
 #include <algorithm>
+#include <cctype>
 
 namespace shapes {
+
+bool Sprite::HasFrames() const {
+    return sheet_ && sheet_->Bitmap() && !sheet_->Bitmap()->IsEmpty() && sheet_->FrameCount() > 0;
+}
+
+bool Sprite::IsJsonPath(const std::string& path) {
+    if (path.size() < 5) return false;
+    std::string extension = path.substr(path.size() - 5);
+    std::transform(extension.begin(), extension.end(), extension.begin(), [](unsigned char c) {
+        return static_cast<char>(std::tolower(c));
+    });
+    return extension == ".json";
+}
 
 const SpriteClip& Sprite::ActiveClip() const {
     if (clip_) return *clip_;
@@ -44,6 +58,16 @@ SpriteSheet& Sprite::MutableSheet() {
 }
 
 void Sprite::SheetChanged() {
+    // animacja domyślna bierze czasy klatek z pliku (np. Aseprite bez tagów), jeśli są
+    defaultClip_.durations.clear();
+    if (sheet_) {
+        bool any = false;
+        for (int i = 0; i < sheet_->FrameCount(); ++i)
+            any |= sheet_->FrameInfo(i).duration > 0.0f;
+        if (any)
+            for (int i = 0; i < sheet_->FrameCount(); ++i)
+                defaultClip_.durations.push_back(sheet_->FrameInfo(i).duration);
+    }
     ClipsChanged();
     Rewind(frame_);
 }
@@ -91,9 +115,9 @@ int Sprite::SheetFrame() const {
 }
 
 Vector2 Sprite::FrameSize() const {
-    if (!IsLoaded()) return {0, 0};
-    const Rectangle frame = sheet_->Frame(SheetFrame());
-    return {frame.width, frame.height};
+    if (!HasFrames()) return {0, 0};
+    // pełna klatka (także przycięta w atlasie) - obszar trafienia nie skacze między klatkami
+    return sheet_->FrameInfo(SheetFrame()).FullSize();
 }
 
 bool Sprite::Advance(const SpriteClip& clip) {
@@ -155,12 +179,18 @@ bool Sprite::Contains(Vector2 point) const {
 }
 
 void Sprite::Draw(PrimitiveRenderer& renderer) const {
-    if (!IsLoaded()) return;
-    Rectangle source = sheet_->Frame(SheetFrame());
+    if (!HasFrames()) return;
+    const SpriteFrame& frame = sheet_->FrameInfo(SheetFrame());
+    Rectangle source = frame.area;
+    // przycięta klatka leży w pełnej klatce w miejscu offset; odbicie odbija też to położenie
+    const Vector2 full = frame.FullSize();
+    Vector2 offset = frame.offset;
+    if (flipX_) offset.x = full.x - frame.offset.x - source.width;
+    if (flipY_) offset.y = full.y - frame.offset.y - source.height;
     // ujemny wymiar źródła odbija obraz (DrawTextureRec)
     if (flipX_) source.width = -source.width;
     if (flipY_) source.height = -source.height;
-    renderer.Blit(*sheet_->Bitmap(), source, {-origin_.x, -origin_.y}, color_);
+    renderer.Blit(*sheet_->Bitmap(), source, {offset.x - origin_.x, offset.y - origin_.y}, color_);
 }
 
 } // namespace shapes

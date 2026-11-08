@@ -109,7 +109,13 @@ w logu zamiast `nullptr`:
 ```cpp
 auto hero = engine.Assets().Bitmap("hero.png");
 auto font = engine.Assets().Font("font.ttf");
+auto anim = engine.Assets().Sheet("hero.json"); // Aseprite / TexturePacker
 ```
+
+Arkusze sprite'ów z programów graficznych (eksport JSON z Aseprite albo TexturePackera) wczytuje
+`Assets::Sheet()`: klatki, czasy klatek i animacje z tagów, a obraz z `meta.image` trafia do tej
+samej pamięci podręcznej co `Bitmap()`. Zwrócony arkusz jest tylko do odczytu - animacje
+i zdarzenia klatek dopisuje się do kopii (`std::make_shared<SpriteSheet>(*anim)`).
 
 `Load()` zostaje dla zasobów spoza gry (np. plik wskazany przez użytkownika) i dla kodu, który
 sam chce obsłużyć błąd. `ShaderProgram` nie przechodzi przez `Assets`, bo jego uniformy są

@@ -48,7 +48,7 @@ Bitmap::~Bitmap() {
 
 Bitmap::Bitmap(Bitmap&& other) noexcept
     : image_(std::exchange(other.image_, {})), texture_(std::exchange(other.texture_, {})),
-      dirty_(other.dirty_) {
+      dirty_(other.dirty_), placeholder_(std::exchange(other.placeholder_, false)) {
 }
 
 Bitmap& Bitmap::operator=(Bitmap&& other) noexcept {
@@ -57,6 +57,7 @@ Bitmap& Bitmap::operator=(Bitmap&& other) noexcept {
         image_ = std::exchange(other.image_, {});
         texture_ = std::exchange(other.texture_, {});
         dirty_ = other.dirty_;
+        placeholder_ = std::exchange(other.placeholder_, false);
     }
     return *this;
 }

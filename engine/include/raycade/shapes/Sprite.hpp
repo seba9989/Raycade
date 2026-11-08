@@ -101,13 +101,21 @@ class Sprite : public Entity {
     }
 
     /**
-     * @brief Ustawia arkusz z pliku graficznego przez pamięć podręczną zasobów.
-     * @details Plik pobiera Assets z kontekstu (Engine::Assets()), więc wiele sprite'ów
-     * z tym samym plikiem dzieli jedną bitmapę, a nazwa względna jest liczona od katalogu
-     * assets/. Brakujący plik daje szachownicę zastępczą (Assets::Missing()) i wpis w logu.
-     * Bez Assets w kontekście plik jest wczytywany bezpośrednio przez Bitmap::Load().
-     * @param path Nazwa pliku w assets/ (np. "hero.png") albo pełna ścieżka.
-     * @param frameSize Rozmiar jednej klatki; {0, 0} - cały obraz.
+     * @brief Ustawia arkusz z pliku przez pamięć podręczną zasobów.
+     * @details Plik JSON (Aseprite, TexturePacker - patrz SpriteSheet::Load()) daje gotowy
+     * arkusz z klatkami i animacjami, a parametry siatki są pomijane. Plik graficzny jest
+     * dzielony na siatkę klatek (prywatny arkusz sprite'a).
+     *
+     * Plik pobiera Assets z kontekstu (Engine::Assets()), więc wiele sprite'ów z tym samym
+     * plikiem dzieli jedną bitmapę (i jeden arkusz JSON), a nazwa względna jest liczona od
+     * katalogu assets/. Brakujący plik daje szachownicę zastępczą (Assets::Missing()) i wpis
+     * w logu. Bez Assets w kontekście plik jest wczytywany bezpośrednio.
+     * @code{.cpp}
+     * scene.Spawn<shapes::Sprite>().Sheet("hero.json").Play("run");
+     * scene.Spawn<shapes::Sprite>().Sheet("coin.png", {16, 16}).Play();
+     * @endcode
+     * @param path Nazwa pliku w assets/ (np. "hero.json", "hero.png") albo pełna ścieżka.
+     * @param frameSize Rozmiar jednej klatki obrazu; {0, 0} - cały obraz.
      * @param margin Odstęp siatki od lewej i górnej krawędzi bitmapy.
      * @param spacing Odstęp między klatkami.
      * @return Ten sam obiekt.
@@ -120,15 +128,22 @@ class Sprite : public Entity {
         Vector2 margin = {0, 0},
         Vector2 spacing = {0, 0}
     ) {
-        if (Assets* assets = self.template Context<Assets>())
-            return self.Sheet(assets->Bitmap(path), frameSize, margin, spacing);
+        Assets* assets = self.template Context<Assets>();
+        if (IsJsonPath(path)) {
+            if (assets) return self.Sheet(assets->Sheet(path));
+            return self.Sheet(std::shared_ptr<const SpriteSheet>{Shared(SpriteSheet::Load(path))});
+        }
+        if (assets) return self.Sheet(assets->Bitmap(path), frameSize, margin, spacing);
         return self.Sheet(Shared(Bitmap::Load(path)), frameSize, margin, spacing);
     }
 
     /** @brief Podaje arkusz klatek (albo nullptr). */
     const std::shared_ptr<const SpriteSheet>& Sheet() const { return sheet_; }
 
-    /** @brief Sprawdza, czy sprite ma arkusz z bitmapą i klatkami. */
+    /**
+     * @brief Sprawdza, czy sprite ma arkusz z wczytaną bitmapą i klatkami.
+     * @details Dla szachownicy zastępczej (brakujący plik) zwraca false, choć sprite ją rysuje.
+     */
     bool IsLoaded() const { return sheet_ && sheet_->IsLoaded(); }
 
     /** @brief Podaje rozmiar wyświetlanej klatki w pikselach. */
@@ -366,6 +381,12 @@ class Sprite : public Entity {
     void Draw(PrimitiveRenderer& renderer) const override;
 
   private:
+    /** @brief Sprawdza, czy jest co rysować (także szachownicę zastępczą). */
+    bool HasFrames() const;
+
+    /** @brief Sprawdza, czy ścieżka to plik JSON (rozszerzenie bez względu na wielkość liter). */
+    static bool IsJsonPath(const std::string& path);
+
     /** @brief Bieżąca animacja (dla "" i nazwy spoza arkusza - cały arkusz z Fps()). */
     const SpriteClip& ActiveClip() const;
 

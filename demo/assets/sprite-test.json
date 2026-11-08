@@ -1,0 +1,84 @@
+{ "frames": [
+   {"filename": "sprite-test 0.aseprite","frame": {"x": 1,"y": 1,"w": 32,"h": 32},"rotated": false,"trimmed": false,"spriteSourceSize": {"x": 0,"y": 0,"w": 32,"h": 32},"sourceSize": {"w": 32,"h": 32},"duration": 167},
+   {"filename": "sprite-test 1.aseprite","frame": {"x": 35,"y": 1,"w": 32,"h": 32},"rotated": false,"trimmed": false,"spriteSourceSize": {"x": 0,"y": 0,"w": 32,"h": 32},"sourceSize": {"w": 32,"h": 32},"duration": 167},
+   {"filename": "sprite-test 2.aseprite","frame": {"x": 69,"y": 1,"w": 32,"h": 32},"rotated": false,"trimmed": false,"spriteSourceSize": {"x": 0,"y": 0,"w": 32,"h": 32},"sourceSize": {"w": 32,"h": 32},"duration": 167},
+   {"filename": "sprite-test 3.aseprite","frame": {"x": 103,"y": 1,"w": 32,"h": 32},"rotated": false,"trimmed": false,"spriteSourceSize": {"x": 0,"y": 0,"w": 32,"h": 32},"sourceSize": {"w": 32,"h": 32},"duration": 167},
+   {"filename": "sprite-test 4.aseprite","frame": {"x": 137,"y": 1,"w": 32,"h": 32},"rotated": false,"trimmed": false,"spriteSourceSize": {"x": 0,"y": 0,"w": 32,"h": 32},"sourceSize": {"w": 32,"h": 32},"duration": 167},
+   {"filename": "sprite-test 5.aseprite","frame": {"x": 171,"y": 1,"w": 32,"h": 32},"rotated": false,"trimmed": false,"spriteSourceSize": {"x": 0,"y": 0,"w": 32,"h": 32},"sourceSize": {"w": 32,"h": 32},"duration": 167},
+   {"filename": "sprite-test 6.aseprite","frame": {"x": 205,"y": 1,"w": 32,"h": 32},"rotated": false,"trimmed": false,"spriteSourceSize": {"x": 0,"y": 0,"w": 32,"h": 32},"sourceSize": {"w": 32,"h": 32},"duration": 167},
+   {"filename": "sprite-test 7.aseprite","frame": {"x": 239,"y": 1,"w": 32,"h": 32},"rotated": false,"trimmed": false,"spriteSourceSize": {"x": 0,"y": 0,"w": 32,"h": 32},"sourceSize": {"w": 32,"h": 32},"duration": 167},
+   {"filename": "sprite-test 8.aseprite","frame": {"x": 1,"y": 35,"w": 32,"h": 32},"rotated": false,"trimmed": false,"spriteSourceSize": {"x": 0,"y": 0,"w": 32,"h": 32},"sourceSize": {"w": 32,"h": 32},"duration": 83},
+   {"filename": "sprite-test 9.aseprite","frame": {"x": 35,"y": 35,"w": 32,"h": 32},"rotated": false,"trimmed": false,"spriteSourceSize": {"x": 0,"y": 0,"w": 32,"h": 32},"sourceSize": {"w": 32,"h": 32},"duration": 83},
+   {"filename": "sprite-test 10.aseprite","frame": {"x": 69,"y": 35,"w": 32,"h": 32},"rotated": false,"trimmed": false,"spriteSourceSize": {"x": 0,"y": 0,"w": 32,"h": 32},"sourceSize": {"w": 32,"h": 32},"duration": 83},
+   {"filename": "sprite-test 11.aseprite","frame": {"x": 103,"y": 35,"w": 32,"h": 32},"rotated": false,"trimmed": false,"spriteSourceSize": {"x": 0,"y": 0,"w": 32,"h": 32},"sourceSize": {"w": 32,"h": 32},"duration": 83},
+   {"filename": "sprite-test 12.aseprite","frame": {"x": 137,"y": 35,"w": 32,"h": 32},"rotated": false,"trimmed": false,"spriteSourceSize": {"x": 0,"y": 0,"w": 32,"h": 32},"sourceSize": {"w": 32,"h": 32},"duration": 83},
+   {"filename": "sprite-test 13.aseprite","frame": {"x": 171,"y": 35,"w": 32,"h": 32},"rotated": false,"trimmed": false,"spriteSourceSize": {"x": 0,"y": 0,"w": 32,"h": 32},"sourceSize": {"w": 32,"h": 32},"duration": 83},
+   {"filename": "sprite-test 14.aseprite","frame": {"x": 205,"y": 35,"w": 32,"h": 32},"rotated": false,"trimmed": false,"spriteSourceSize": {"x": 0,"y": 0,"w": 32,"h": 32},"sourceSize": {"w": 32,"h": 32},"duration": 83},
+   {"filename": "sprite-test 15.aseprite","frame": {"x": 239,"y": 35,"w": 32,"h": 32},"rotated": false,"trimmed": false,"spriteSourceSize": {"x": 0,"y": 0,"w": 32,"h": 32},"sourceSize": {"w": 32,"h": 32},"duration": 83},
+   {"filename": "sprite-test 16.aseprite","frame": {"x": 1,"y": 69,"w": 32,"h": 32},"rotated": false,"trimmed": false,"spriteSourceSize": {"x": 0,"y": 0,"w": 32,"h": 32},"sourceSize": {"w": 32,"h": 32},"duration": 350},
+   {"filename": "sprite-test 17.aseprite","frame": {"x": 35,"y": 69,"w": 32,"h": 32},"rotated": false,"trimmed": false,"spriteSourceSize": {"x": 0,"y": 0,"w": 32,"h": 32},"sourceSize": {"w": 32,"h": 32},"duration": 71},
+   {"filename": "sprite-test 18.aseprite","frame": {"x": 69,"y": 69,"w": 32,"h": 32},"rotated": false,"trimmed": false,"spriteSourceSize": {"x": 0,"y": 0,"w": 32,"h": 32},"sourceSize": {"w": 32,"h": 32},"duration": 71},
+   {"filename": "sprite-test 19.aseprite","frame": {"x": 103,"y": 69,"w": 32,"h": 32},"rotated": false,"trimmed": false,"spriteSourceSize": {"x": 0,"y": 0,"w": 32,"h": 32},"sourceSize": {"w": 32,"h": 32},"duration": 71},
+   {"filename": "sprite-test 20.aseprite","frame": {"x": 137,"y": 69,"w": 32,"h": 32},"rotated": false,"trimmed": false,"spriteSourceSize": {"x": 0,"y": 0,"w": 32,"h": 32},"sourceSize": {"w": 32,"h": 32},"duration": 71},
+   {"filename": "sprite-test 21.aseprite","frame": {"x": 171,"y": 69,"w": 32,"h": 32},"rotated": false,"trimmed": false,"spriteSourceSize": {"x": 0,"y": 0,"w": 32,"h": 32},"sourceSize": {"w": 32,"h": 32},"duration": 71},
+   {"filename": "sprite-test 22.aseprite","frame": {"x": 205,"y": 69,"w": 32,"h": 32},"rotated": false,"trimmed": false,"spriteSourceSize": {"x": 0,"y": 0,"w": 32,"h": 32},"sourceSize": {"w": 32,"h": 32},"duration": 71},
+   {"filename": "sprite-test 23.aseprite","frame": {"x": 239,"y": 69,"w": 32,"h": 32},"rotated": false,"trimmed": false,"spriteSourceSize": {"x": 0,"y": 0,"w": 32,"h": 32},"sourceSize": {"w": 32,"h": 32},"duration": 500}
+ ],
+ "meta": {
+   "app": "https://www.aseprite.org/",
+   "version": "1.3.9",
+   "image": "sprite-test.png",
+   "format": "RGBA8888",
+   "size": {
+     "w": 271,
+     "h": 101
+   },
+   "scale": "1",
+   "frameTags": [
+     {
+       "name": "stoi",
+       "from": 0,
+       "to": 3,
+       "direction": "forward",
+       "color": "#000000ff"
+     },
+     {
+       "name": "biegnie",
+       "from": 8,
+       "to": 15,
+       "direction": "forward",
+       "color": "#000000ff"
+     },
+     {
+       "name": "waha",
+       "from": 17,
+       "to": 20,
+       "direction": "pingpong",
+       "color": "#000000ff"
+     },
+     {
+       "name": "atak",
+       "from": 16,
+       "to": 23,
+       "direction": "forward",
+       "repeat": "1",
+       "color": "#000000ff"
+     },
+     {
+       "name": "cofa",
+       "from": 8,
+       "to": 15,
+       "direction": "reverse",
+       "color": "#000000ff"
+     }
+   ],
+   "layers": [
+     {
+       "name": "Layer 1",
+       "opacity": 255,
+       "blendMode": "normal"
+     }
+   ],
+   "slices": []
+ }
+}

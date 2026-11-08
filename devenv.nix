@@ -4,6 +4,7 @@
   # Narzędzia dostępne w powłoce projektu
   packages = with pkgs; [
     raylib          # biblioteka graficzna (z pliku raylib-config.cmake korzysta CMake)
+    nlohmann_json   # JSON arkuszy sprite'ów (Aseprite / TexturePacker) - find_package w CMake
     cmake
     ninja
     pkg-config

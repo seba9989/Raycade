@@ -75,6 +75,31 @@ class Bitmap {
     /** @brief Sprawdza, czy bitmapa nie ma pikseli (0 x 0). */
     bool IsEmpty() const { return image_.data == nullptr || Width() <= 0 || Height() <= 0; }
 
+    /**
+     * @brief Sprawdza, czy bitmapa ma piksele i nie jest zasobem zastępczym.
+     * @details Assets zamiast pliku, którego nie da się wczytać, zwraca szachownicę
+     * (Assets::Missing()) - da się ją narysować, ale IsLoaded() zwraca dla niej false:
+     * @code{.cpp}
+     * auto hero = engine.Assets().Bitmap("hero.png");
+     * if (!hero->IsLoaded()) engine.Log(LogLevel::Warning, "brak hero.png");
+     * @endcode
+     * @return true dla niepustej bitmapy, która nie jest zastępcza.
+     */
+    bool IsLoaded() const { return !IsEmpty() && !placeholder_; }
+
+    /**
+     * @brief Oznacza bitmapę jako zastępczą (np. w miejsce brakującego pliku).
+     * @param value Czy bitmapa jest zastępcza.
+     * @return Ta sama bitmapa.
+     */
+    Bitmap& Placeholder(bool value = true) {
+        placeholder_ = value;
+        return *this;
+    }
+
+    /** @brief Sprawdza, czy bitmapa jest zastępcza (Placeholder()). */
+    bool IsPlaceholder() const { return placeholder_; }
+
     /** @brief Zwalnia obraz i ewentualną teksturę. */
     ~Bitmap();
 
@@ -164,4 +189,5 @@ class Bitmap {
     Image image_{};               /**< Piksele w RAM (format R8G8B8A8). */
     mutable Texture2D texture_{}; /**< Kopia na karcie graficznej, tworzona na żądanie. */
     mutable bool dirty_ = true;   /**< Czy tekstura wymaga odświeżenia. */
+    bool placeholder_ = false;    /**< Czy to bitmapa zastępcza (brakujący plik). */
 };

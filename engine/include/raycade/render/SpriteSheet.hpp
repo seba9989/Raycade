@@ -6,8 +6,10 @@
 
 #include <raylib.h>
 
+#include <functional>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -55,6 +57,26 @@ struct SpriteClip {
 };
 
 /**
+ * @brief Klatka arkusza: prostokąt w bitmapie i jego miejsce w pełnej klatce.
+ * @details Atlas z Aseprite albo TexturePackera może zapisywać klatki przycięte do
+ * nieprzezroczystych pikseli. Wtedy area jest mniejszy od klatki, offset mówi, gdzie w pełnej
+ * klatce leży jego lewy górny róg, a size podaje rozmiar pełnej klatki - dzięki temu Origin()
+ * i obszar trafienia sprite'a nie skaczą między klatkami.
+ */
+struct SpriteFrame {
+    Rectangle area{0, 0, 0, 0}; /**< Prostokąt w pikselach bitmapy. */
+    Vector2 offset{0, 0};       /**< Położenie area w pełnej klatce. */
+    Vector2 size{0, 0};         /**< Rozmiar pełnej klatki; {0, 0} - rozmiar area. */
+    float duration = 0.0f;      /**< Czas klatki z pliku w sekundach; 0 - brak. */
+    std::string name;           /**< Nazwa klatki z pliku (np. "run_01.png"); może być pusta. */
+
+    /** @brief Podaje rozmiar pełnej klatki (size albo rozmiar area). */
+    Vector2 FullSize() const {
+        return size.x > 0 && size.y > 0 ? size : Vector2{area.width, area.height};
+    }
+};
+
+/**
  * @brief Arkusz klatek (bitmapa + prostokąty klatek) z nazwanymi animacjami.
  * @details Opis animacji należy do arkusza, a nie do sprite'a, więc dziesięciu przeciwników
  * dzieli jeden obiekt - definiuje się go raz, a każdy shapes::Sprite pamięta tylko własny
@@ -76,6 +98,13 @@ struct SpriteClip {
  *     .Event("biegnie", 5, "krok");
  * for (int i = 0; i < 10; ++i)
  *     scene.Spawn<shapes::Sprite>().Sheet(hero).Play("biegnie").Position({i * 40.0f, 0});
+ * @endcode
+ *
+ * Arkusz z programu graficznego wczytuje Load() z pliku JSON - najprościej przez pamięć
+ * podręczną zasobów (Assets::Sheet()):
+ * @code{.cpp}
+ * auto hero = engine.Assets().Sheet("hero.json"); // obraz, klatki i animacje z tagów
+ * scene.Spawn<shapes::Sprite>().Sheet(hero).Play("run");
  * @endcode
  */
 class SpriteSheet {
@@ -110,6 +139,39 @@ class SpriteSheet {
         int count = 0
     );
 
+    /** @brief Funkcja dostarczająca bitmapę dla ścieżki obrazu (nullptr - błąd). */
+    using BitmapLoader = std::function<std::shared_ptr<const ::Bitmap>(const std::string& path)>;
+
+    /**
+     * @brief Wczytuje arkusz z pliku JSON wyeksportowanego z Aseprite albo TexturePackera.
+     * @details Obsługiwany jest układ `{"frames": ..., "meta": {...}}`:
+     * - frames jako tablica (Aseprite "Array", TexturePacker "JSON Array") albo obiekt
+     *   (Aseprite "Hash", TexturePacker "JSON Hash") - kolejność klatek jak w pliku,
+     * - frame, spriteSourceSize i sourceSize - także klatki przycięte (trimmed),
+     * - duration klatki w milisekundach (Aseprite) - czasy klatek animacji,
+     * - meta.image - obraz arkusza, ścieżka względem pliku JSON,
+     * - meta.frameTags (Aseprite) - animacje: from, to, direction (forward, reverse,
+     *   pingpong, pingpong_reverse) i repeat (odtworzenie N razy, potem Playback::Once).
+     *
+     * Bez frameTags animacje powstają z nazw klatek: "run_01.png", "run_02.png" dają animację
+     * "run" (końcowe cyfry i rozszerzenie są odcinane), a pojedyncza klatka "coin.png" -
+     * animację "coin". Klatki obrócone w atlasie (TexturePacker "rotated") nie są obsługiwane -
+     * wczytanie zapisuje ostrzeżenie; trzeba wyłączyć obracanie przy eksporcie.
+     * @code{.cpp}
+     * // aseprite -b hero.aseprite --sheet hero.png --data hero.json --format json-array
+     * //          --list-tags
+     * auto hero = Shared(SpriteSheet::Load(engine.AssetPath("hero.json")));
+     * @endcode
+     * @param path Ścieżka pliku JSON.
+     * @param loadBitmap Skąd wziąć obraz (np. z Assets); domyślnie Bitmap::Load().
+     * @return Arkusz albo brak wartości, gdy pliku albo obrazu nie da się wczytać (przyczyna
+     * w logu).
+     */
+    static std::optional<SpriteSheet> Load(
+        const std::string& path,
+        const BitmapLoader& loadBitmap = {}
+    );
+
     /**
      * @brief Ustawia bitmapę arkusza (klatki zostają).
      * @param bitmap Bitmapa (współdzielona).
@@ -129,7 +191,19 @@ class SpriteSheet {
      * @return Ten sam arkusz.
      */
     SpriteSheet& Frame(Rectangle area) {
-        frames_.push_back(area);
+        SpriteFrame frame;
+        frame.area = area;
+        frames_.push_back(std::move(frame));
+        return *this;
+    }
+
+    /**
+     * @brief Dopisuje klatkę z pełnym opisem (przycięcie, czas, nazwa).
+     * @param frame Klatka.
+     * @return Ten sam arkusz.
+     */
+    SpriteSheet& Frame(SpriteFrame frame) {
+        frames_.push_back(std::move(frame));
         return *this;
     }
 
@@ -138,13 +212,30 @@ class SpriteSheet {
      * @param index Numer klatki; spoza zakresu jest przycinany.
      * @return Prostokąt w pikselach bitmapy; {0, 0, 0, 0} dla arkusza bez klatek.
      */
-    Rectangle Frame(int index) const;
+    Rectangle Frame(int index) const { return FrameInfo(index).area; }
+
+    /**
+     * @brief Podaje pełny opis klatki (przycięcie, czas, nazwa).
+     * @param index Numer klatki; spoza zakresu jest przycinany.
+     * @return Klatka; pusta dla arkusza bez klatek.
+     */
+    const SpriteFrame& FrameInfo(int index) const;
+
+    /**
+     * @brief Szuka klatki po nazwie z pliku.
+     * @param name Nazwa, np. "coin.png".
+     * @return Numer klatki albo -1.
+     */
+    int FindFrame(const std::string& name) const;
 
     /** @brief Podaje liczbę klatek. */
     int FrameCount() const { return static_cast<int>(frames_.size()); }
 
-    /** @brief Sprawdza, czy arkusz ma niepustą bitmapę i co najmniej jedną klatkę. */
-    bool IsLoaded() const { return bitmap_ && !bitmap_->IsEmpty() && !frames_.empty(); }
+    /**
+     * @brief Sprawdza, czy arkusz ma wczytaną bitmapę (Bitmap::IsLoaded() - nie zastępczą)
+     * i co najmniej jedną klatkę.
+     */
+    bool IsLoaded() const { return bitmap_ && bitmap_->IsLoaded() && !frames_.empty(); }
 
     /**
      * @brief Definiuje animację (albo zastępuje istniejącą o tej nazwie).
@@ -225,6 +316,6 @@ class SpriteSheet {
     SpriteClip* EditClip(const std::string& name, const char* function);
 
     std::shared_ptr<const ::Bitmap> bitmap_;  /**< Bitmapa klatek. */
-    std::vector<Rectangle> frames_;           /**< Prostokąty klatek. */
-    std::map<std::string, SpriteClip> clips_; /**< Animacje według nazw. */
+    std::vector<SpriteFrame> frames_;         /**< Klatki. */
+    std::map<std::string, SpriteClip> clips_; /**< Animacje (klucz: nazwa). */
 };

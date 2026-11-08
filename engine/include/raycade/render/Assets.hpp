@@ -1,6 +1,6 @@
 /**
  * @file Assets.hpp
- * @brief Klasa Assets - pamięć podręczna zasobów z plików (bitmapy, czcionki).
+ * @brief Klasa Assets - pamięć podręczna zasobów z plików (bitmapy, czcionki, arkusze).
  */
 #pragma once
 
@@ -11,6 +11,7 @@
 #include <unordered_map>
 
 #include <raycade/render/Bitmap.hpp>
+#include <raycade/render/SpriteSheet.hpp>
 #include <raycade/render/Typeface.hpp>
 
 /**
@@ -23,7 +24,9 @@
  * pliku wykonywalnego (Engine::AssetPath()). Ścieżka bezwzględna jest używana bez zmian.
  *
  * Plik, którego nie da się wczytać, nie daje nullptr: bitmapa zostaje zastąpiona szachownicą
- * magenta-czarną (Missing()), a czcionka - fontem domyślnym raylib. Błąd jest widoczny na
+ * magenta-czarną (Missing()), arkusz - jedną klatką z tą szachownicą, a czcionka - fontem
+ * domyślnym raylib. Czy plik się wczytał, mówi Bitmap::IsLoaded(), SpriteSheet::IsLoaded()
+ * i Typeface::IsDefault(). Błąd jest widoczny na
  * ekranie, a w logu pojawia się jeden wpis na plik, nawet jeśli gra prosi o niego co klatkę.
  *
  * Silnik zwalnia nieużywane zasoby (Purge()) po zwolnieniu albo ponownym wczytaniu sceny,
@@ -32,6 +35,7 @@
  * Assets& assets = Engine::Get().Assets();
  * auto coin = assets.Bitmap("coin.png");
  * auto font = assets.Font("Roboto.ttf");
+ * auto hero = assets.Sheet("hero.json"); // Aseprite / TexturePacker
  * for (int i = 0; i < 10; ++i)
  *     scene.Spawn<shapes::Sprite>().Sheet(coin, {16, 16}).Play().Position({i * 40.0f, 0});
  * @endcode
@@ -55,7 +59,7 @@ class Assets {
     /**
      * @brief Zamienia nazwę zasobu na ścieżkę pliku.
      * @param name Nazwa względna (np. "postac/hero.png") albo ścieżka bezwzględna.
-     * @return Ścieżka pliku.
+     * @return Ścieżka pliku (znormalizowana - bez "." i ".."; służy też jako klucz pamięci).
      */
     std::string Path(const std::string& name) const;
 
@@ -84,12 +88,30 @@ class Assets {
 
     /**
      * @brief Podaje zastępczą bitmapę (szachownica 16 x 16, magenta i czarny).
+     * @details Bitmapa ma znacznik Bitmap::Placeholder(), więc jej IsLoaded() zwraca false.
      * @return Wspólna bitmapa zastępcza.
      */
     std::shared_ptr<const ::Bitmap> Missing();
 
+    /**
+     * @brief Podaje arkusz klatek z pliku JSON (Aseprite, TexturePacker), wczytując go przy
+     * pierwszym użyciu.
+     * @details Obraz z meta.image (względem pliku JSON) też trafia do pamięci podręcznej -
+     * Bitmap() z tym samym plikiem zwraca ten sam obiekt. Arkusz jest tylko do odczytu; żeby
+     * dopisać animacje albo zdarzenia klatek, robi się kopię:
+     * @code{.cpp}
+     * auto hero = std::make_shared<SpriteSheet>(*assets.Sheet("hero.json"));
+     * hero->Event("run", 2, "krok");
+     * @endcode
+     * Format i obsługiwane pola opisuje SpriteSheet::Load().
+     * @param name Nazwa pliku (patrz Path()).
+     * @return Arkusz albo arkusz z jedną klatką szachownicy, gdy pliku albo obrazu nie da się
+     * wczytać.
+     */
+    std::shared_ptr<const SpriteSheet> Sheet(const std::string& name);
+
     /** @brief Podaje liczbę zasobów w pamięci podręcznej. */
-    std::size_t Count() const { return bitmaps_.size() + fonts_.size(); }
+    std::size_t Count() const { return bitmaps_.size() + fonts_.size() + sheets_.size(); }
 
     /**
      * @brief Zwalnia zasoby, których nie używa już nikt poza pamięcią podręczną.
@@ -111,8 +133,10 @@ class Assets {
     bool Failed(const std::string& key, const std::string& path);
 
     std::string directory_; /**< Katalog nazw względnych. */
-    std::unordered_map<std::string, std::shared_ptr<const ::Bitmap>> bitmaps_; /**< Bitmapy. */
-    std::unordered_map<std::string, std::shared_ptr<const Typeface>> fonts_;   /**< Czcionki. */
+    std::unordered_map<std::string, std::shared_ptr<const ::Bitmap>> bitmaps_;   /**< Bitmapy. */
+    std::unordered_map<std::string, std::shared_ptr<const Typeface>> fonts_;     /**< Czcionki. */
+    std::unordered_map<std::string, std::shared_ptr<const SpriteSheet>> sheets_; /**< Arkusze. */
+    std::shared_ptr<const SpriteSheet> missingSheet_; /**< Arkusz zastępczy. */
     std::set<std::string> failed_;                    /**< Klucze, których nie wczytano. */
     std::shared_ptr<const ::Bitmap> missing_;         /**< Bitmapa zastępcza. */
     std::shared_ptr<const Typeface> defaultTypeface_; /**< Font raylib dla błędów. */
