@@ -75,7 +75,7 @@
  *
  * return engine
  *     .OnUpdate([&](float) {
- *         if (engine.KeyPressed(KEY_ENTER)) engine.SwitchScene("menu");
+ *         if (engine.Input().KeyPressed(KEY_ENTER)) engine.SwitchScene("menu");
  *     })
  *     .Run();
  * @endcode
@@ -287,6 +287,9 @@ class Engine : public Contextable {
      */
     Engine& Icon(std::string path);
 
+    /** @brief Podaje ścieżkę ikony okna ("" - domyślna). */
+    const std::string& Icon() const { return icon_; }
+
     /**
      * @brief Ustawia shader nakładany na cały obraz gry (post-processing: CRT, winieta,
      * skala szarości).
@@ -316,61 +319,8 @@ class Engine : public Contextable {
 
     /** @} */
 
-    /** @name Konfiguracja wejścia i logów */
+    /** @name Gesty, klawisz wyjścia i logi */
     /** @{ */
-
-    /**
-     * @brief Włącza lub wyłącza odczyt klawiatury.
-     * @param value Czy włączyć klawiaturę.
-     * @return Ten sam silnik.
-     */
-    Engine& KeyboardEnabled(bool value = true) {
-        input_.KeyboardEnabled(value);
-        return *this;
-    }
-
-    /** @brief Sprawdza, czy odczyt klawiatury jest włączony. */
-    bool IsKeyboardEnabled() const { return input_.IsKeyboardEnabled(); }
-
-    /**
-     * @brief Włącza lub wyłącza odczyt myszy.
-     * @details Wyłączenie myszy wyłącza też zdarzenia myszy obiektów sceny.
-     * @param value Czy włączyć mysz.
-     * @return Ten sam silnik.
-     */
-    Engine& MouseEnabled(bool value = true) {
-        input_.MouseEnabled(value);
-        return *this;
-    }
-
-    /** @brief Sprawdza, czy odczyt myszy jest włączony. */
-    bool IsMouseEnabled() const { return input_.IsMouseEnabled(); }
-
-    /**
-     * @brief Włącza lub wyłącza odczyt padów.
-     * @param value Czy włączyć pady.
-     * @return Ten sam silnik.
-     */
-    Engine& GamepadEnabled(bool value = true) {
-        input_.GamepadEnabled(value);
-        return *this;
-    }
-
-    /** @brief Sprawdza, czy odczyt padów jest włączony. */
-    bool IsGamepadEnabled() const { return input_.IsGamepadEnabled(); }
-
-    /**
-     * @brief Włącza lub wyłącza odczyt ekranu dotykowego.
-     * @param value Czy włączyć dotyk.
-     * @return Ten sam silnik.
-     */
-    Engine& TouchEnabled(bool value = true) {
-        input_.TouchEnabled(value);
-        return *this;
-    }
-
-    /** @brief Sprawdza, czy odczyt ekranu dotykowego jest włączony. */
-    bool IsTouchEnabled() const { return input_.IsTouchEnabled(); }
 
     /**
      * @brief Wybiera gesty rozpoznawane przez raylib (domyślnie wszystkie).
@@ -669,65 +619,18 @@ class Engine : public Contextable {
 
     /** @} */
 
-    /** @name Klawiatura i mysz */
-    /** @{ */
-
     /**
-     * @brief Sprawdza, czy klawisz jest aktualnie wciśnięty.
-     * @param key Kod klawisza raylib.
-     * @return Stan klawisza.
-     */
-    bool KeyDown(int key) const { return input_.KeyDown(key); }
-
-    /**
-     * @brief Sprawdza, czy klawisz naciśnięto w bieżącej klatce.
-     * @param key Kod klawisza raylib.
-     * @return Stan naciśnięcia.
-     */
-    bool KeyPressed(int key) const { return input_.KeyPressed(key); }
-
-    /**
-     * @brief Sprawdza, czy przycisk myszy jest wciśnięty.
-     * @param button Kod przycisku raylib.
-     * @return Stan przycisku.
-     */
-    bool MouseDown(int button) const { return input_.MouseDown(button); }
-
-    /**
-     * @brief Sprawdza, czy przycisk myszy naciśnięto w bieżącej klatce.
-     * @param button Kod przycisku raylib.
-     * @return Stan naciśnięcia.
-     */
-    bool MousePressed(int button) const { return input_.MousePressed(button); }
-
-    /**
-     * @brief Pobiera pozycję kursora.
-     * @details We współrzędnych gry: przy ScaleMode() innym niż None są one przeliczone
-     * z pikseli okna na rozdzielczość gry (ViewSize()).
-     * @return Współrzędne kursora albo {0, 0}, gdy mysz jest wyłączona.
-     */
-    Vector2 MousePosition() const { return input_.MousePosition(); }
-
-    /**
-     * @brief Udostępnia pełny odczyt wejścia: klawiatura, mysz, pady i dotyk.
-     * @details Powyższe metody to skróty najczęstszych zapytań; resztę (np. KeyReleased(),
-     * MouseWheel(), GamepadAxis()) daje Input.
-     * @return Stan wejścia (ten sam, który obiekty dostają w Tick()).
-     */
-    const ::Input& Input() const { return input_; }
-
-    /** @} */
-
-    /**
-     * @name Akcje i osie wejścia
-     * Nazwy zamiast konkretnych klawiszy: gra pyta o "skok", a nie o spację. Dzięki temu jedna
-     * akcja może mieć kilka źródeł (klawiatura, mysz, pad), a sterowanie da się zmienić
-     * w jednym miejscu. Odczyt: Input::ActionPressed(), Input::Axis() (także w Tick()).
+     * @name Wejście
+     * Odczyt wejścia i jego konfiguracja (włączanie urządzeń, akcje i osie) są w klasie Input -
+     * silnik jej nie dubluje. Obiekty sceny dostają ten sam stan w Tick().
      * @code{.cpp}
-     * engine.BindAction("skok", {bind::Key(KEY_SPACE), bind::Pad(GAMEPAD_BUTTON_RIGHT_FACE_DOWN)})
+     * engine.Input()
+     *     .BindAction("skok", {bind::Key(KEY_SPACE), bind::Pad(GAMEPAD_BUTTON_RIGHT_FACE_DOWN)})
      *     .BindAxis("ruch_x", {bind::Key(KEY_A), bind::Key(KEY_LEFT)},
      *               {bind::Key(KEY_D), bind::Key(KEY_RIGHT)},
      *               {bind::PadAxis(GAMEPAD_AXIS_LEFT_X, 1.0f)});
+     *
+     * if (engine.Input().KeyPressed(KEY_F11)) engine.Fullscreen(!engine.IsFullscreen());
      *
      * // w Tick(dt, input):
      * if (input.ActionPressed("skok")) Jump();
@@ -737,56 +640,15 @@ class Engine : public Contextable {
     /** @{ */
 
     /**
-     * @brief Ustawia źródła akcji (zastępuje poprzednie).
-     * @param action Nazwa akcji.
-     * @param bindings Źródła z przestrzeni nazw bind.
-     * @return Ten sam silnik.
+     * @brief Udostępnia wejście: klawiatura, mysz, pady, dotyk, akcje i osie.
+     * @details Pozycje kursora i dotyku są we współrzędnych gry: przy ScaleMode() innym niż
+     * None są przeliczone z pikseli okna na rozdzielczość gry (ViewSize()).
+     * @return Stan wejścia (ten sam, który obiekty dostają w Tick()).
      */
-    Engine& BindAction(const std::string& action, std::vector<InputBinding> bindings) {
-        input_.BindAction(action, std::move(bindings));
-        return *this;
-    }
+    ::Input& Input() { return input_; }
 
-    /**
-     * @brief Ustawia oś: źródła na minus, na plus i osie analogowe pada.
-     * @param axis Nazwa osi.
-     * @param negative Źródła dające -1 (np. A, strzałka w lewo).
-     * @param positive Źródła dające +1 (np. D, strzałka w prawo).
-     * @param analog Osie pada: bind::PadAxis(GAMEPAD_AXIS_*, kierunek); kierunek -1 odwraca oś.
-     * @param deadzone Wychylenia analogowe mniejsze od tej wartości są pomijane.
-     * @return Ten sam silnik.
-     */
-    Engine& BindAxis(
-        const std::string& axis,
-        std::vector<InputBinding> negative,
-        std::vector<InputBinding> positive,
-        std::vector<InputBinding> analog = {},
-        float deadzone = 0.15f
-    ) {
-        input_.BindAxis(
-            axis, std::move(negative), std::move(positive), std::move(analog), deadzone
-        );
-        return *this;
-    }
-
-    /**
-     * @brief Usuwa akcję albo oś o podanej nazwie.
-     * @param name Nazwa akcji lub osi.
-     * @return Ten sam silnik.
-     */
-    Engine& Unbind(const std::string& name) {
-        input_.Unbind(name);
-        return *this;
-    }
-
-    /** @brief Skrót: Input::ActionDown(). */
-    bool ActionDown(const std::string& action) const { return input_.ActionDown(action); }
-    /** @brief Skrót: Input::ActionPressed(). */
-    bool ActionPressed(const std::string& action) const { return input_.ActionPressed(action); }
-    /** @brief Skrót: Input::ActionReleased(). */
-    bool ActionReleased(const std::string& action) const { return input_.ActionReleased(action); }
-    /** @brief Skrót: Input::Axis(). */
-    float Axis(const std::string& axis) const { return input_.Axis(axis); }
+    /** @brief Udostępnia wejście tylko do odczytu. */
+    const ::Input& Input() const { return input_; }
 
     /** @} */
 
@@ -798,17 +660,23 @@ class Engine : public Contextable {
 
     /**
      * @brief Przenosi kursor w podane miejsce.
-     * @param position Nowa pozycja kursora we współrzędnych gry (jak MousePosition()).
+     * @details Polecenie, a nie setter - pozycję kursora czyta Input::MousePosition().
+     * @param position Nowa pozycja kursora we współrzędnych gry (jak Input::MousePosition()).
      * @return Ten sam silnik.
      */
-    Engine& MousePosition(Vector2 position);
+    Engine& MoveCursor(Vector2 position);
 
     /**
      * @brief Ustawia wygląd kursora systemowego.
+     * @details Nazwa w grupie Cursor*: CursorShape(), CursorHidden(), CursorLocked(),
+     * MoveCursor().
      * @param cursor Kod raylib (MOUSE_CURSOR_DEFAULT, MOUSE_CURSOR_POINTING_HAND itd.).
      * @return Ten sam silnik.
      */
-    Engine& MouseCursor(int cursor);
+    Engine& CursorShape(int cursor);
+
+    /** @brief Podaje wygląd kursora (MOUSE_CURSOR_*). */
+    int CursorShape() const { return cursorShape_; }
 
     /**
      * @brief Ukrywa albo pokazuje kursor nad oknem.
@@ -951,6 +819,9 @@ class Engine : public Contextable {
      * @return Ten sam silnik.
      */
     Engine& Opacity(float opacity);
+
+    /** @brief Podaje przezroczystość okna (1 - nieprzezroczyste). */
+    float Opacity() const { return opacity_.value_or(1.0f); }
 
     /** @brief Maksymalizuje okno (wymaga okna o zmiennym rozmiarze). */
     Engine& Maximize();
@@ -1226,9 +1097,9 @@ class Engine : public Contextable {
      * Nagrywa klawiaturę, mysz i pady klatka po klatce, a potem odtwarza je, np. żeby pokazać
      * demo na obronie zawsze tak samo. Podczas odtwarzania prawdziwe wejście nadal działa.
      * @code{.cpp}
-     * if (engine.KeyPressed(KEY_F5)) engine.StartRecording();
-     * if (engine.KeyPressed(KEY_F6)) engine.StopRecording("demo.rae");
-     * if (engine.KeyPressed(KEY_F7)) engine.Replay("demo.rae");
+     * if (engine.Input().KeyPressed(KEY_F5)) engine.StartRecording();
+     * if (engine.Input().KeyPressed(KEY_F6)) engine.StopRecording("demo.rae");
+     * if (engine.Input().KeyPressed(KEY_F7)) engine.Replay("demo.rae");
      * @endcode
      */
     /** @{ */
@@ -1260,35 +1131,19 @@ class Engine : public Contextable {
 
     /** @} */
 
-    /** @name Czyszczenie ekranu i bitmap */
+    /**
+     * @name Czyszczenie ekranu
+     * Bitmapę i teksturę czyści się ich własnym Clear() (Bitmap::Clear(), RenderTarget::Clear()).
+     */
     /** @{ */
 
     /**
-     * @brief Czyści aktualny cel rysowania wskazanym kolorem.
+     * @brief Czyści aktualny cel rysowania (ekran albo otwartą teksturę) wskazanym kolorem.
      * @param color Kolor czyszczenia.
      * @return Ten sam silnik.
      */
     Engine& Clear(Color color) {
         ::ClearBackground(color);
-        return *this;
-    }
-
-    /**
-     * @brief Czyści teksturę renderowaną (np. zawartość visual::RenderGroup).
-     * @param target Tekstura docelowa.
-     * @param color Kolor czyszczenia.
-     * @return Ten sam silnik.
-     */
-    Engine& Clear(const RenderTarget& target, Color color);
-
-    /**
-     * @brief Czyści bitmapę w pamięci RAM.
-     * @param bitmap Bitmapa docelowa.
-     * @param color Kolor czyszczenia.
-     * @return Ten sam silnik.
-     */
-    Engine& Clear(Bitmap& bitmap, Color color) {
-        bitmap.Clear(color);
         return *this;
     }
 
@@ -1360,21 +1215,22 @@ class Engine : public Contextable {
     /** @brief Liczy prostokąt obrazu w oknie i przeliczenie myszy dla bieżącego rozmiaru okna. */
     void UpdateScaling();
 
-    std::string title_ = "Gra";             /**< Tytuł okna. */
-    int width_ = 800;                       /**< Szerokość okna w trybie okienkowym. */
-    int height_ = 600;                      /**< Wysokość okna w trybie okienkowym. */
-    bool fullscreen_ = false;               /**< Czy używać trybu pełnoekranowego. */
-    int fps_ = 60;                          /**< Docelowa liczba klatek na sekundę. */
-    Color background_ = BLACK;              /**< Kolor czyszczenia ekranu w każdej klatce. */
-    ::Input input_;                         /**< Stan i ustawienia urządzeń wejścia. */
-    int exitKey_ = KEY_ESCAPE;              /**< Klawisz zamykający okno. */
-    std::optional<Vector2> windowPosition_; /**< Pozycja okna do ustawienia przy Init(). */
-    std::optional<int> monitor_;            /**< Monitor do ustawienia przy Init(). */
-    unsigned int gestures_ = 0b1111111111;  /**< Rozpoznawane gesty (domyślnie wszystkie). */
-    std::optional<float> opacity_;          /**< Przezroczystość okna do ustawienia przy Init(). */
-    bool cursorLocked_ = false;             /**< Czy kursor jest zablokowany (CursorLocked()). */
-    bool eventWaiting_ = false;             /**< Czy włączone jest EventWaiting(). */
-    unsigned int windowFlags_ = 0;          /**< Flagi okna (FLAG_*) z Resizable() itd. */
+    std::string title_ = "Gra";              /**< Tytuł okna. */
+    int width_ = 800;                        /**< Szerokość okna w trybie okienkowym. */
+    int height_ = 600;                       /**< Wysokość okna w trybie okienkowym. */
+    bool fullscreen_ = false;                /**< Czy używać trybu pełnoekranowego. */
+    int fps_ = 60;                           /**< Docelowa liczba klatek na sekundę. */
+    Color background_ = BLACK;               /**< Kolor czyszczenia ekranu w każdej klatce. */
+    ::Input input_;                          /**< Stan i ustawienia urządzeń wejścia. */
+    int exitKey_ = KEY_ESCAPE;               /**< Klawisz zamykający okno. */
+    std::optional<Vector2> windowPosition_;  /**< Pozycja okna do ustawienia przy Init(). */
+    std::optional<int> monitor_;             /**< Monitor do ustawienia przy Init(). */
+    unsigned int gestures_ = 0b1111111111;   /**< Rozpoznawane gesty (domyślnie wszystkie). */
+    std::optional<float> opacity_;           /**< Przezroczystość okna do ustawienia przy Init(). */
+    int cursorShape_ = MOUSE_CURSOR_DEFAULT; /**< Wygląd kursora (CursorShape()). */
+    bool cursorLocked_ = false;              /**< Czy kursor jest zablokowany (CursorLocked()). */
+    bool eventWaiting_ = false;              /**< Czy włączone jest EventWaiting(). */
+    unsigned int windowFlags_ = 0;           /**< Flagi okna (FLAG_*) z Resizable() itd. */
     std::optional<std::pair<int, int>> minSize_; /**< Minimalny rozmiar okna. */
     std::optional<std::pair<int, int>> maxSize_; /**< Maksymalny rozmiar okna. */
     std::string icon_;                           /**< Ścieżka ikony do ustawienia przy Init(). */

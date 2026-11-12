@@ -177,7 +177,7 @@ SCENE("kamera") {
 
     // --- napisy w układzie okna ---
     scene.OnDraw([&engine, &camera](PrimitiveRenderer&) {
-        const Vector2 mouse = camera.ScreenToWorld(engine.MousePosition());
+        const Vector2 mouse = camera.ScreenToWorld(engine.Input().MousePosition());
         char info[160];
         std::snprintf(
             info, sizeof info,

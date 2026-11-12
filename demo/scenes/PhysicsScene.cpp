@@ -212,11 +212,12 @@ SCENE("fizyka") {
 
     scene.OnUpdate([&scene, &ledge](float) {
         Engine& engine = Engine::Get();
-        if (engine.KeyPressed(KEY_F1)) scene.DebugColliders(!scene.IsDebugColliders());
-        if (engine.KeyPressed(KEY_R)) engine.ReloadScene("fizyka");
-        if (engine.KeyPressed(KEY_B)) Ball(scene, engine.MousePosition());
+        const Input& input = engine.Input();
+        if (input.KeyPressed(KEY_F1)) scene.DebugColliders(!scene.IsDebugColliders());
+        if (input.KeyPressed(KEY_R)) engine.ReloadScene("fizyka");
+        if (input.KeyPressed(KEY_B)) Ball(scene, input.MousePosition());
         // zeskok przez platformę jednostronną: collider wyłączony, póki trzymany jest klawisz
-        ledge.Disabled(engine.KeyDown(KEY_S) || engine.KeyDown(KEY_DOWN));
+        ledge.Disabled(input.KeyDown(KEY_S) || input.KeyDown(KEY_DOWN));
     });
 
     scene.OnDraw([&player](PrimitiveRenderer&) {

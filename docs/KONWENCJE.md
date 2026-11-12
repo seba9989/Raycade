@@ -84,6 +84,13 @@ w `src/`. Katalogi mają nazwy małymi literami, pliki z klasami - PascalCase.
 - **Obiekty, które przyjmują zasób, przyjmują też nazwę pliku:** `Sprite::Sheet("hero.png")`,
   `Text::Font("font.ttf")` - z `Assets` w kontekście, jeśli jest.
 
+## Bez duplikatów
+
+Każda funkcja ma jedno miejsce. `Engine` nie dubluje metod `Input` (`engine.Input().KeyDown()`)
+ani `Clear()` bitmap i tekstur; sterowanie oknem i kursorem jest w `Engine`, a odczyt wejścia
+w `Input`. Metody, które prowadzą wewnętrzny przebieg (kroki `PhysicsWorld`,
+`SceneCamera::Update()`), są prywatne i dostępne tylko dla klas, które je wywołują (`friend`).
+
 ## Łańcuchowanie
 
 Każda metoda konfiguracji zwraca obiekt, na którym ją wywołano. W klasach z hierarchii Entity

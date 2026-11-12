@@ -229,11 +229,6 @@ void Engine::Shutdown() {
     initialized_ = false;
 }
 
-Engine& Engine::Clear(const RenderTarget& target, Color color) {
-    target.Clear(color);
-    return *this;
-}
-
 Engine& Engine::Log(LogLevel level, const std::string& message) {
     const std::string line = LevelName(level) + message;
     std::cerr << line << '\n';

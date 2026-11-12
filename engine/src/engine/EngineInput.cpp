@@ -12,16 +12,18 @@ Engine& Engine::ExitKey(int key) {
     return *this;
 }
 
-Engine& Engine::MousePosition(Vector2 position) {
-    if (!RequireWindow("MousePosition")) return *this;
+Engine& Engine::MoveCursor(Vector2 position) {
+    if (!RequireWindow("MoveCursor")) return *this;
     // pozycja podawana jest we współrzędnych gry; raylib oczekuje pikseli okna
     if (target_.IsValid()) position = input_.GameToWindow(position);
     ::SetMousePosition(static_cast<int>(position.x), static_cast<int>(position.y));
     return *this;
 }
 
-Engine& Engine::MouseCursor(int cursor) {
-    if (RequireWindow("MouseCursor")) ::SetMouseCursor(cursor);
+Engine& Engine::CursorShape(int cursor) {
+    if (!RequireWindow("CursorShape")) return *this;
+    cursorShape_ = cursor;
+    ::SetMouseCursor(cursor);
     return *this;
 }
 

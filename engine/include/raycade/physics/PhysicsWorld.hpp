@@ -37,7 +37,8 @@ inline constexpr std::uint32_t kAllLayers = 0xFFFFFFFFu;
  * @brief Świat fizyki jednej sceny (system sceny, obok PointerSystem) - liczony przez Box2D.
  * @details Scena ma jeden świat i sama go prowadzi - gra używa go pośrednio, przez ciała
  * (CharacterBody::MoveAndSlide(), Area::OverlappingBodies()) i ustawienia sceny
- * (Scene::Gravity(), Scene::DebugColliders()).
+ * (Scene::Gravity(), Scene::DebugColliders()). Publiczne są tylko ustawienia i zapytania
+ * (Raycast(), Overlap()); prowadzenie kroków jest prywatne i dostępne dla Scene i ciał.
  *
  * Obiekty sceny są odwzorowane w świecie Box2D (v3, jednostki: piksele):
  * | Raycade         | Box2D                                                                |
@@ -93,6 +94,27 @@ class PhysicsWorld {
     /** @brief Sprawdza, czy interpolacja rysowania jest włączona. */
     bool IsInterpolated() const { return interpolation_; }
 
+    /** @brief Pierwsze ciało na odcinku from-to (patrz Scene::Raycast()). */
+    std::optional<RayHit> Raycast(
+        Vector2 from,
+        Vector2 to,
+        std::uint32_t mask = kAllLayers,
+        const CollisionObject* exclude = nullptr
+    ) const;
+
+    /** @brief Ciała nachodzące na figurę w układzie sceny (patrz Scene::Overlap()). */
+    std::vector<PhysicsBody*> Overlap(
+        const ConvexPart& part,
+        std::uint32_t mask = kAllLayers,
+        const CollisionObject* exclude = nullptr
+    ) const;
+
+  private:
+    friend class Scene;           // prowadzi kroki, klatki i rysowanie colliderów
+    friend class CollisionObject; // interpolacja rysowania i lista colliderów
+    friend class CharacterBody;   // MoveAndSlide()
+    friend class Area;            // OverlappingBodies() i OverlappingAreas()
+
     /** @brief Ustawia ułamek drogi do następnego kroku stałego (Engine::FixedAlpha()). */
     PhysicsWorld& Alpha(float alpha) {
         alpha_ = alpha;
@@ -132,21 +154,6 @@ class PhysicsWorld {
     /** @brief Obszary nachodzące na obszar (stan z ostatniego kroku). */
     std::vector<Area*> OverlappingAreas(const Area& area);
 
-    /** @brief Pierwsze ciało na odcinku from-to (patrz Scene::Raycast()). */
-    std::optional<RayHit> Raycast(
-        Vector2 from,
-        Vector2 to,
-        std::uint32_t mask,
-        const CollisionObject* exclude
-    ) const;
-
-    /** @brief Ciała nachodzące na figurę w układzie sceny (patrz Scene::Overlap()). */
-    std::vector<PhysicsBody*> Overlap(
-        const ConvexPart& part,
-        std::uint32_t mask,
-        const CollisionObject* exclude
-    ) const;
-
     /**
      * @brief Rysuje collidery wszystkich obiektów (w układzie świata, przez kamerę).
      * @details Kolory: StaticBody - niebieski, CharacterBody - zielony, RigidBody - fioletowy,
@@ -163,7 +170,6 @@ class PhysicsWorld {
      */
     static void CollectShapes(const Entity& object, std::vector<const CollisionShape*>& shapes);
 
-  private:
     struct Impl; /**< Stan Box2D (świat, ciała, kształty) - zdefiniowany w PhysicsWorld.cpp. */
 
     /** @brief Para obiektów (zawsze w tej samej kolejności) - klucz zderzeń i nakładania. */

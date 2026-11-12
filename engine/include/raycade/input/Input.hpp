@@ -23,11 +23,12 @@
  * wyłączoną - IsKeyboardCaptured() mówi, czy tak jest w tej klatce.
  *
  * Akcje i osie (ActionPressed(), Axis()) to nazwy zamiast konkretnych klawiszy - patrz
- * Engine::BindAction() i Engine::BindAxis().
+ * BindAction() i BindAxis().
  *
- * Klasa tylko odczytuje stan. Sterowanie (pozycja i wygląd kursora, wibracja pada) jest
- * w Engine. Obiekty sceny dostają Input w Tick(), a z dowolnego miejsca jest dostępny przez
- * Engine::Get().Input().
+ * Klasa odczytuje stan i trzyma jego konfigurację (wyłączniki urządzeń, akcje, osie).
+ * Sterowanie oknem (pozycja i wygląd kursora, wibracja pada) jest w Engine. Obiekty sceny
+ * dostają Input w Tick() (tylko do odczytu), a z dowolnego miejsca jest dostępny przez
+ * Engine::Get().Input() - silnik nie dubluje jego metod.
  */
 class Input {
   public:
@@ -355,8 +356,8 @@ class Input {
 
     /**
      * @name Akcje i osie
-     * Powiązania ustawia się przez BindAction() i BindAxis() (zwykle przez skróty
-     * Engine::BindAction() i Engine::BindAxis()). Obiekty sceny dostają Input jako `const`,
+     * Powiązania ustawia się przez BindAction() i BindAxis() (zwykle
+     * `Engine::Get().Input().BindAction(...)`). Obiekty sceny dostają Input jako `const`,
      * więc mogą powiązania tylko odczytywać. Akcje respektują wyłączniki urządzeń i przejęcie
      * klawiatury przez pole tekstowe. Nieznana nazwa daje false albo 0.
      */

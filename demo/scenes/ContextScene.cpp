@@ -191,7 +191,7 @@ SCENE("kontekst") {
     scene.Spawn<ScoreBar>().Position({60, 520});
 
     scene.OnUpdate([&engine](float) {
-        if (engine.KeyPressed(KEY_R)) engine.ReloadScene("kontekst");
+        if (engine.Input().KeyPressed(KEY_R)) engine.ReloadScene("kontekst");
     });
 
     scene.OnDraw([&scene](PrimitiveRenderer&) {

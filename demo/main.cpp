@@ -140,20 +140,21 @@ int main() {
 
     return engine
         .OnUpdate([&](float) {
-            if (engine.KeyPressed(KEY_ONE)) engine.SwitchScene("menu");
-            if (engine.KeyPressed(KEY_TWO)) engine.SwitchScene("prymitywy");
-            if (engine.KeyPressed(KEY_THREE)) engine.SwitchScene("figury");
-            if (engine.KeyPressed(KEY_FOUR)) engine.SwitchScene("transformacje");
-            if (engine.KeyPressed(KEY_FIVE)) engine.SwitchScene("kontekst");
-            if (engine.KeyPressed(KEY_SIX)) engine.SwitchScene("trafienia");
-            if (engine.KeyPressed(KEY_SEVEN)) engine.SwitchScene("kamera");
-            if (engine.KeyPressed(KEY_EIGHT)) engine.SwitchScene("efekty");
-            if (engine.KeyPressed(KEY_NINE)) engine.SwitchScene("formularz");
-            if (engine.KeyPressed(KEY_ZERO)) engine.SwitchScene("sprite");
-            if (engine.KeyPressed(KEY_MINUS)) engine.SwitchScene("fizyka");
+            const Input& input = engine.Input();
+            if (input.KeyPressed(KEY_ONE)) engine.SwitchScene("menu");
+            if (input.KeyPressed(KEY_TWO)) engine.SwitchScene("prymitywy");
+            if (input.KeyPressed(KEY_THREE)) engine.SwitchScene("figury");
+            if (input.KeyPressed(KEY_FOUR)) engine.SwitchScene("transformacje");
+            if (input.KeyPressed(KEY_FIVE)) engine.SwitchScene("kontekst");
+            if (input.KeyPressed(KEY_SIX)) engine.SwitchScene("trafienia");
+            if (input.KeyPressed(KEY_SEVEN)) engine.SwitchScene("kamera");
+            if (input.KeyPressed(KEY_EIGHT)) engine.SwitchScene("efekty");
+            if (input.KeyPressed(KEY_NINE)) engine.SwitchScene("formularz");
+            if (input.KeyPressed(KEY_ZERO)) engine.SwitchScene("sprite");
+            if (input.KeyPressed(KEY_MINUS)) engine.SwitchScene("fizyka");
             // szarość całego obrazu (G) jest częścią sceny efektów - poza nią ją wyłączamy
             if (engine.ActiveScene() != "efekty" && engine.PostShader()) engine.PostShader(nullptr);
-            if (engine.KeyPressed(KEY_F11)) engine.Fullscreen(!engine.IsFullscreen());
+            if (input.KeyPressed(KEY_F11)) engine.Fullscreen(!engine.IsFullscreen());
         })
         .OnDraw([&](PrimitiveRenderer&) {
             const std::string hud = "Scena: " + engine.ActiveScene() +

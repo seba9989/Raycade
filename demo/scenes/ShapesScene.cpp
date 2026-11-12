@@ -137,9 +137,9 @@ SCENE("figury") {
             // wypełnienia jako już wypełniony i na nim się zatrzymuje
             static constexpr std::array<Color, 6> kColors{LIME,   PINK,  VIOLET,
                                                           ORANGE, BEIGE, MAGENTA};
-            const Engine& engine = Engine::Get();
-            const Vector2 seed = self.ScreenToLocal(engine.MousePosition());
-            const bool boundary = engine.KeyDown(KEY_LEFT_SHIFT) || engine.KeyDown(KEY_RIGHT_SHIFT);
+            const Input& input = Engine::Get().Input();
+            const Vector2 seed = self.ScreenToLocal(input.MousePosition());
+            const bool boundary = input.KeyDown(KEY_LEFT_SHIFT) || input.KeyDown(KEY_RIGHT_SHIFT);
             const Color color = kColors[colorIndex++ % kColors.size()];
 
             self.Edit([&](PrimitiveRenderer& r) {

@@ -19,13 +19,13 @@ SCENE("prymitywy") {
         .Paint(DARKBLUE)
         .Filled()
         .OnUpdate([](shapes::Rect& self, float dt) {
-            const Engine& engine = Engine::Get();
+            const Input& input = Engine::Get().Input();
             Vector2 position = self.Position();
             const float speed = 200 * dt;
-            if (engine.KeyDown(KEY_RIGHT)) position.x += speed;
-            if (engine.KeyDown(KEY_LEFT)) position.x -= speed;
-            if (engine.KeyDown(KEY_DOWN)) position.y += speed;
-            if (engine.KeyDown(KEY_UP)) position.y -= speed;
+            if (input.KeyDown(KEY_RIGHT)) position.x += speed;
+            if (input.KeyDown(KEY_LEFT)) position.x -= speed;
+            if (input.KeyDown(KEY_DOWN)) position.y += speed;
+            if (input.KeyDown(KEY_UP)) position.y -= speed;
             self.Position(position);
         })
         .OnKeyPressed(KEY_L, [](shapes::Rect& self) { self.Layer(self.Layer() == 0 ? 1 : 0); })
@@ -92,8 +92,8 @@ SCENE("prymitywy") {
         .Raster(Rasterizer::Custom)
         .Paint(RED)
         .OnUpdate([](shapes::Line& self, float) {
-            const Engine& engine = Engine::Get();
-            if (engine.MouseDown(MOUSE_BUTTON_RIGHT)) self.To(engine.MousePosition());
+            const Input& input = Engine::Get().Input();
+            if (input.MouseDown(MOUSE_BUTTON_RIGHT)) self.To(input.MousePosition());
         })
         .OnKeyPressed(KEY_SPACE, [incremental = true](shapes::Line& self) mutable {
             incremental = !incremental;

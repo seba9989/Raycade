@@ -259,7 +259,7 @@ SCENE("efekty") {
             self.Scale({scale, scale}); // skala bezwzględna (ScaleBy() mnożyłby bieżącą)
         });
 
-    engine.BindAction("nowa pilka", {bind::Key(KEY_B), bind::Gesture(GESTURE_DOUBLETAP)});
+    engine.Input().BindAction("nowa pilka", {bind::Key(KEY_B), bind::Gesture(GESTURE_DOUBLETAP)});
 
     scene.OnFixedUpdate([&scene](float step) {
         // fizyka w kroku stałym: wynik nie zależy od liczby klatek na sekundę
@@ -289,10 +289,10 @@ SCENE("efekty") {
     scene.OnUpdate([&scene, &counter, wave, gray](float) {
         Engine& e = Engine::Get();
         if (wave) wave->Uniform("time", static_cast<float>(e.Time()));
-        if (e.KeyPressed(KEY_G)) e.PostShader(e.PostShader() ? nullptr : gray);
+        if (e.Input().KeyPressed(KEY_G)) e.PostShader(e.PostShader() ? nullptr : gray);
 
-        if (e.ActionPressed("nowa pilka")) {
-            const Vector2 mouse = e.MousePosition();
+        if (e.Input().ActionPressed("nowa pilka")) {
+            const Vector2 mouse = e.Input().MousePosition();
             const bool inField = ::CheckCollisionPointRec(mouse, kField);
             SpawnBall(scene, inField ? mouse : Vector2{kField.x + kField.width / 2, kField.y + 40});
         }

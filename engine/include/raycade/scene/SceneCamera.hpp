@@ -151,13 +151,15 @@ class SceneCamera {
     /** @brief Udostępnia kamerę raylib (np. do własnego BeginMode2D). */
     const Camera2D& Raw() const { return camera_; }
 
+  private:
+    friend class Scene; // wywołuje Update() co klatkę
+
     /**
      * @brief Przesuwa Target() za śledzonym obiektem. Wywoływana przez scenę co klatkę.
      * @param dt Czas od poprzedniej klatki w sekundach.
      */
     void Update(float dt);
 
-  private:
     Camera2D camera_{{0, 0}, {0, 0}, 0.0f, 1.0f}; /**< Offset, target, obrót (stopnie), zoom. */
     std::function<Vector2()> follow_;             /**< Pozycja śledzonego obiektu. */
     const Entity* followed_ = nullptr;            /**< Śledzony obiekt (do Destroy()). */
