@@ -56,7 +56,7 @@ Voice& Voice::Stop() {
 
 bool Voice::IsPlaying() const {
     const auto* slot = SlotOf(*this);
-    return slot && !slot->paused;
+    return slot && !slot->paused && !slot->stopping;
 }
 
 const Audio* Voice::Sound() const {

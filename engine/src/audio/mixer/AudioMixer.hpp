@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <functional>
 #include <map>
+#include <memory>
 #include <set>
 #include <string>
 #include <unordered_map>
@@ -28,7 +29,9 @@
  * mikser przez Current().
  *
  * Krótki dźwięk jest wczytywany do pamięci raz na plik (Clip), a każdy głos gra własny alias
- * raylib (LoadSoundAlias) - tak ten sam plik może grać kilka razy naraz.
+ * raylib (LoadSoundAlias) - tak ten sam plik może grać kilka razy naraz. Dźwięk z
+ * Audio::Streamed() gra jako strumień raylib (Music) czytany z pliku, a zapętlony bez Streamed()
+ * - jako strumień z bajtów pliku w pamięci, bo tylko strumień raylib zapętla się bez przerwy.
  */
 class AudioMixer {
   public:
@@ -105,7 +108,13 @@ class AudioMixer {
         ::Audio* audio = nullptr;     /**< Dźwięk, z którego powstał głos. */
         std::string bus;              /**< Szyna (ustalona przy Play()). */
         std::string path;             /**< Wylosowany plik. */
+        bool stream = false;          /**< Czy głos gra strumień (music), a nie alias (sound). */
         ::Sound sound{};              /**< Alias próbek pliku. */
+        ::Music music{};              /**< Strumień (Streamed() albo Looped()). */
+        std::shared_ptr<const std::vector<unsigned char>> bytes; /**< Plik dla strumienia z pamięci. */
+        float fade = 1.0f;            /**< Bieżący poziom narastania/wyciszania (0-1). */
+        float fadeRate = 0.0f;        /**< Zmiana fade na sekundę. */
+        bool stopping = false;        /**< Czy głos wycisza się po Stop() (potem zwolnienie). */
         float volume = 1.0f;          /**< Głośność głosu (Voice::Volume()). */
         float pitch = 1.0f;           /**< Wysokość głosu (Voice::Pitch()). */
         float pan = 0.0f;             /**< Panorama głosu (Voice::Pan()). */
@@ -134,6 +143,12 @@ class AudioMixer {
 
     /** @brief Wczytuje plik do pamięci (raz); nullptr przy błędzie (raz w logu). */
     const Clip* LoadClip(const std::string& path);
+    /** @brief Wczytuje bajty pliku (raz) dla strumienia z pamięci; nullptr przy błędzie. */
+    std::shared_ptr<const std::vector<unsigned char>> LoadBytes(const std::string& path);
+    /** @brief Zapisuje w logu błąd wczytania (raz na plik). */
+    void Failed(const std::string& path);
+    /** @brief Wycisza pozostałe głosy szyny Exclusive() po starcie głosu slot. */
+    void Replace(const Slot& slot);
     /** @brief Uruchamia zgłoszony głos; false - nie udało się wczytać pliku. */
     bool Start(Slot& slot);
     /** @brief Zwalnia miejsce głosu (bez zdarzeń). */
@@ -158,6 +173,8 @@ class AudioMixer {
     std::map<std::string, ::Audio> sounds_;       /**< Dźwięki według nazw. */
     std::map<std::string, ::AudioBus> buses_;     /**< Szyny według nazw ("" - główna). */
     std::unordered_map<std::string, Clip> clips_; /**< Pliki w pamięci według ścieżek. */
+    /** Bajty plików dla zapętlonych strumieni z pamięci, według ścieżek. */
+    std::unordered_map<std::string, std::shared_ptr<const std::vector<unsigned char>>> bytes_;
     std::set<std::string> failed_;                /**< Pliki, których nie wczytano. */
     std::vector<Slot> slots_;                     /**< Pula głosów (stały rozmiar). */
 };

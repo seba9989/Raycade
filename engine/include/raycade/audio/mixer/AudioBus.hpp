@@ -92,7 +92,28 @@ class AudioBus {
     bool IsPaused() const { return paused_; }
 
     /**
-     * @brief Zatrzymuje wszystkie dźwięki szyny i jej dzieci.
+     * @brief Pozwala grać na szynie tylko jednemu dźwiękowi naraz.
+     * @details Start nowego dźwięku wycisza pozostałe dźwięki tej szyny (ich
+     * Audio::FadeOutTime()) - przy muzyce z FadeInTime() daje to przenikanie ścieżek. Dotyczy
+     * dźwięków samej szyny, nie jej dzieci. Tak samo działa szyna dialogów: nowa kwestia ucina
+     * poprzednią.
+     * @code{.cpp}
+     * engine.AudioBus("muzyka").Exclusive();
+     * engine.Audio("boss.ogg").Play(); // theme.ogg wycisza się, boss.ogg narasta
+     * @endcode
+     * @param value Czy tylko jeden dźwięk naraz.
+     * @return Ta sama szyna.
+     */
+    AudioBus& Exclusive(bool value = true) {
+        exclusive_ = value;
+        return *this;
+    }
+
+    /** @brief Sprawdza, czy na szynie gra tylko jeden dźwięk naraz. */
+    bool IsExclusive() const { return exclusive_; }
+
+    /**
+     * @brief Zatrzymuje wszystkie dźwięki szyny i jej dzieci (z ich Audio::FadeOutTime()).
      * @return Ta sama szyna.
      */
     AudioBus& Stop();
@@ -109,4 +130,5 @@ class AudioBus {
     float volume_ = 1.0f;  /**< Głośność. */
     bool muted_ = false;   /**< Wyciszenie. */
     bool paused_ = false;  /**< Pauza. */
+    bool exclusive_ = false; /**< Jeden dźwięk naraz. */
 };

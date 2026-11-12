@@ -29,6 +29,14 @@ class AudioMixer;
  * engine.Audio("kroki").Files({"step1.wav", "step2.wav", "step3.wav"}).Bus("efekty");
  * @endcode
  *
+ * Muzyka to zwykły dźwięk z Streamed() i Looped() na szynie z AudioBus::Exclusive() - nowa
+ * ścieżka płynnie zastępuje poprzednią:
+ * @code{.cpp}
+ * engine.AudioBus("muzyka").Exclusive();
+ * engine.Audio("theme.ogg").Streamed().Looped().Bus("muzyka").FadeInTime(1.5f).FadeOutTime(1.0f);
+ * engine.Audio("theme.ogg").Play();
+ * @endcode
+ *
  * Pliki wczytują się przy pierwszym odtworzeniu. Plik, którego nie da się wczytać, gra ciszą,
  * a w logu pojawia się jeden wpis na plik. Ustawienia zostają w silniku do końca programu,
  * a dane próbek są zwalniane razem z nieużywanymi zasobami (po zmianie scen).
@@ -118,23 +126,74 @@ class Audio {
     const std::string& Bus() const { return bus_; }
 
     /**
+     * @brief Odtwarza dźwięk w pętli, aż do Stop().
+     * @details Pętla jest bez przerwy na styku (dźwięk gra jako strumień z pamięci).
+     * @param value Czy zapętlić.
+     * @return Ten sam dźwięk.
+     */
+    Audio& Looped(bool value = true) {
+        looped_ = value;
+        return *this;
+    }
+
+    /** @brief Sprawdza, czy dźwięk gra w pętli. */
+    bool IsLooped() const { return looped_; }
+
+    /**
+     * @brief Czyta plik na bieżąco w czasie odtwarzania zamiast wczytywać go do pamięci.
+     * @details Do długich plików (muzyka, dialogi): w pamięci jest tylko mały bufor. Każde
+     * odtworzenie otwiera plik osobno, więc kilka odtworzeń naraz też działa.
+     * @param value Czy czytać plik na bieżąco.
+     * @return Ten sam dźwięk.
+     */
+    Audio& Streamed(bool value = true) {
+        streamed_ = value;
+        return *this;
+    }
+
+    /** @brief Sprawdza, czy plik jest czytany na bieżąco. */
+    bool IsStreamed() const { return streamed_; }
+
+    /**
+     * @brief Ustawia czas narastania głośności od zera na początku odtworzenia.
+     * @param seconds Czas w sekundach; 0 - od razu pełna głośność.
+     * @return Ten sam dźwięk.
+     */
+    Audio& FadeInTime(float seconds);
+
+    /** @brief Podaje czas narastania głośności. */
+    float FadeInTime() const { return fadeInTime_; }
+
+    /**
+     * @brief Ustawia czas wyciszania przy Stop() i przy zastąpieniu na szynie Exclusive().
+     * @param seconds Czas w sekundach; 0 - zatrzymanie od razu.
+     * @return Ten sam dźwięk.
+     */
+    Audio& FadeOutTime(float seconds);
+
+    /** @brief Podaje czas wyciszania. */
+    float FadeOutTime() const { return fadeOutTime_; }
+
+    /**
      * @brief Odtwarza dźwięk.
      * @details Odtworzenie startuje na końcu klatki, więc ustawienia podane na zwróconym
      * uchwycie działają od pierwszej próbki. Bez urządzenia audio zwraca martwy uchwyt.
+     * Na szynie Exclusive() odtworzenie zastępuje inne dźwięki tej szyny, a gdy ten sam dźwięk
+     * już na niej gra, Play() zwraca jego trwające odtworzenie zamiast zaczynać od nowa.
      * @return Uchwyt odtworzenia.
      */
     Voice Play();
 
     /**
-     * @brief Zatrzymuje wszystkie odtworzenia tego dźwięku.
+     * @brief Zatrzymuje wszystkie odtworzenia tego dźwięku (z wyciszeniem FadeOutTime()).
      * @return Ten sam dźwięk.
      */
     Audio& Stop();
 
-    /** @brief Sprawdza, czy gra choć jedno odtworzenie tego dźwięku. */
+    /** @brief Sprawdza, czy gra choć jedno odtworzenie (wyciszane po Stop() się nie liczą). */
     bool IsPlaying() const { return VoiceCount() > 0; }
 
-    /** @brief Podaje liczbę trwających odtworzeń tego dźwięku. */
+    /** @brief Podaje liczbę trwających odtworzeń (bez wyciszanych po Stop()). */
     int VoiceCount() const;
 
   private:
@@ -148,5 +207,9 @@ class Audio {
     float pitch_ = 1.0f;              /**< Wysokość. */
     float pitchVariation_ = 0.0f;     /**< Losowe odchylenie wysokości. */
     float pan_ = 0.0f;                /**< Panorama. */
+    float fadeInTime_ = 0.0f;         /**< Czas narastania. */
+    float fadeOutTime_ = 0.0f;        /**< Czas wyciszania. */
+    bool looped_ = false;             /**< Pętla. */
+    bool streamed_ = false;           /**< Czytanie pliku na bieżąco. */
     int lastFile_ = -1;               /**< Ostatnio wylosowany plik (bez powtórzeń). */
 };

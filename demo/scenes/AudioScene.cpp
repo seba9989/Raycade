@@ -1,12 +1,15 @@
 /**
  * @file AudioScene.cpp
- * @brief Pokaz dźwięku: Engine::Audio(), Voice i szyny miksera (AudioBus).
+ * @brief Pokaz dźwięku: Engine::Audio(), Voice, szyny miksera (AudioBus) i muzyka.
  * @details Dźwięki i szyny są skonfigurowane raz, w main.cpp - scena tylko je odtwarza.
  * - przyciski albo klawisze odtwarzają dźwięki: spacja moneta (losowa wysokość), K kroki
  *   (losowy plik z trzech), U uderzenie,
  * - Q odtwarza monetę z wysokością zmienioną tylko dla tego odtworzenia (Voice::Pitch()),
  * - P wstrzymuje szynę "efekty" razem z jej dzieckiem "kroki" (szyna "interfejs" gra dalej),
  * - N wycisza szynę "efekty", strzałki w górę i w dół zmieniają głośność szyny głównej,
+ * - muzyka startuje razem ze sceną; M przełącza ścieżkę theme/boss - szyna "muzyka" ma
+ *   Exclusive(), więc stara ścieżka się wycisza (FadeOutTime()), a nowa narasta (FadeInTime()),
+ *   S zatrzymuje muzykę z wyciszeniem, B wycisza samą szynę muzyki,
  * - napis u góry pokazuje stan szyn i liczbę trwających głosów.
  */
 
@@ -55,7 +58,8 @@ SCENE("dzwiek") {
     scene.Spawn<visual::Text>().Content("Dźwięk").FontSize(28).Position({40, 30});
     scene.Spawn<visual::Text>()
         .Content("Spacja moneta, K kroki, U uderzenie, Q moneta o kwintę wyżej\n"
-                 "P pauza efektów, N wyciszenie efektów, strzałki góra/dół głośność główna")
+                 "P pauza efektów, N wyciszenie efektów, strzałki góra/dół głośność główna\n"
+                 "M zmiana muzyki (przenikanie), S stop muzyki, B wyciszenie muzyki")
         .FontSize(16)
         .Paint(GRAY)
         .LineHeight(1.4f)
@@ -67,6 +71,9 @@ SCENE("dzwiek") {
 
     auto& status = scene.Spawn<visual::Text>().FontSize(18).Position({40, 70});
 
+    // muzyka: szyna Exclusive() - ta sama ścieżka nie zaczyna się od nowa przy powrocie na scenę
+    engine.Audio("theme.wav").Play();
+
     scene.OnUpdate([&engine, &status](float) {
         const Input& input = engine.Input();
         if (input.KeyPressed(KEY_SPACE)) engine.Audio("coin.wav").Play();
@@ -74,6 +81,14 @@ SCENE("dzwiek") {
         if (input.KeyPressed(KEY_U)) engine.Audio("uderzenie").Play();
         // zmiana tylko tego jednego odtworzenia - ustawienia dźwięku zostają bez zmian
         if (input.KeyPressed(KEY_Q)) engine.Audio("coin.wav").Play().Pitch(1.5f);
+
+        if (input.KeyPressed(KEY_M)) {
+            const bool boss = engine.Audio("boss.wav").IsPlaying();
+            engine.Audio(boss ? "theme.wav" : "boss.wav").Play(); // stara ścieżka się wycisza
+        }
+        if (input.KeyPressed(KEY_S)) engine.AudioBus("muzyka").Stop();
+        AudioBus& music = engine.AudioBus("muzyka");
+        if (input.KeyPressed(KEY_B)) music.Muted(!music.IsMuted());
 
         AudioBus& master = engine.AudioBus();
         AudioBus& effects = engine.AudioBus("efekty");
@@ -84,7 +99,7 @@ SCENE("dzwiek") {
 
         status.Content(
             "Główna: " + BusLabel(master) + "    efekty: " + BusLabel(effects) +
-            "    kroki: " + BusLabel(engine.AudioBus("kroki")) +
+            "    kroki: " + BusLabel(engine.AudioBus("kroki")) + "    muzyka: " + BusLabel(music) +
             "    głosy: " + std::to_string(master.VoiceCount())
         );
     });

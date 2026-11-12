@@ -64,7 +64,7 @@ class Voice {
      */
     Voice& Stop();
 
-    /** @brief Sprawdza, czy głos istnieje i nie jest wstrzymany. */
+    /** @brief Sprawdza, czy głos gra (istnieje, nie jest wstrzymany ani wyciszany po Stop()). */
     bool IsPlaying() const;
 
     /**
