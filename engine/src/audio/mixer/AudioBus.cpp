@@ -20,6 +20,11 @@ AudioBus& AudioBus::Volume(float volume) {
     return *this;
 }
 
+AudioBus& AudioBus::MaxVoices(int count) {
+    maxVoices_ = mixer_->ClampVoices(*this, count);
+    return *this;
+}
+
 AudioBus& AudioBus::Stop() {
     mixer_->Stop(*this);
     return *this;

@@ -10,13 +10,20 @@
  * - muzyka startuje razem ze sceną; M przełącza ścieżkę theme/boss - szyna "muzyka" ma
  *   Exclusive(), więc stara ścieżka się wycisza (FadeOutTime()), a nowa narasta (FadeInTime()),
  *   S zatrzymuje muzykę z wyciszeniem, B wycisza samą szynę muzyki,
- * - napis u góry pokazuje stan szyn i liczbę trwających głosów.
+ * - Enter wstrzymuje i wznawia bieżącą ścieżkę (Voice::Pause() / Voice::Play()) - Play() na
+ *   szynie Exclusive() zwraca głos, który już gra,
+ * - moneta ma MaxVoices(4) i MinInterval(): przytrzymana spacja nie zagłusza reszty; Backspace
+ *   ucina ostatnią monetę przez zapamiętany uchwyt Voice,
+ * - napis u góry pokazuje stan szyn, liczbę trwających głosów, czas ostatniej monety
+ *   (Voice::PlaybackTime() / Duration()) i liczbę skończonych monet (Voice::OnFinish()).
  */
 
 #include <raycade>
 
 #include <algorithm>
 #include <cmath>
+#include <format>
+#include <memory>
 #include <string>
 
 namespace {
@@ -57,9 +64,9 @@ SCENE("dzwiek") {
 
     scene.Spawn<visual::Text>().Content("Dźwięk").FontSize(28).Position({40, 30});
     scene.Spawn<visual::Text>()
-        .Content("Spacja moneta, K kroki, U uderzenie, Q moneta o kwintę wyżej\n"
+        .Content("Spacja moneta, K kroki, U uderzenie, Q moneta o kwintę wyżej, Backspace ucina monetę\n"
                  "P pauza efektów, N wyciszenie efektów, strzałki góra/dół głośność główna\n"
-                 "M zmiana muzyki (przenikanie), S stop muzyki, B wyciszenie muzyki")
+                 "M zmiana muzyki (przenikanie), Enter pauza ścieżki, S stop muzyki, B wyciszenie muzyki")
         .FontSize(16)
         .Paint(GRAY)
         .LineHeight(1.4f)
@@ -70,13 +77,18 @@ SCENE("dzwiek") {
     SoundButton(scene, {440, 180}, "Uderzenie", "uderzenie");
 
     auto& status = scene.Spawn<visual::Text>().FontSize(18).Position({40, 70});
+    auto& coinInfo = scene.Spawn<visual::Text>().FontSize(16).Paint(GRAY).Position({40, 260});
 
     // muzyka: szyna Exclusive() - ta sama ścieżka nie zaczyna się od nowa przy powrocie na scenę
     engine.Audio("theme.wav").Play();
 
-    scene.OnUpdate([&engine, &status](float) {
+    // stan sceny trzymany w lambdzie: uchwyt ostatniej monety i licznik skończonych
+    auto finished = std::make_shared<int>(0);
+    scene.OnUpdate([&engine, &status, &coinInfo, finished, lastCoin = Voice{}](float) mutable {
         const Input& input = engine.Input();
-        if (input.KeyPressed(KEY_SPACE)) engine.Audio("coin.wav").Play();
+        if (input.KeyDown(KEY_SPACE)) // przytrzymana: limit głosów i MinInterval() pilnują hałasu
+            lastCoin = engine.Audio("coin.wav").Play().OnFinish([finished](Voice&) { ++*finished; });
+        if (input.KeyPressed(KEY_BACKSPACE)) lastCoin.Stop(); // martwy uchwyt - bez efektu
         if (input.KeyPressed(KEY_K)) engine.Audio("kroki").Play();
         if (input.KeyPressed(KEY_U)) engine.Audio("uderzenie").Play();
         // zmiana tylko tego jednego odtworzenia - ustawienia dźwięku zostają bez zmian
@@ -85,6 +97,15 @@ SCENE("dzwiek") {
         if (input.KeyPressed(KEY_M)) {
             const bool boss = engine.Audio("boss.wav").IsPlaying();
             engine.Audio(boss ? "theme.wav" : "boss.wav").Play(); // stara ścieżka się wycisza
+        }
+        if (input.KeyPressed(KEY_ENTER)) {
+            // Play() na szynie Exclusive() zwraca głos, który już gra - to jest bieżąca ścieżka
+            const bool boss = engine.Audio("boss.wav").VoiceCount() > 0; // także wstrzymany
+            Voice track = engine.Audio(boss ? "boss.wav" : "theme.wav").Play();
+            if (track.IsPaused())
+                track.Play();
+            else
+                track.Pause();
         }
         if (input.KeyPressed(KEY_S)) engine.AudioBus("muzyka").Stop();
         AudioBus& music = engine.AudioBus("muzyka");
@@ -101,6 +122,11 @@ SCENE("dzwiek") {
             "Główna: " + BusLabel(master) + "    efekty: " + BusLabel(effects) +
             "    kroki: " + BusLabel(engine.AudioBus("kroki")) + "    muzyka: " + BusLabel(music) +
             "    głosy: " + std::to_string(master.VoiceCount())
+        );
+        coinInfo.Content(
+            "Ostatnia moneta: " + std::format("{:.2f} / {:.2f} s", lastCoin.PlaybackTime(),
+                                               lastCoin.Duration()) +
+            "    skończone monety: " + std::to_string(*finished)
         );
     });
 }

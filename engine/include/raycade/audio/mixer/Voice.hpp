@@ -5,6 +5,7 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 
 class Audio;
 
@@ -17,6 +18,9 @@ class Audio;
  * Voice hit = engine.Audio("hit.wav").Play().Volume(0.5f).Pitch(1.2f);
  * if (hit.IsPlaying()) hit.Stop();
  * @endcode
+ *
+ * Dźwięk w konkretnym miejscu świata gra przez audio::Emitter - głos nie ma położenia, żeby
+ * nie dublować Transformable.
  *
  * Uchwyt jest lekki (numer miejsca w puli i numer generacji) i można go kopiować. Gdy głos się
  * skończy albo zostanie zatrzymany, uchwyt staje się martwy: settery i polecenia nic nie robią,
@@ -59,6 +63,20 @@ class Voice {
     float Pan() const;
 
     /**
+     * @brief Wznawia odtworzenie wstrzymane przez Pause().
+     * @details Nie wznawia głosu na wstrzymanej szynie (AudioBus::Paused()) - ten ruszy razem
+     * z szyną.
+     * @return Ten sam uchwyt.
+     */
+    Voice& Play();
+
+    /**
+     * @brief Wstrzymuje odtworzenie w bieżącym miejscu (wznawia je Play()).
+     * @return Ten sam uchwyt.
+     */
+    Voice& Pause();
+
+    /**
      * @brief Zatrzymuje odtworzenie (z wyciszeniem Audio::FadeOutTime(), jeśli jest ustawione).
      * @return Ten sam uchwyt.
      */
@@ -66,6 +84,42 @@ class Voice {
 
     /** @brief Sprawdza, czy głos gra (istnieje, nie jest wstrzymany ani wyciszany po Stop()). */
     bool IsPlaying() const;
+
+    /** @brief Sprawdza, czy głos jest wstrzymany - przez Pause() albo przez swoją szynę. */
+    bool IsPaused() const;
+
+    /**
+     * @brief Przewija odtworzenie do podanego miejsca.
+     * @details Działa dla dźwięków granych jako strumień (Audio::Streamed() albo
+     * Audio::Looped()); dla krótkiego dźwięku z pamięci jest pomijane z jednym wpisem w logu.
+     * Przed startem głosu (do końca klatki) miejsce zostaje zapamiętane.
+     * @param seconds Czas od początku pliku w sekundach.
+     * @return Ten sam uchwyt.
+     */
+    Voice& PlaybackTime(float seconds);
+
+    /**
+     * @brief Podaje miejsce odtwarzania w sekundach od początku pliku.
+     * @details Dla krótkiego dźwięku z pamięci to czas liczony przez silnik (z uwzględnieniem
+     * wysokości), dla strumienia - pozycja podana przez raylib. 0 dla martwego uchwytu.
+     */
+    float PlaybackTime() const;
+
+    /** @brief Podaje długość pliku w sekundach (0 przed startem głosu i dla martwego uchwytu). */
+    float Duration() const;
+
+    /**
+     * @brief Ustawia zdarzenie końca odtworzenia.
+     * @details Zdarzenie przychodzi na końcu klatki, w której głos się skończył albo zatrzymał
+     * (po wyciszeniu). Uchwyt w argumencie jest już martwy - służy do porównania z zapamiętanym.
+     * Głosy zatrzymane przez zwolnienie sceny i zamknięcie silnika nie wywołują zdarzenia.
+     * @param callback Reakcja na koniec.
+     * @return Ten sam uchwyt.
+     */
+    Voice& OnFinish(std::function<void(Voice&)> callback);
+
+    /** @brief Porównuje uchwyty (ten sam głos). */
+    bool operator==(const Voice&) const = default;
 
     /**
      * @brief Podaje dźwięk, z którego powstał głos.

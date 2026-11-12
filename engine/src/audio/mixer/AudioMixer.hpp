@@ -97,6 +97,8 @@ class AudioMixer {
     int VoiceCount(const ::AudioBus& bus) const;
     /** @brief Podpina szynę pod rodzica, jeśli nie powstanie cykl. */
     void Reparent(::AudioBus& bus, const std::string& parent);
+    /** @brief Poprawia limit głosów szyny (szyna główna: od 1 do rozmiaru puli). */
+    int ClampVoices(const ::AudioBus& bus, int count) const;
     /** @} */
 
     /** @brief Głos w puli. */
@@ -115,6 +117,11 @@ class AudioMixer {
         float fade = 1.0f;            /**< Bieżący poziom narastania/wyciszania (0-1). */
         float fadeRate = 0.0f;        /**< Zmiana fade na sekundę. */
         bool stopping = false;        /**< Czy głos wycisza się po Stop() (potem zwolnienie). */
+        bool userPaused = false;      /**< Czy wstrzymany przez Voice::Pause(). */
+        float time = 0.0f;            /**< Czas odtwarzania liczony przez silnik (alias). */
+        float seek = -1.0f;           /**< Przewinięcie do wykonania po starcie (< 0 - brak). */
+        std::uint64_t order = 0;      /**< Numer Play() - najstarszy głos ma najmniejszy. */
+        std::function<void(Voice&)> onFinish; /**< Zdarzenie końca (Voice::OnFinish()). */
         float volume = 1.0f;          /**< Głośność głosu (Voice::Volume()). */
         float pitch = 1.0f;           /**< Wysokość głosu (Voice::Pitch()). */
         float pan = 0.0f;             /**< Panorama głosu (Voice::Pan()). */
@@ -128,6 +135,12 @@ class AudioMixer {
 
     /** @brief Zatrzymuje głos. */
     void Stop(Slot& slot);
+    /** @brief Przewija głos (strumień) albo zapisuje w logu, że się nie da. */
+    void Seek(Slot& slot, float seconds);
+    /** @brief Podaje miejsce odtwarzania głosu w sekundach. */
+    float PlaybackTime(const Slot& slot) const;
+    /** @brief Podaje długość pliku głosu w sekundach (0 przed startem). */
+    float Duration(const Slot& slot) const;
 
   private:
     /** @brief Dane jednego pliku w pamięci. */
@@ -151,8 +164,18 @@ class AudioMixer {
     void Replace(const Slot& slot);
     /** @brief Uruchamia zgłoszony głos; false - nie udało się wczytać pliku. */
     bool Start(Slot& slot);
-    /** @brief Zwalnia miejsce głosu (bez zdarzeń). */
-    void Release(Slot& slot);
+    /**
+     * @brief Zwalnia miejsce głosu.
+     * @param slot Głos.
+     * @param notify Czy wywołać zdarzenie końca (na końcu klatki).
+     */
+    void Release(Slot& slot, bool notify = true);
+    /** @brief Zwalnia najstarszy głos spełniający warunek; false - nie ma takiego. */
+    bool StealOldest(const std::function<bool(const Slot&)>& match);
+    /** @brief Robi miejsce dla nowego głosu dźwięku (limity dźwięku, szyn i puli). */
+    void MakeRoom(const ::Audio& audio);
+    /** @brief Wywołuje zdarzenia końca zebrane w tej klatce. */
+    void Notify();
     /** @brief Ustawia głośność, wysokość i panoramę głosu w raylib. */
     void Apply(Slot& slot, const BusState& bus);
     /** @brief Liczy stan szyny razem z rodzicami. */
@@ -177,4 +200,8 @@ class AudioMixer {
     std::unordered_map<std::string, std::shared_ptr<const std::vector<unsigned char>>> bytes_;
     std::set<std::string> failed_;                /**< Pliki, których nie wczytano. */
     std::vector<Slot> slots_;                     /**< Pula głosów (stały rozmiar). */
+    std::uint64_t order_ = 0;                     /**< Licznik Play(). */
+    bool warnedSeek_ = false;                     /**< Czy zapisano brak przewijania aliasu. */
+    /** Zdarzenia końca do wywołania na końcu klatki. */
+    std::vector<std::pair<std::function<void(Voice&)>, Voice>> finished_;
 };

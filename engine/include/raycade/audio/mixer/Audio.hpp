@@ -175,6 +175,30 @@ class Audio {
     float FadeOutTime() const { return fadeOutTime_; }
 
     /**
+     * @brief Ogranicza liczbę odtworzeń tego dźwięku naraz.
+     * @details Play() ponad limit zatrzymuje najstarsze odtworzenie - dziesięć monet zebranych
+     * naraz nie zagłuszy reszty gry.
+     * @param count Największa liczba głosów; 0 - bez limitu.
+     * @return Ten sam dźwięk.
+     */
+    Audio& MaxVoices(int count);
+
+    /** @brief Podaje limit odtworzeń naraz (0 - bez limitu). */
+    int MaxVoices() const { return maxVoices_; }
+
+    /**
+     * @brief Ustawia najkrótszy odstęp między odtworzeniami.
+     * @details Play() wcześniej niż po tym czasie od poprzedniego zwraca martwy uchwyt - np.
+     * dwadzieścia trafień w jednej klatce daje jeden dźwięk zamiast głośnego trzasku.
+     * @param seconds Odstęp w sekundach; 0 - bez ograniczenia.
+     * @return Ten sam dźwięk.
+     */
+    Audio& MinInterval(float seconds);
+
+    /** @brief Podaje najkrótszy odstęp między odtworzeniami. */
+    float MinInterval() const { return minInterval_; }
+
+    /**
      * @brief Odtwarza dźwięk.
      * @details Odtworzenie startuje na końcu klatki, więc ustawienia podane na zwróconym
      * uchwycie działają od pierwszej próbki. Bez urządzenia audio zwraca martwy uchwyt.
@@ -212,4 +236,7 @@ class Audio {
     bool looped_ = false;             /**< Pętla. */
     bool streamed_ = false;           /**< Czytanie pliku na bieżąco. */
     int lastFile_ = -1;               /**< Ostatnio wylosowany plik (bez powtórzeń). */
+    int maxVoices_ = 0;               /**< Limit głosów naraz; 0 - bez limitu. */
+    float minInterval_ = 0.0f;        /**< Najkrótszy odstęp między Play(). */
+    double lastPlay_ = -1.0e9;        /**< Czas ostatniego Play() (GetTime()). */
 };

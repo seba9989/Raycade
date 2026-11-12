@@ -6,6 +6,7 @@
 #include <raycade/audio/mixer/Voice.hpp>
 
 #include <algorithm>
+#include <utility>
 
 #include "AudioMixer.hpp"
 
@@ -54,9 +55,44 @@ Voice& Voice::Stop() {
     return *this;
 }
 
+Voice& Voice::Play() {
+    if (auto* slot = SlotOf(*this)) slot->userPaused = false;
+    return *this;
+}
+
+Voice& Voice::Pause() {
+    if (auto* slot = SlotOf(*this)) slot->userPaused = true;
+    return *this;
+}
+
+bool Voice::IsPaused() const {
+    const auto* slot = SlotOf(*this);
+    return slot && (slot->paused || slot->userPaused);
+}
+
+Voice& Voice::PlaybackTime(float seconds) {
+    if (auto* slot = SlotOf(*this)) AudioMixer::Current()->Seek(*slot, seconds);
+    return *this;
+}
+
+float Voice::PlaybackTime() const {
+    const auto* slot = SlotOf(*this);
+    return slot ? AudioMixer::Current()->PlaybackTime(*slot) : 0.0f;
+}
+
+float Voice::Duration() const {
+    const auto* slot = SlotOf(*this);
+    return slot ? AudioMixer::Current()->Duration(*slot) : 0.0f;
+}
+
+Voice& Voice::OnFinish(std::function<void(Voice&)> callback) {
+    if (auto* slot = SlotOf(*this)) slot->onFinish = std::move(callback);
+    return *this;
+}
+
 bool Voice::IsPlaying() const {
     const auto* slot = SlotOf(*this);
-    return slot && !slot->paused && !slot->stopping;
+    return slot && !slot->paused && !slot->userPaused && !slot->stopping;
 }
 
 const Audio* Voice::Sound() const {

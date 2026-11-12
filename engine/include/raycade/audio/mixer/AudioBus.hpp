@@ -113,6 +113,18 @@ class AudioBus {
     bool IsExclusive() const { return exclusive_; }
 
     /**
+     * @brief Ogranicza liczbę głosów naraz na szynie i jej dzieciach.
+     * @details Play() ponad limit zatrzymuje najstarszy głos szyny. Limit szyny głównej to
+     * rozmiar całej puli głosów (domyślnie 32, najwyżej 128).
+     * @param count Największa liczba głosów; 0 - bez limitu (szyna główna: 128).
+     * @return Ta sama szyna.
+     */
+    AudioBus& MaxVoices(int count);
+
+    /** @brief Podaje limit głosów naraz (0 - bez limitu). */
+    int MaxVoices() const { return maxVoices_; }
+
+    /**
      * @brief Zatrzymuje wszystkie dźwięki szyny i jej dzieci (z ich Audio::FadeOutTime()).
      * @return Ta sama szyna.
      */
@@ -131,4 +143,5 @@ class AudioBus {
     bool muted_ = false;   /**< Wyciszenie. */
     bool paused_ = false;  /**< Pauza. */
     bool exclusive_ = false; /**< Jeden dźwięk naraz. */
+    int maxVoices_ = 0;      /**< Limit głosów; 0 - bez limitu. */
 };

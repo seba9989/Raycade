@@ -11,8 +11,11 @@
 
 namespace {
 
-/** @brief Rozmiar puli głosów. */
-constexpr std::size_t kSlots = 64;
+/** @brief Rozmiar puli głosów (największy limit szyny głównej). */
+constexpr std::size_t kSlots = 128;
+
+/** @brief Domyślny limit głosów szyny głównej. */
+constexpr int kDefaultVoices = 32;
 
 /** @brief Najgłębsze drzewo szyn (ochrona przed cyklem przy liczeniu stanu). */
 constexpr int kMaxBusDepth = 64;
@@ -39,7 +42,7 @@ float RandomUnit() {
 
 AudioMixer::AudioMixer(LogFunction log, PathFunction path)
     : log_(std::move(log)), path_(std::move(path)), slots_(kSlots) {
-    buses_.try_emplace("", *this, "");
+    buses_.try_emplace("", *this, "").first->second.maxVoices_ = kDefaultVoices;
     current_ = this;
 }
 
@@ -57,7 +60,8 @@ void AudioMixer::Open() {
 
 void AudioMixer::Close() {
     for (Slot& slot : slots_)
-        if (slot.used) Release(slot);
+        if (slot.used) Release(slot, false);
+    finished_.clear();
     for (auto& [path, clip] : clips_)
         ::UnloadSound(clip.sound);
     clips_.clear();
@@ -84,6 +88,9 @@ Voice AudioMixer::Play(::Audio& audio) {
         warnedNoDevice_ = true;
         return {};
     }
+    const double now = ::GetTime();
+    if (audio.MinInterval() > 0.0f && now - audio.lastPlay_ < audio.MinInterval()) return {};
+    audio.lastPlay_ = now;
     const std::string& bus = audio.Bus();
     if (Bus(bus).IsExclusive()) {
         for (std::size_t i = 0; i < slots_.size(); ++i) {
@@ -92,14 +99,12 @@ Voice AudioMixer::Play(::Audio& audio) {
             // ten sam dźwięk już gra na tej szynie - muzyka nie zaczyna się od nowa
             if (other.audio == &audio) return Handle(i);
             // zgłoszony w tej klatce inny dźwięk - wygrywa ostatnie Play()
-            if (!other.started) Release(other);
+            if (!other.started) Release(other, false);
         }
     }
+    MakeRoom(audio);
     auto free = std::ranges::find_if(slots_, [](const Slot& slot) { return !slot.used; });
-    if (free == slots_.end()) {
-        log_(LogLevel::Warning, "pula glosow pelna - pominieto \"" + audio.Name() + "\"");
-        return {};
-    }
+    if (free == slots_.end()) return {}; // nie zdarza się: MakeRoom() zwalnia miejsce
     Slot& slot = *free;
     const std::uint32_t generation = slot.generation;
     slot = Slot{};
@@ -109,7 +114,76 @@ Voice AudioMixer::Play(::Audio& audio) {
     slot.bus = bus;
     slot.path = PickFile(audio);
     slot.variation = 1.0f + audio.PitchVariation() * RandomUnit();
+    slot.order = ++order_;
     return Handle(static_cast<std::size_t>(free - slots_.begin()));
+}
+
+bool AudioMixer::StealOldest(const std::function<bool(const Slot&)>& match) {
+    Slot* oldest = nullptr;
+    for (Slot& slot : slots_)
+        if (slot.used && match(slot) && (!oldest || slot.order < oldest->order)) oldest = &slot;
+    if (!oldest) return false;
+    Release(*oldest);
+    return true;
+}
+
+/**
+ * @details Kolejno: limit dźwięku, limity szyny dźwięku i jej rodziców (aż do szyny głównej,
+ * której limit to rozmiar puli) i na końcu sama pula. W każdym przypadku ustępuje najstarszy
+ * głos z danej grupy - nowy dźwięk jest zwykle ważniejszy niż ten, który gra od dawna.
+ */
+void AudioMixer::MakeRoom(const ::Audio& audio) {
+    if (audio.MaxVoices() > 0)
+        while (VoiceCount(audio) >= audio.MaxVoices() &&
+               StealOldest([&audio](const Slot& s) { return s.audio == &audio; })) {}
+    std::string bus = audio.Bus();
+    for (int depth = 0; depth < kMaxBusDepth; ++depth) {
+        const ::AudioBus& node = Bus(bus);
+        const auto within = [this, &bus](const Slot& s) { return IsWithin(s.bus, bus); };
+        if (node.MaxVoices() > 0)
+            while (std::ranges::count_if(slots_, [&](const Slot& s) {
+                       return s.used && within(s);
+                   }) >= node.MaxVoices() &&
+                   StealOldest(within)) {}
+        if (bus.empty()) break;
+        bus = node.Parent();
+    }
+    if (std::ranges::none_of(slots_, [](const Slot& s) { return !s.used; }))
+        StealOldest([](const Slot&) { return true; });
+}
+
+int AudioMixer::ClampVoices(const ::AudioBus& bus, int count) const {
+    if (!bus.Name().empty()) return std::max(0, count);
+    const int pool = static_cast<int>(kSlots);
+    return count <= 0 ? pool : std::min(count, pool);
+}
+
+void AudioMixer::Seek(Slot& slot, float seconds) {
+    seconds = std::max(0.0f, seconds);
+    if (!slot.started) {
+        slot.seek = seconds; // po starcie, w Update()
+        return;
+    }
+    if (slot.stream) {
+        ::SeekMusicStream(slot.music, seconds);
+        return;
+    }
+    if (!warnedSeek_)
+        log_(LogLevel::Warning,
+             "PlaybackTime(s) dziala tylko dla dzwiekow Streamed() albo Looped() - pominieto");
+    warnedSeek_ = true;
+}
+
+float AudioMixer::PlaybackTime(const Slot& slot) const {
+    if (!slot.started) return 0.0f;
+    return slot.stream ? ::GetMusicTimePlayed(slot.music) : slot.time;
+}
+
+float AudioMixer::Duration(const Slot& slot) const {
+    if (!slot.started) return 0.0f;
+    if (slot.stream) return ::GetMusicTimeLength(slot.music);
+    const unsigned int rate = slot.sound.stream.sampleRate;
+    return rate > 0 ? static_cast<float>(slot.sound.frameCount) / static_cast<float>(rate) : 0.0f;
 }
 
 std::string AudioMixer::PickFile(::Audio& audio) {
@@ -289,7 +363,13 @@ void AudioMixer::Replace(const Slot& slot) {
         if (&other != &slot && other.used && other.started && other.bus == slot.bus) Stop(other);
 }
 
-void AudioMixer::Release(Slot& slot) {
+void AudioMixer::Release(Slot& slot, bool notify) {
+    if (notify && slot.onFinish) {
+        // uchwyt przed zmianą generacji - porównuje się z zapamiętanym w grze
+        const auto index = static_cast<std::size_t>(&slot - slots_.data());
+        finished_.emplace_back(std::move(slot.onFinish), Handle(index));
+    }
+    slot.onFinish = nullptr;
     if (slot.started && slot.stream) {
         ::StopMusicStream(slot.music);
         ::UnloadMusicStream(slot.music);
@@ -326,8 +406,9 @@ void AudioMixer::Update(float dt) {
     for (Slot& slot : slots_) {
         if (!slot.used) continue;
         const BusState bus = StateOf(slot.bus);
+        const bool paused = bus.paused || slot.userPaused;
         if (!slot.started) {
-            if (bus.paused) continue; // ruszy po wznowieniu szyny
+            if (paused) continue; // ruszy po wznowieniu
             if (!Start(slot)) {
                 Release(slot);
                 continue;
@@ -338,26 +419,40 @@ void AudioMixer::Update(float dt) {
                 ::PlayMusicStream(slot.music);
             else
                 ::PlaySound(slot.sound);
+            // po starcie: raylib zeruje pozycję przy PlayMusicStream()
+            if (slot.seek >= 0.0f) Seek(slot, slot.seek);
             continue;
         }
-        if (bus.paused != slot.paused) {
-            if (slot.stream && bus.paused) ::PauseMusicStream(slot.music);
-            if (slot.stream && !bus.paused) ::ResumeMusicStream(slot.music);
-            if (!slot.stream && bus.paused) ::PauseSound(slot.sound);
-            if (!slot.stream && !bus.paused) ::ResumeSound(slot.sound);
-            slot.paused = bus.paused;
+        if (paused != slot.paused) {
+            if (slot.stream && paused) ::PauseMusicStream(slot.music);
+            if (slot.stream && !paused) ::ResumeMusicStream(slot.music);
+            if (!slot.stream && paused) ::PauseSound(slot.sound);
+            if (!slot.stream && !paused) ::ResumeSound(slot.sound);
+            slot.paused = paused;
         }
-        if (slot.paused) continue;
+        if (slot.paused) {
+            Apply(slot, bus); // np. zmiana głośności w czasie pauzy
+            continue;
+        }
         if (slot.stream) ::UpdateMusicStream(slot.music);
         const bool playing =
             slot.stream ? ::IsMusicStreamPlaying(slot.music) : ::IsSoundPlaying(slot.sound);
         slot.fade = std::clamp(slot.fade + slot.fadeRate * dt, 0.0f, 1.0f);
+        slot.time += dt * slot.audio->Pitch() * slot.variation * slot.pitch;
         if (!playing || (slot.stopping && slot.fade <= 0.0f)) {
             Release(slot); // skończył się albo wyciszył po Stop()
             continue;
         }
         Apply(slot, bus);
     }
+    Notify();
+}
+
+void AudioMixer::Notify() {
+    // kopia: zdarzenie może wywołać Play() albo Stop(), które dopisują kolejne zakończenia
+    auto finished = std::exchange(finished_, {});
+    for (auto& [callback, voice] : finished)
+        callback(voice);
 }
 
 std::size_t AudioMixer::Purge() {

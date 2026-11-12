@@ -46,6 +46,16 @@ Audio& Audio::FadeOutTime(float seconds) {
     return *this;
 }
 
+Audio& Audio::MaxVoices(int count) {
+    maxVoices_ = std::max(0, count);
+    return *this;
+}
+
+Audio& Audio::MinInterval(float seconds) {
+    minInterval_ = std::max(0.0f, seconds);
+    return *this;
+}
+
 Audio& Audio::Bus(std::string bus) {
     mixer_->Bus(bus); // szyna powstaje od razu - widać ją w logu przy konfiguracji
     bus_ = std::move(bus);

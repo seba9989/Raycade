@@ -110,7 +110,9 @@
  * Scena `dzwiek` pokazuje dźwięk (Engine::Audio(), Voice, szyny AudioBus): przyciski albo
  * klawisze odtwarzają monetę, kroki (losowy plik z trzech) i uderzenie, P wstrzymuje szynę
  * efektów, N ją wycisza, a strzałki zmieniają głośność główną. Muzyka gra ze strumienia w pętli;
- * M przełącza ścieżkę z przenikaniem (szyna Exclusive()), a S ją wycisza i zatrzymuje. Próbki WAV w `demo/assets/`
+ * M przełącza ścieżkę z przenikaniem (szyna Exclusive()), a S ją wycisza i zatrzymuje.
+ * Enter wstrzymuje samą ścieżkę (Voice::Pause()), a Backspace ucina ostatnią monetę; napis
+ * pokazuje czas jej odtwarzania i liczbę skończonych monet (Voice::OnFinish()). Próbki WAV w `demo/assets/`
  * są syntezowane skryptem `demo/tools/generate_sounds.py`.
  *
  * @section dokumentacja Dokumentacja
@@ -146,17 +148,23 @@ int main() {
 
     // dźwięk (scena "dzwiek"): szyny i dźwięki konfiguruje się raz, a odtwarza w dowolnym miejscu
     engine.AudioBus().Volume(0.8f); // szyna główna
+    engine.AudioBus("efekty").MaxVoices(24);
     engine.AudioBus("kroki").Parent("efekty").Volume(0.6f);
     engine.AudioBus("interfejs"); // nie pauzuje się razem z efektami
     engine.AudioBus("muzyka").Volume(0.6f).Exclusive(); // jedna ścieżka naraz, z przenikaniem
     engine.Audio("theme.wav").Streamed().Looped().Bus("muzyka").FadeInTime(1.5f).FadeOutTime(1.5f);
     engine.Audio("boss.wav").Streamed().Looped().Bus("muzyka").FadeInTime(0.5f).FadeOutTime(1.0f);
-    engine.Audio("coin.wav").Volume(0.7f).PitchVariation(0.08f).Bus("efekty");
+    engine.Audio("coin.wav")
+        .Volume(0.7f)
+        .PitchVariation(0.08f)
+        .MaxVoices(4)       // najwyżej 4 monety naraz - kolejna ucina najstarszą
+        .MinInterval(0.03f) // seria w jednej klatce to jeden dźwięk
+        .Bus("efekty");
     engine.Audio("kroki")
         .Files({"step1.wav", "step2.wav", "step3.wav"})
         .PitchVariation(0.05f)
         .Bus("kroki");
-    engine.Audio("uderzenie").Files({"hit.wav"}).Bus("efekty");
+    engine.Audio("uderzenie").Files({"hit.wav"}).MaxVoices(6).Bus("efekty");
     engine.Audio("klik").Files({"click.wav"}).Volume(0.5f).Bus("interfejs");
 
     return engine
