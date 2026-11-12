@@ -137,6 +137,7 @@ void PhysicsWorld::Record(CharacterBody& body, const Collision& hit) {
 }
 
 bool PhysicsWorld::MoveAndSlide(CharacterBody& body) {
+    const bool wasOnFloor = body.onFloor_;
     body.collisions_.clear();
     body.onFloor_ = body.onWall_ = body.onCeiling_ = false;
 
@@ -154,41 +155,65 @@ bool PhysicsWorld::MoveAndSlide(CharacterBody& body) {
     const Vector2 up = body.up_;
     const float floorCos = std::cos(body.floorMaxAngle_);
 
+    // rozsunięcie z jednym ciałem: podłoga - pionowo w górę, ściana i sufit - wzdłuż normalnej
+    const auto resolve = [&](const Collision& hit) {
+        const Vector2 n = hit.normal;
+        const float upness = Dot(n, up);
+        if (upness >= floorCos) {
+            // podłoga: wypchnięcie pionowo w górę (bez zsuwania się z pochylni)
+            body.onFloor_ = true;
+            body.floorNormal_ = n;
+            const float lift = hit.depth / upness;
+            body.MoveInScene({up.x * lift, up.y * lift});
+            const float into = Dot(body.velocity_, up);
+            if (into < 0.0f)
+                body.velocity_ = {body.velocity_.x - up.x * into, body.velocity_.y - up.y * into};
+        } else {
+            if (upness <= -floorCos)
+                body.onCeiling_ = true;
+            else
+                body.onWall_ = true;
+            body.MoveInScene({n.x * hit.depth, n.y * hit.depth});
+            const float into = Dot(body.velocity_, n);
+            if (into < 0.0f)
+                body.velocity_ = {body.velocity_.x - n.x * into, body.velocity_.y - n.y * into};
+        }
+        const bool known =
+            std::any_of(body.collisions_.begin(), body.collisions_.end(), [&](const Collision& c) {
+                return c.other == hit.other && c.shape == hit.shape;
+            });
+        if (!known) body.collisions_.push_back(hit);
+        Record(body, hit);
+    };
+
     for (int substep = 0; substep < substeps; ++substep) {
         body.MoveInScene({body.velocity_.x * substepTime, body.velocity_.y * substepTime});
         for (int push = 0; push < kMaxPushes; ++push) {
             const std::optional<Collision> hit = Deepest(*self);
             if (!hit) break;
-            const Vector2 n = hit->normal;
-            const float upness = Dot(n, up);
-            if (upness >= floorCos) {
-                // podłoga: wypchnięcie pionowo w górę (bez zsuwania się z pochylni)
-                body.onFloor_ = true;
-                body.floorNormal_ = n;
-                const float lift = hit->depth / upness;
-                body.MoveInScene({up.x * lift, up.y * lift});
-                const float into = Dot(body.velocity_, up);
-                if (into < 0.0f)
-                    body.velocity_ = {
-                        body.velocity_.x - up.x * into, body.velocity_.y - up.y * into
-                    };
-            } else {
-                if (upness <= -floorCos)
-                    body.onCeiling_ = true;
-                else
-                    body.onWall_ = true;
-                body.MoveInScene({n.x * hit->depth, n.y * hit->depth});
-                const float into = Dot(body.velocity_, n);
-                if (into < 0.0f)
-                    body.velocity_ = {body.velocity_.x - n.x * into, body.velocity_.y - n.y * into};
-            }
-            const bool known = std::any_of(
-                body.collisions_.begin(), body.collisions_.end(),
-                [&](const Collision& c) { return c.other == hit->other && c.shape == hit->shape; }
-            );
-            if (!known) body.collisions_.push_back(*hit);
-            Record(body, *hit);
+            resolve(*hit);
         }
+    }
+
+    // Przyklejenie do podłogi (floor snap): schodząc z pochylni, postać w każdym kroku przesuwa
+    // się w bok szybciej, niż grawitacja ściąga ją w dół, i odrywa się od powierzchni. Jeśli
+    // przed ruchem stała na podłodze i nie leci w górę (skok), sprawdzamy podłogę tuż pod nią.
+    const float snap = body.floorSnapLength_;
+    if (wasOnFloor && !body.onFloor_ && snap > 0.0f && Dot(body.velocity_, up) <= 0.0f) {
+        const Vector2 before = body.Position();
+        body.MoveInScene({-up.x * snap, -up.y * snap});
+        bool floor = false;
+        for (int push = 0; push < kMaxPushes; ++push) {
+            const std::optional<Collision> hit = Deepest(*self);
+            if (!hit) break;
+            if (Dot(hit->normal, up) < floorCos) { // pod spodem nie ma podłogi - np. ściana
+                floor = false;
+                break;
+            }
+            resolve(*hit);
+            floor = true;
+        }
+        if (!floor) body.Position(before); // nic pod spodem - postać spada normalnie
     }
     return !body.collisions_.empty();
 }

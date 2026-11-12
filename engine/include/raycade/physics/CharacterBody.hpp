@@ -80,6 +80,23 @@ class CharacterBody : public PhysicsBody {
     float FloorMaxAngle() const { return floorMaxAngle_; }
 
     /**
+     * @brief Ustawia, z jakiej odległości postać jest przyciągana do podłogi pod nią.
+     * @details Schodząc z pochylni, postać przesuwa się w bok szybciej, niż grawitacja ściąga ją
+     * w dół, więc bez przyciągania odrywałaby się od powierzchni (IsOnFloor() == false - nie da
+     * się skoczyć). MoveAndSlide() przyciąga postać, która przed ruchem stała na podłodze i nie
+     * leci w górę. Potrzebna odległość to mniej więcej prędkość * krok * tg(kąt pochylni).
+     * @param length Odległość w pikselach; 0 wyłącza przyciąganie. Domyślnie 8.
+     * @return Ten sam obiekt.
+     */
+    template <typename Self> Self& FloorSnapLength(this Self& self, float length) {
+        self.floorSnapLength_ = length;
+        return self;
+    }
+
+    /** @brief Podaje odległość przyciągania do podłogi w pikselach. */
+    float FloorSnapLength() const { return floorSnapLength_; }
+
+    /**
      * @brief Przesuwa postać o Velocity() * krok, wypychając ją z innych ciał i ślizgając wzdłuż.
      * @details Krokiem jest bieżący krok stały (w FixedTick()) albo czas klatki (w Tick()).
      * Długi ruch jest dzielony na krótsze odcinki, żeby szybka postać nie przeleciała przez
@@ -110,6 +127,7 @@ class CharacterBody : public PhysicsBody {
     Vector2 velocity_{};                /**< Prędkość w pikselach na sekundę. */
     Vector2 up_{0.0f, -1.0f};           /**< Kierunek „w górę”. */
     float floorMaxAngle_ = PI / 4.0f;   /**< Największe pochylenie podłogi. */
+    float floorSnapLength_ = 8.0f;      /**< Przyciąganie do podłogi (px). */
     bool onFloor_ = false;              /**< Stoi na podłodze. */
     bool onWall_ = false;               /**< Dotyka ściany. */
     bool onCeiling_ = false;            /**< Dotyka sufitu. */
