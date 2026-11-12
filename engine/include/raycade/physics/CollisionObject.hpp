@@ -17,8 +17,16 @@
  *
  * Warstwy i maski to maski bitowe (do 32 warstw). CollisionLayer() mówi, na których warstwach
  * obiekt jest, a CollisionMask() - z którymi warstwami się zderza (albo które wykrywa Area).
- * Obiekt A zderza się z B, gdy `A.CollisionMask() & B.CollisionLayer()` jest niezerowe.
- * Domyślnie oba są równe 1, więc wszystko zderza się ze wszystkim.
+ * Obiekt A „widzi” B, gdy `A.CollisionMask() & B.CollisionLayer()` jest niezerowe
+ * (CollidesWith()). Kto musi kogo widzieć:
+ * - dwie bryły (RigidBody) albo bryła i inne ciało - wystarczy, że którakolwiek strona widzi
+ *   drugą (jak w Godocie): skrzynia z graczem w masce jest przez niego przesuwana, nawet jeśli
+ *   gracz nie ma jej warstwy w swojej masce,
+ * - postać w MoveAndSlide() - zatrzymuje się tylko na tym, co sama widzi,
+ * - obszar (Area) - wykrywa to, co sam widzi (maska obiektu wchodzącego nie ma znaczenia),
+ * - Scene::Raycast() i Scene::Overlap() - trafiają warstwy z podanej maski.
+ *
+ * Domyślnie oba pola są równe 1, więc wszystko zderza się ze wszystkim.
  * @code{.cpp}
  * enum Layers : std::uint32_t { World = 1 << 0, Player = 1 << 1, Coins = 1 << 2 };
  * player.CollisionLayer(Player).CollisionMask(World);     // gracz zderza się tylko ze światem

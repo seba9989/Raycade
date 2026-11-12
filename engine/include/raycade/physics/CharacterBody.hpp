@@ -68,6 +68,9 @@ class CharacterBody : public PhysicsBody {
 
     /**
      * @brief Ustawia największe pochylenie podłogi - bardziej stroma powierzchnia jest ścianą.
+     * @details Postać idąca po podłodze nie wspina się po ścianie: stroma powierzchnia (np.
+     * podstawa koła) blokuje ją tylko w poziomie, a postać zostaje na ziemi (IsOnFloor()).
+     * Na taką powierzchnię trzeba wskoczyć.
      * @param radians Kąt w radianach, domyślnie PI / 4 (45°).
      * @return Ten sam obiekt.
      */
@@ -119,7 +122,8 @@ class CharacterBody : public PhysicsBody {
 
     /**
      * @brief Prędkość podłogi, na której stała postać (np. jadącej platformy), w px/s.
-     * @details MoveAndSlide() przesuwa postać razem z podłogą, na której stoi: platforma
+     * @details MoveAndSlide() przesuwa postać razem z podłogą, na której stoi (StaticBody albo inna
+     * postać - nie bryła RigidBody, bo toczące się koło obracałoby postać wokół siebie): platforma
      * przesuwana w kodzie (Position(), Translate(), Rotate()) wiezie postać, także po łuku, gdy
      * się obraca. Gdy postać opuszcza podłogę (skok, zejście z krawędzi), prędkość platformy jest
      * dodawana do Velocity() - skok z jadącej platformy nie urywa się w miejscu.

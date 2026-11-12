@@ -11,6 +11,7 @@
 #include <array>
 #include <cmath>
 #include <functional>
+#include <optional>
 #include <unordered_map>
 
 namespace {
@@ -23,9 +24,12 @@ constexpr int kSubSteps = 4;
 // Bity filtrów Box2D. Warstwy gry zajmują bity 0-31 (kategoria i maska). Bity zapytań są tylko
 // w maskach kształtów: zapytanie (promień, mover, overlap) ma kategorię z tymi bitami, więc widzi
 // kształt tylko wtedy, gdy jego maska je zawiera. Czujniki ich nie mają - zapytania ich nie widzą.
-constexpr std::uint64_t kQueryBit = 1ull << 40; /**< Zwykły kształt widoczny dla zapytań. */
-constexpr std::uint64_t kOneWayBit = 1ull
-                                     << 41; /**< Platforma jednostronna widoczna dla zapytań. */
+/** Zwykły kształt widoczny dla zapytań. */
+constexpr std::uint64_t kQueryBit = 1ull << 40;
+/** Platforma jednostronna widoczna dla zapytań. */
+constexpr std::uint64_t kOneWayBit = 1ull << 41;
+/** Wszystkie warstwy gry (bity 0-31). */
+constexpr std::uint64_t kAllLayerBits = 0xFFFFFFFFull;
 
 /** @brief Najmniejszy cosinus kąta między normalną a „górą” platformy jednostronnej. */
 constexpr float kOneWayCos = 0.7f;
@@ -35,6 +39,8 @@ constexpr float kOneWayMargin = 1.0f;
 constexpr int kMoverIterations = 5;
 /** @brief Najwięcej płaszczyzn styku movera w jednej iteracji. */
 constexpr int kMaxPlanes = 16;
+/** @brief Odległość (px) pod postacią, w której podłoga jeszcze się liczy (IsOnFloor()). */
+constexpr float kFloorProbe = 1.0f;
 
 b2Vec2 ToB2(Vector2 v) {
     return {v.x, v.y};
@@ -113,6 +119,7 @@ struct BodyRecord {
     bool moved = false; /**< StaticBody przesunięty w kodzie - kinematyczny. */
     std::vector<const CollisionShape*> current; /**< Collidery z bieżącego zebrania. */
     std::vector<ShapeRecord> shapes;
+    ShapeRecord capsule; /**< Postać: kapsuła do fizyki (collidery są wtedy czujnikami dla Area). */
     b2Transform stepStart = b2Transform_identity; /**< Położenie Box2D na początku kroku. */
     AffineMatrix2D written{};                     /**< Macierz bryły po ostatnim kroku. */
     bool hasWritten = false;
@@ -128,8 +135,10 @@ struct MoverContext {
     std::array<b2CollisionPlane, kMaxPlanes> planes{};
     std::array<b2ShapeId, kMaxPlanes> shapes{};
     int count = 0;
-    bool insideOneWay =
-        false; /**< Postać nachodzi na platformę jednostronną, która jej nie trzyma. */
+    /** Postać nachodzi na platformę jednostronną, która jej nie trzyma. */
+    bool insideOneWay = false;
+    bool blockOnWall = false; /**< Postać idzie po podłodze: ściany blokują tylko w poziomie. */
+    float floorCos = 0.7f;    /**< Granica podłogi (cos FloorMaxAngle()). */
 };
 
 /** @brief Czy platforma jednostronna zatrzymuje ruch: normalna w jej „górę” i ruch nie w górę. */
@@ -149,10 +158,35 @@ bool CollectPlane(b2ShapeId shapeId, const b2PlaneResult* result, void* context)
         mover.insideOneWay = true;
         return true;
     }
-    mover.planes[static_cast<std::size_t>(mover.count)] = {result->plane, FLT_MAX, 0.0f, true};
+    b2Plane plane = result->plane;
+    // postać idąca po podłodze nie wspina się po zbyt stromej ścianie: jej płaszczyzna jest
+    // pionowa (normalna bez składowej „w górę”), więc blokuje tylko ruch w bok
+    const Vector2 up = FromB2(*mover.up);
+    const float upness = Dot(FromB2(plane.normal), up);
+    if (mover.blockOnWall && upness > 0.0f && upness < mover.floorCos) {
+        const Vector2 flat{plane.normal.x - up.x * upness, plane.normal.y - up.y * upness};
+        const float length = Length(flat);
+        if (length > 1e-4f) plane.normal = ToB2(Scale(flat, 1.0f / length));
+    }
+    mover.planes[static_cast<std::size_t>(mover.count)] = {plane, FLT_MAX, 0.0f, true};
     mover.shapes[static_cast<std::size_t>(mover.count)] = shapeId;
     ++mover.count;
     return true;
+}
+
+/**
+ * @brief Reguła warstw Raycade (jak w Godocie): para się zderza, gdy którakolwiek strona ma drugą
+ * w masce - `A.mask & B.layer` LUB `B.mask & A.layer`.
+ * @details Filtr Box2D wymaga obu warunków naraz, więc maski kształtów przepuszczają wszystkie
+ * warstwy, a decyzję podejmuje ten callback (obszary filtrują swoje wejścia osobno).
+ */
+bool CustomFilter(b2ShapeId shapeA, b2ShapeId shapeB, void*) {
+    const auto* a =
+        static_cast<const CollisionObject*>(b2Body_GetUserData(b2Shape_GetBody(shapeA)));
+    const auto* b =
+        static_cast<const CollisionObject*>(b2Body_GetUserData(b2Shape_GetBody(shapeB)));
+    if (!a || !b) return true;
+    return a->CollidesWith(*b) || b->CollidesWith(*a);
 }
 
 /** @brief Platforma jednostronna dla brył: wyłącza styk, który nie jest opadaniem od góry. */
@@ -168,6 +202,39 @@ bool PreSolve(b2ShapeId shapeA, b2ShapeId shapeB, b2Manifold* manifold, void*) {
     for (int i = 0; i < manifold->pointCount; ++i)
         if (manifold->points[i].separation < -kOneWayMargin) return false; // przechodzi przez nią
     return true;
+}
+
+/** @brief Kapsuła postaci: wpisana w obrys jej colliderów (oś wzdłuż dłuższego boku). */
+struct CharacterCapsule {
+    Vector2 a{}; /**< Środek pierwszego końca (układ sceny). */
+    Vector2 b{}; /**< Środek drugiego końca (układ sceny). */
+    float radius = 0;
+};
+
+std::optional<CharacterCapsule> CapsuleOf(const std::vector<const CollisionShape*>& shapes) {
+    std::vector<ConvexPart> parts;
+    for (const CollisionShape* shape : shapes)
+        if (!shape->IsDisabled()) shape->WorldParts(parts);
+    float left = INFINITY, top = INFINITY, right = -INFINITY, bottom = -INFINITY;
+    for (const ConvexPart& part : parts)
+        for (const Vector2 direction :
+             {Vector2{1, 0}, Vector2{-1, 0}, Vector2{0, 1}, Vector2{0, -1}}) {
+            const Vector2 point = part.Support(direction);
+            left = std::min(left, point.x);
+            right = std::max(right, point.x);
+            top = std::min(top, point.y);
+            bottom = std::max(bottom, point.y);
+        }
+    if (parts.empty() || !std::isfinite(left)) return std::nullopt;
+    const float width = right - left;
+    const float height = bottom - top;
+    const float radius = std::max(0.5f, std::min(width, height) * 0.5f);
+    const Vector2 middle{(left + right) * 0.5f, (top + bottom) * 0.5f};
+    const float half = std::max(0.01f, std::max(width, height) * 0.5f - radius);
+    const Vector2 axis = height >= width ? Vector2{0, half} : Vector2{half, 0};
+    return CharacterCapsule{
+        {middle.x - axis.x, middle.y - axis.y}, {middle.x + axis.x, middle.y + axis.y}, radius
+    };
 }
 
 } // namespace
@@ -195,6 +262,7 @@ PhysicsWorld::PhysicsWorld(const std::vector<std::unique_ptr<Entity>>& roots)
     def.gravity = ToB2(gravity_);
     impl_->world = b2CreateWorld(&def);
     b2World_SetPreSolveCallback(impl_->world, PreSolve, nullptr);
+    b2World_SetCustomFilterCallback(impl_->world, CustomFilter, nullptr);
 }
 
 PhysicsWorld::~PhysicsWorld() {
@@ -235,6 +303,7 @@ void PhysicsWorld::Collect(const Entity& entity, int owner) const {
             b2DestroyBody(record->id);
             record->id = b2_nullBodyId;
             record->shapes.clear();
+            record->capsule = {};
         }
         if (!record) {
             impl.index[object] = impl.records.size();
@@ -304,6 +373,7 @@ void PhysicsWorld::SyncStructure() const {
             record.mass = -1;
             record.hasWritten = false;
             record.shapes.clear();
+            record.capsule = {};
         }
         // obiekt oznaczony do usunięcia nie bierze udziału w kolizjach
         const bool enabled = !record.object->IsDestroyed();
@@ -335,6 +405,53 @@ void PhysicsWorld::SyncShapes(std::size_t index) const {
         return true;
     });
 
+    if (record.kind == Kind::Character) {
+        // postać: do fizyki kapsuła (ta sama co mover); jej collidery są poniżej tworzone jako
+        // czujniki - widzą je tylko obszary (OnBodyShapeEnter z dokładnym colliderem)
+        const std::optional<CharacterCapsule> capsule = CapsuleOf(record.current);
+        ShapeRecord& shapeRecord = record.capsule;
+        if (!capsule || record.current.empty()) {
+            for (const b2ShapeId id : shapeRecord.ids)
+                if (b2Shape_IsValid(id)) b2DestroyShape(id, false);
+            shapeRecord = {};
+        } else {
+            const Vector2 a = toBody.Apply(capsule->a);
+            const Vector2 b = toBody.Apply(capsule->b);
+            const std::vector<float> signature{a.x, a.y, b.x, b.y, capsule->radius};
+            b2Filter filter = b2DefaultFilter();
+            filter.categoryBits = record.object->CollisionLayer();
+            filter.maskBits = kAllLayerBits | kQueryBit;
+            const bool same = shapeRecord.shape == record.current.front() &&
+                              shapeRecord.signature.size() == signature.size() &&
+                              std::equal(
+                                  signature.begin(), signature.end(), shapeRecord.signature.begin(),
+                                  [](float x, float y) { return std::fabs(x - y) < 1e-3f; }
+                              );
+            if (!same) {
+                for (const b2ShapeId id : shapeRecord.ids)
+                    if (b2Shape_IsValid(id)) b2DestroyShape(id, false);
+                shapeRecord.ids.clear();
+                shapeRecord.shape = record.current.front();
+                shapeRecord.signature = signature;
+                b2ShapeDef def = b2DefaultShapeDef();
+                def.userData = const_cast<CollisionShape*>(shapeRecord.shape);
+                def.filter = filter;
+                def.material.friction = record.body->friction_;
+                def.material.restitution = record.body->bounce_;
+                def.enableSensorEvents = false; // obszary widzą collidery, nie kapsułę
+                def.updateBodyMass = false;
+                const b2Capsule shapeCapsule{ToB2(a), ToB2(b), capsule->radius};
+                shapeRecord.ids.push_back(b2CreateCapsuleShape(record.id, &def, &shapeCapsule));
+                shapeRecord.filter = filter;
+            } else if (filter.categoryBits != shapeRecord.filter.categoryBits ||
+                       filter.maskBits != shapeRecord.filter.maskBits) {
+                for (const b2ShapeId id : shapeRecord.ids)
+                    b2Shape_SetFilter(id, filter);
+                shapeRecord.filter = filter;
+            }
+        }
+    }
+
     std::vector<ConvexPart> parts;
     for (const CollisionShape* shape : record.current) {
         parts.clear();
@@ -364,11 +481,14 @@ void PhysicsWorld::SyncShapes(std::size_t index) const {
         }
         ShapeRecord& shapeRecord = *it;
 
-        // filtr: warstwy gry + bity zapytań (czujniki są dla zapytań niewidoczne)
+        // filtr: kategoria = warstwy obiektu; maska przepuszcza wszystkie warstwy (o parach
+        // decyduje CustomFilter() według reguły Raycade) + bity zapytań (czujniki są dla zapytań
+        // niewidoczne)
         b2Filter filter = b2DefaultFilter();
         filter.categoryBits = record.object->CollisionLayer();
-        filter.maskBits = record.object->CollisionMask();
-        if (!record.area) filter.maskBits |= shape->IsOneWay() ? kOneWayBit : kQueryBit;
+        filter.maskBits = kAllLayerBits;
+        const bool sensor = record.area != nullptr || record.character != nullptr;
+        if (!sensor) filter.maskBits |= shape->IsOneWay() ? kOneWayBit : kQueryBit;
         const float friction = record.body ? record.body->friction_ : 0.0f;
         const float bounce = record.body ? record.body->bounce_ : 0.0f;
 
@@ -390,7 +510,7 @@ void PhysicsWorld::SyncShapes(std::size_t index) const {
             def.filter = filter;
             def.material.friction = friction;
             def.material.restitution = bounce;
-            def.isSensor = record.area != nullptr;
+            def.isSensor = sensor;
             def.enableSensorEvents = true;
             def.enablePreSolveEvents = record.rigid != nullptr;
             def.updateBodyMass = false;
@@ -524,6 +644,16 @@ void PhysicsWorld::PrepareStep() {
     SyncTransforms();
     for (BodyRecord& record : impl_->records) {
         if (!b2Body_IsValid(record.id)) continue;
+        if (record.kind == Kind::Character) {
+            // postać jest tylko przestawiana, bez prędkości: bryły się od niej odbijają i na niej
+            // leżą, ale nie są wpychane z nieskończoną masą (np. piłka pod postacią nie zostaje
+            // wystrzelona); pchanie brył jest jawne - siłą z SlideCollisions()
+            const b2Transform target = FrameOf(record.object->WorldTransform());
+            b2Body_SetTransform(record.id, target.p, target.q);
+            b2Body_SetLinearVelocity(record.id, b2Vec2_zero);
+            b2Body_SetAngularVelocity(record.id, 0.0f);
+            continue;
+        }
         if (record.kind != Kind::Rigid) {
             if (record.kind == Kind::Static && !record.moved) continue;
             // od położenia z początku kroku do bieżącego - Box2D liczy z tego prędkość, więc
@@ -817,33 +947,17 @@ bool PhysicsWorld::MoveAndSlide(CharacterBody& body) {
         return false;
     }
 
-    // kapsuła movera z obrysu colliderów (Box2D przesuwa postać kapsułą)
-    std::vector<ConvexPart> parts;
-    for (const CollisionShape* shape : record->current)
-        if (!shape->IsDisabled()) shape->WorldParts(parts);
-    float left = INFINITY, top = INFINITY, right = -INFINITY, bottom = -INFINITY;
-    for (const ConvexPart& part : parts)
-        for (const Vector2 direction :
-             {Vector2{1, 0}, Vector2{-1, 0}, Vector2{0, 1}, Vector2{0, -1}}) {
-            const Vector2 point = part.Support(direction);
-            left = std::min(left, point.x);
-            right = std::max(right, point.x);
-            top = std::min(top, point.y);
-            bottom = std::max(bottom, point.y);
-        }
-    if (parts.empty() || !std::isfinite(left)) {
+    // kapsuła movera z obrysu colliderów (Box2D przesuwa postać kapsułą) - ta sama co kształt
+    // ciała postaci w Box2D, więc bryły widzą postać dokładnie tam, gdzie mover ją stawia
+    const std::optional<CharacterCapsule> shape = CapsuleOf(record->current);
+    if (!shape) {
         body.MoveInScene(motion);
         return false;
     }
     const Vector2 origin = body.WorldPosition();
-    const float width = right - left;
-    const float height = bottom - top;
-    const float radius = std::max(0.5f, std::min(width, height) * 0.5f);
-    const Vector2 middle{(left + right) * 0.5f, (top + bottom) * 0.5f};
-    const float half = std::max(0.01f, std::max(width, height) * 0.5f - radius);
-    const Vector2 axis = height >= width ? Vector2{0, half} : Vector2{half, 0};
-    const Vector2 offset1{middle.x - axis.x - origin.x, middle.y - axis.y - origin.y};
-    const Vector2 offset2{middle.x + axis.x - origin.x, middle.y + axis.y - origin.y};
+    const float radius = shape->radius;
+    const Vector2 offset1{shape->a.x - origin.x, shape->a.y - origin.y};
+    const Vector2 offset2{shape->b.x - origin.x, shape->b.y - origin.y};
     const auto capsule = [&](Vector2 at) {
         return b2Capsule{ToB2(Add(at, offset1)), ToB2(Add(at, offset2)), radius};
     };
@@ -862,7 +976,10 @@ bool PhysicsWorld::MoveAndSlide(CharacterBody& body) {
     const bool teleported = std::fabs(origin.x - body.floorWorld_.x) > 0.01f ||
                             std::fabs(origin.y - body.floorWorld_.y) > 0.01f;
     Vector2 position = origin;
-    if (floorBody && !teleported && impl_->Find(floorBody)) {
+    // bryły (RigidBody) nie wożą postaci: punkt pod stopami obraca się z toczącą się piłką,
+    // a ruch postaci znów popychałby piłkę - sprzężenie zwrotne
+    if (floorBody && !teleported && impl_->Find(floorBody) &&
+        !dynamic_cast<const RigidBody*>(floorBody)) {
         const Vector2 now = floorBody->World(body.floorLocal_);
         const Vector2 carry{now.x - body.floorWorld_.x, now.y - body.floorWorld_.y};
         position = Add(position, carry);
@@ -871,6 +988,7 @@ bool PhysicsWorld::MoveAndSlide(CharacterBody& body) {
 
     MoverContext context;
     context.up = &upB2;
+    context.floorCos = floorCos;
     std::vector<std::pair<b2ShapeId, b2Plane>> touched; // do zderzeń i zdarzeń
     // jedna pętla movera: zderzenie -> płaszczyzny -> rzut kapsuły
     const auto slide = [&](Vector2 translation) {
@@ -909,7 +1027,9 @@ bool PhysicsWorld::MoveAndSlide(CharacterBody& body) {
         // pochylni przesuwałoby stojącą postać w dół zbocza
         const Vector2 lateral{motion.x - up.x * vertical, motion.y - up.y * vertical};
         if (Dot(lateral, lateral) > 1e-8f) {
+            context.blockOnWall = true;
             slide(lateral);
+            context.blockOnWall = false;
         } else {
             // stoi: wypchnięcie z zapasu Box2D pionowo w górę (z podłogi) i wzdłuż normalnej
             // (ze ścian) - bez tego rzut w dół startowałby z wnikania i przelatywał przez podłogę
@@ -965,6 +1085,24 @@ bool PhysicsWorld::MoveAndSlide(CharacterBody& body) {
                 body.onWall_ = true;
             clipPlanes[static_cast<std::size_t>(clipCount++)] =
                 context.planes[static_cast<std::size_t>(k)];
+        }
+    }
+    // podłoga z tolerancją: mover zgłasza płaszczyznę tylko przy dotyku, a postać pchająca stromą
+    // ścianę (np. podstawę koła) bywa przez nią uniesiona o ułamek piksela - bez tolerancji stan
+    // skakałby co kilka kroków między „na ziemi” i „w powietrzu”
+    if (!body.onFloor_ && Dot(motion, up) <= 0.0f) {
+        context.count = 0;
+        context.motion = Scale(up, -1.0f);
+        const b2Capsule probe = capsule(Add(position, Scale(up, -kFloorProbe)));
+        b2World_CollideMover(impl_->world, &probe, collideFilter, CollectPlane, &context);
+        for (int k = 0; k < context.count; ++k) {
+            const b2Plane plane = context.planes[static_cast<std::size_t>(k)].plane;
+            if (Dot(FromB2(plane.normal), up) < floorCos) continue;
+            body.onFloor_ = true;
+            body.floorNormal_ = FromB2(plane.normal);
+            standingOn = dynamic_cast<const PhysicsBody*>(
+                Impl::ObjectOf(context.shapes[static_cast<std::size_t>(k)])
+            );
         }
     }
 
