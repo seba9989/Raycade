@@ -53,8 +53,9 @@
  *
  * @section obsluga Sceny demonstracyjne
  * Klawisze 1-9 wybierają `menu`, `prymitywy`, `figury`, `transformacje`, `kontekst`,
- * `trafienia`, `kamera`, `efekty` i `formularz`, 0 - `sprite`, a minus - `fizyka` (lista jest
- * też na scenie `menu`). F11 przełącza pełny ekran. Okno ma zmienny rozmiar: gra rysuje zawsze w
+ * `trafienia`, `kamera`, `efekty` i `formularz`, 0 - `sprite`, minus - `fizyka`, a znak
+ * równości - `dzwiek` (lista jest też na scenie `menu`). F11 przełącza pełny ekran. Okno ma
+ * zmienny rozmiar: gra rysuje zawsze w
  * 1000x700, a obraz jest skalowany do okna z zachowaniem proporcji
  * (Engine::ScaleMode(Scaling::Fit)), więc układ scen i kliknięcia działają przy każdym rozmiarze
  * okna i na pełnym ekranie. Na scenie `prymitywy` strzałki przesuwają prostokąt, L zmienia warstwę,
@@ -106,6 +107,10 @@
  * Fioletowe oko rzuca promień do gracza (Scene::Raycast()) -
  * linia jest zielona, gdy nic go nie zasłania. F1 pokazuje obrysy colliderów, R wczytuje scenę
  * od nowa.
+ * Scena `dzwiek` pokazuje dźwięk (Engine::Audio(), Voice, szyny AudioBus): przyciski albo
+ * klawisze odtwarzają monetę, kroki (losowy plik z trzech) i uderzenie, P wstrzymuje szynę
+ * efektów, N ją wycisza, a strzałki zmieniają głośność główną. Próbki WAV w `demo/assets/`
+ * są syntezowane skryptem `demo/tools/generate_sounds.py`.
  *
  * @section dokumentacja Dokumentacja
  * Dokumentację HTML generuje polecenie `docs` (devenv) albo, w katalogu głównym projektu:
@@ -138,6 +143,18 @@ int main() {
 
     if (!engine.IsReady()) return 1;
 
+    // dźwięk (scena "dzwiek"): szyny i dźwięki konfiguruje się raz, a odtwarza w dowolnym miejscu
+    engine.AudioBus().Volume(0.8f); // szyna główna
+    engine.AudioBus("kroki").Parent("efekty").Volume(0.6f);
+    engine.AudioBus("interfejs"); // nie pauzuje się razem z efektami
+    engine.Audio("coin.wav").Volume(0.7f).PitchVariation(0.08f).Bus("efekty");
+    engine.Audio("kroki")
+        .Files({"step1.wav", "step2.wav", "step3.wav"})
+        .PitchVariation(0.05f)
+        .Bus("kroki");
+    engine.Audio("uderzenie").Files({"hit.wav"}).Bus("efekty");
+    engine.Audio("klik").Files({"click.wav"}).Volume(0.5f).Bus("interfejs");
+
     return engine
         .OnUpdate([&](float) {
             const Input& input = engine.Input();
@@ -152,13 +169,14 @@ int main() {
             if (input.KeyPressed(KEY_NINE)) engine.SwitchScene("formularz");
             if (input.KeyPressed(KEY_ZERO)) engine.SwitchScene("sprite");
             if (input.KeyPressed(KEY_MINUS)) engine.SwitchScene("fizyka");
+            if (input.KeyPressed(KEY_EQUAL)) engine.SwitchScene("dzwiek");
             // szarość całego obrazu (G) jest częścią sceny efektów - poza nią ją wyłączamy
             if (engine.ActiveScene() != "efekty" && engine.PostShader()) engine.PostShader(nullptr);
             if (input.KeyPressed(KEY_F11)) engine.Fullscreen(!engine.IsFullscreen());
         })
         .OnDraw([&](PrimitiveRenderer&) {
             const std::string hud = "Scena: " + engine.ActiveScene() +
-                                    "   [0-9, -] zmiana sceny (lista w menu)   [F11] pelny ekran";
+                                    "   [0-9, -, =] zmiana sceny (lista w menu)   [F11] pelny ekran";
             const int bottom = static_cast<int>(engine.ViewSize().y);
             ::DrawText(hud.c_str(), 20, bottom - 32, 18, DARKGRAY);
         })

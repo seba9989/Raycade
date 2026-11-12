@@ -13,6 +13,7 @@ warstwy wcześniejsze na liście:
 | `math/`      | AffineMatrix2D, Point2D, LineSegment, geometria, ConvexPart (części kształtów kolizji) | - |
 | `render/`    | Bitmap, Assets, RenderTarget, ClipStack, ShaderProgram, Typeface, PrimitiveRenderer | math    |
 | `input/`     | Input, akcje i osie                                             | -                           |
+| `audio/mixer/` | Audio, AudioBus, Voice - dźwięki, szyny i odtworzenia (raylib audio) | math                   |
 | `entity/`    | Entity, Group i klasy bazowe (Transformable, Drawable, Updatable...) | math, render, input    |
 | `shapes/`    | figury geometryczne z przestrzeni nazw `shapes` (baza `shapes::Shape`) | entity i jej zależności |
 | `visual/`    | obrazy, tekst i grupy rysowane do tekstury z przestrzeni nazw `visual` | entity i jej zależności |
@@ -20,13 +21,15 @@ warstwy wcześniejsze na liście:
 | `physics/`   | `Collider<S>`, StaticBody, CharacterBody, RigidBody, Area, PhysicsWorld (Box2D) | shapes, visual i ich zależności |
 | `scene/`     | Scene, SceneCamera, PointerSystem (trafienia myszą)             | physics i jej zależności (Scene ma PhysicsWorld) |
 | `engine/EngineTypes.hpp` | typy ustawień: LogLevel, Scaling                    | -                           |
-| `Engine.hpp` | pętla, okno, sceny, zasoby                                      | wszystkie powyższe          |
+| `Engine.hpp` | pętla, okno, sceny, zasoby, dźwięk                              | wszystkie powyższe          |
 | `engine/SceneMacro.hpp` | makro SCENE (wymaga pełnej klasy Engine)             | `Engine.hpp`                |
 
 Nagłówek zbiorczy katalogu leży obok niego (`shapes.hpp` obok `shapes/`, `visual.hpp` obok
 `visual/`, `physics.hpp` obok `physics/`, `ui.hpp` obok `ui/`). `<raycade>` (w `engine/umbrella/`)
 dołącza `Engine.hpp`, `engine/SceneMacro.hpp`, `entity/Group.hpp`, `shapes.hpp`, `visual.hpp`,
-`physics.hpp` i `ui.hpp`. Źródła w `engine/src/` odwzorowują ten sam układ. Implementacja
+`physics.hpp` i `ui.hpp`. Źródła w `engine/src/` odwzorowują ten sam układ. Mikser dźwięku
+(`AudioMixer`) jest nagłówkiem prywatnym w `src/audio/mixer/` - gra korzysta z `Engine::Audio()`,
+`Engine::AudioBus()` i `Voice`. Implementacja
 `Engine` jest w `src/engine/`, podzielona tematycznie na pliki `Engine*.cpp` - który plik
 zawiera którą grupę metod, opisuje tabela w dokumentacji `Engine.hpp`. Nagłówki prywatne
 implementacji (np. `src/render/primitive_renderer/Pixel.hpp`) zostają w `src/`.
@@ -163,6 +166,34 @@ i zdarzenia klatek dopisuje się do kopii (`std::make_shared<SpriteSheet>(*anim)
 sam chce obsłużyć błąd. `ShaderProgram` nie przechodzi przez `Assets`, bo jego uniformy są
 stanem obiektu, który go używa.
 
+## Dźwięk
+
+Dźwięki i szyny miksera pobiera się z silnika po nazwie, jak sceny: `engine.Audio(name)`
+i `engine.AudioBus(name)`. Pierwsze pobranie tworzy obiekt z ustawieniami domyślnymi, a kolejne
+zwracają ten sam, więc konfiguruje się go raz (np. w `main()`), a odtwarza w dowolnym miejscu.
+Ustawienia mnożą się w górę: głos (`Voice`) - dźwięk (`Audio`) - szyny (`AudioBus`) aż do
+szyny głównej (`engine.AudioBus()`).
+
+```cpp
+engine.AudioBus("kroki").Parent("efekty").Volume(0.6f);
+engine.Audio("kroki").Files({"step1.wav", "step2.wav"}).PitchVariation(0.05f).Bus("kroki");
+
+engine.Audio("kroki").Play();                    // Play() tylko odtwarza
+engine.Audio("coin.wav").Play().Pitch(1.5f);     // zmiana jednego odtworzenia
+engine.AudioBus("efekty").Paused();              // stan całej grupy
+```
+
+- **Nazwa dźwięku jest plikiem** (względem `assets/`), chyba że `Files()` poda listę wariantów -
+  jedna lista jednym setterem, jak `Polygon::Vertices()`.
+- **`Play()` zwraca uchwyt `Voice`**, a nie dźwięk - tworzy nowe odtworzenie, tak jak `Spawn<T>()`
+  zwraca nowy obiekt. Głos rusza na końcu klatki, więc ustawienia z łańcucha działają od pierwszej
+  próbki. Uchwyt skończonego głosu jest martwy i ignoruje polecenia bez wpisu w logu.
+- **Szyna to grupa dźwięków** (`AudioBus`), a nie kanał - „kanał” w audio znaczy też kanał
+  stereo albo pojedynczy głos. Setter dźwięku nazywa się krótko `Bus()`.
+- **Polecenia odtwarzania to czasowniki** (`Play()`, `Stop()`), jak w `visual::Sprite`, a trwały
+  stan grupy to flagi szyny (`Paused()`, `Muted()`).
+- Nazwy szyn to identyfikatory - bez polskich znaków (`"muzyka"`, `"efekty"`).
+
 ## Obsługa błędów (Engine)
 
 - Konfiguracja i polecenia zwracają `Engine&`, a niepoprawne wywołanie tylko zapisują w logu
@@ -174,6 +205,8 @@ stanem obiektu, który go używa.
   `Replay()`) zmieniają stan silnika i same zapisują wynik w logu.
 - `Init()` loguje błąd, a wynik podaje `IsReady()`.
 - Wyjątek rzuca tylko `Engine::Scene()`, bo musi zwrócić referencję do sceny, której nie ma.
+  `Engine::Audio()` i `Engine::AudioBus()` też zwracają referencję, ale nieznaną nazwę tworzą
+  (jak `Assets` - brakujący plik gra ciszą z jednym wpisem w logu).
 
 ## Pliki i ścieżki
 

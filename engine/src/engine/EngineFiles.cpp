@@ -10,11 +10,6 @@
  * silnika, żeby obiekty sceny (np. visual::Sprite::Sheet() z nazwą pliku) korzystały z tej
  * samej pamięci podręcznej. Init() odnawia wpis po Shutdown(), które czyści kontekst.
  */
-Engine::Engine() {
-    assets_.Directory(AssetPath(""));
-    SetContext(assets_);
-}
-
 std::string Engine::ApplicationDirectory() const {
     return ::GetApplicationDirectory();
 }

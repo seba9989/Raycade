@@ -3,8 +3,8 @@
  * @brief Inicjalizacja, pętla gry, zamykanie i log silnika.
  * @details Pozostałe metody Engine są w plikach Engine*.cpp w tym katalogu, pogrupowane
  * jak w dokumentacji klasy: okno (EngineWindow.cpp), skalowanie (EngineScaling.cpp), sceny
- * (EngineScenes.cpp), wejście (EngineInput.cpp), pliki (EngineFiles.cpp) oraz schowek, czas
- * i losowość (EngineSystem.cpp).
+ * (EngineScenes.cpp), wejście (EngineInput.cpp), pliki (EngineFiles.cpp), dźwięk
+ * (EngineAudio.cpp) oraz schowek, czas i losowość (EngineSystem.cpp).
  */
 
 #include <raycade/Engine.hpp>
@@ -13,6 +13,8 @@
 #include <cstdarg>
 #include <cstdio>
 #include <iostream>
+
+#include "../audio/mixer/AudioMixer.hpp"
 
 namespace {
 
@@ -68,6 +70,19 @@ Contextable* ContextRoot() {
     return &Engine::Get();
 }
 
+Engine::Engine()
+    : mixer_(std::make_unique<AudioMixer>(
+          [this](LogLevel level, const std::string& message) { Log(level, message); },
+          [this](const std::string& name) { return assets_.Path(name); }
+      )) {
+    assets_.Directory(AssetPath(""));
+    SetContext(assets_);
+}
+
+Engine::~Engine() {
+    Shutdown();
+}
+
 Engine& Engine::Init() {
     if (initialized_) return *this;
     if (!logFile_.empty()) log_.open(logFile_);
@@ -108,6 +123,7 @@ Engine& Engine::Init() {
     SetContext(assets_); // Shutdown() czyści kontekst - po ponownym Init() wpis wraca
     ApplyIcon();
     if (scaling_ != Scaling::None) CreateTarget();
+    mixer_->Open();
     Log("Silnik zainicjalizowany (podwojne buforowanie, V-Sync: " +
         std::string(IsVSync() ? "tak" : "nie") + ")");
     return *this;
@@ -192,6 +208,8 @@ int Engine::Run() {
 
         // zmiany scen między klatkami, poza pętlą po obiektach
         ApplySceneChanges();
+        // głosy zgłoszone w tej klatce (Audio::Play()) ruszają z kompletem ustawień
+        mixer_->Update(dt);
         ++frameCount_;
     }
 
@@ -221,6 +239,7 @@ void Engine::Shutdown() {
         ::UnloadAutomationEventList(replayList_);
         replaying_ = false;
     }
+    mixer_->Close(); // po scenach: obiekty sceny mogą przy usuwaniu zatrzymywać swoje głosy
     postShader_.reset(); // zasób GPU - przed zamknięciem okna
     ReleaseTarget();
     ::CloseWindow();

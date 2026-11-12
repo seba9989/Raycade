@@ -7,6 +7,8 @@
 
 #include <stdexcept>
 
+#include "../audio/mixer/AudioMixer.hpp"
+
 Scene& Engine::CreateScene(const std::string& name) {
     auto [it, created] = scenes_.try_emplace(name);
     if (!created) Log(LogLevel::Warning, "scena \"" + name + "\" juz istnieje");
@@ -128,7 +130,8 @@ Engine& Engine::ReloadScene(const std::string& name) {
  * 2. zwolnienie scen z UnloadScene() i ReloadScene(),
  * 3. ponowne wczytanie scen z ReloadScene(),
  * 4. jeśli aktywna scena została zwolniona - wczytanie jej od nowa (restart),
- * 5. zwolnienie zasobów (Assets::Purge()), których nie używa już żadna scena.
+ * 5. zwolnienie zasobów (Assets::Purge()) i danych dźwięków, których nie używa już żadna
+ *    scena ani żaden głos.
  *
  * Dzięki temu scena może w jednym zdarzeniu przełączyć na inną i zwolnić samą siebie:
  * `engine.SwitchScene("menu").UnloadScene("poziom1");`
@@ -158,6 +161,6 @@ void Engine::ApplySceneChanges() {
     if (!active_.empty() && !scenes_.contains(active_)) Load(active_);
 
     // dopiero po wczytaniu: zasób użyty także przez nową scenę zostaje w pamięci
-    if (const std::size_t released = assets_.Purge(); released > 0)
+    if (const std::size_t released = assets_.Purge() + mixer_->Purge(); released > 0)
         Log("Zwolniono nieuzywane zasoby: " + std::to_string(released));
 }
