@@ -15,6 +15,7 @@
 #include <raycade/entity/Entity.hpp>
 #include <raycade/input/Input.hpp>
 #include <raycade/render/PrimitiveRenderer.hpp>
+#include <raycade/scene/PointerSystem.hpp>
 #include <raycade/scene/SceneCamera.hpp>
 
 /**
@@ -200,6 +201,7 @@ class Scene : public Contextable {
         focus_; /**< Fokus klawiatury (niszczony po obiektach, które się z niego wypisują). */
     /** Powiązania ze sceną wspólne dla wszystkich jej obiektów (patrz SceneLinks). */
     SceneLinks links_{this, this, &camera_, &focus_};
+    PointerSystem pointer_;     /**< Wybór obiektów pod kursorem i odbiorców zdarzeń myszy. */
     bool tabNavigation_ = true; /**< Czy Tab przenosi fokus. */
     /** Obiekty najwyższego poziomu. Pole jest niszczone przed klasą bazową Contextable,
      *  więc obiekty znikają przed kontekstem sceny. */

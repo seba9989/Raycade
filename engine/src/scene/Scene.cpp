@@ -14,8 +14,8 @@ void Scene::Update(float dt, const Input& input) {
             input.SystemKeyDown(KEY_LEFT_SHIFT) || input.SystemKeyDown(KEY_RIGHT_SHIFT) ? -1 : 1
         );
 
-    // trafienia myszą liczone raz, przed zmianami w tej klatce (patrz Entity::Pointer)
-    const PointerFrame pointer = Entity::Pointer(entities_, input, camera_);
+    // trafienia myszą liczone raz, przed zmianami w tej klatce (patrz PointerSystem::Pick)
+    const PointerFrame pointer = pointer_.Pick(entities_, input, camera_);
     // kliknięcie daje fokus trafionemu obiektowi z cechą Focusable, a w cokolwiek innego -
     // zabiera
     if (pointer.pressed) focus_.focused = pointer.focus;

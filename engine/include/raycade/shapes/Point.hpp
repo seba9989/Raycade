@@ -11,7 +11,7 @@ namespace shapes {
 /** @brief Pojedynczy punkt rysowany w pozycji obiektu. */
 class Point : public Shape {
   public:
-    /** @copydoc Updatable::Contains */
+    /** @copydoc Entity::Contains */
     bool Contains(Vector2 point) const override;
 
   protected:

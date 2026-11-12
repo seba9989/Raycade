@@ -39,6 +39,7 @@ add_library(raycade STATIC
     src/visual/Sprite.cpp
     src/visual/Text.cpp
     src/ui/TextField.cpp
+    src/scene/PointerSystem.cpp
     src/scene/Scene.cpp
     src/scene/SceneCamera.cpp
 )

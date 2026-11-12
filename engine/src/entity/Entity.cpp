@@ -1,7 +1,6 @@
 /**
  * @file Entity.cpp
- * @brief Drzewo obiektów: rysowanie dzieci, testy trafień, rozdział zdarzeń myszy i podpinanie do
- * sceny.
+ * @brief Drzewo obiektów: rysowanie dzieci, współrzędne, zdarzenia myszy i podpinanie do sceny.
  */
 #include <raycade/entity/Entity.hpp>
 
@@ -85,42 +84,10 @@ bool Entity::AnyChildContains(Vector2 point) const {
     return false;
 }
 
-void Entity::CollectHits(Vector2 point, std::vector<const Entity*>& hits) const {
-    if (destroyed_) return;
-    // poza przycięciem nie widać ani obiektu, ani dzieci - nie da się ich kliknąć
-    if (clip_) {
-        const auto local = TryToLocal(point);
-        if (!local || !::CheckCollisionPointRec(*local, *clip_)) return;
-    }
-    if (ChildrenHittable(point))
-        for (const Entity* child : TopFirst(children_))
-            child->CollectHits(point, hits);
-    if (Contains(point)) hits.push_back(this);
-}
-
-std::vector<const Entity*> Entity::TopFirst(const std::vector<std::unique_ptr<Entity>>& entities) {
-    std::vector<const Entity*> order;
-    order.reserve(entities.size());
-    for (const auto& entity : entities)
-        order.push_back(entity.get());
-    std::stable_sort(order.begin(), order.end(), [](const Entity* a, const Entity* b) {
-        return a->Layer() > b->Layer();
-    });
-    // w tej samej warstwie później dodany jest rysowany wyżej
-    for (auto begin = order.begin(); begin != order.end();) {
-        auto end = std::find_if(begin, order.end(), [&](const Entity* e) {
-            return e->Layer() != (*begin)->Layer();
-        });
-        std::reverse(begin, end);
-        begin = end;
-    }
-    return order;
-}
-
 void Entity::Attach(const SceneLinks& links) {
     links_ = &links;
-    // dynamic_cast raz przy dodaniu do sceny, a nie co klatkę (drugi jest w Pointer(),
-    // tylko w klatce kliknięcia)
+    // dynamic_cast raz przy dodaniu do sceny, a nie co klatkę (drugi jest
+    // w PointerSystem::Pick(), tylko w klatce kliknięcia)
     if (Focusable* focusable = dynamic_cast<Focusable*>(this))
         focusable->AttachFocus(*links.focus, this);
     if (!mounted_) {
@@ -135,42 +102,6 @@ void Entity::Attach(const SceneLinks& links) {
 Vector2 Entity::ScreenPosition() const {
     const SceneCamera* camera = ViewCamera();
     return camera ? camera->WorldToScreen(WorldPosition()) : WorldPosition();
-}
-
-PointerFrame Entity::Pointer(
-    const std::vector<std::unique_ptr<Entity>>& roots,
-    const Input& input,
-    const SceneCamera& camera
-) {
-    PointerFrame frame;
-    if (!input.IsMouseEnabled()) return frame;
-    frame.pressed = input.MousePressed(MOUSE_BUTTON_LEFT); // także w puste miejsce
-    std::vector<const Entity*> hits;
-    const Vector2 mouse = input.MousePosition();
-    const Vector2 worldMouse = camera.ScreenToWorld(mouse);
-    const std::vector<const Entity*> order = TopFirst(roots);
-    for (const Entity* root : order)
-        if (root->screenSpace_) root->CollectHits(mouse, hits);
-    for (const Entity* root : order)
-        if (!root->screenSpace_) root->CollectHits(worldMouse, hits);
-    if (hits.empty()) return frame;
-
-    frame.target = hits.front();
-    if (input.MousePressed(MOUSE_BUTTON_LEFT)) {
-        // dynamic_cast tylko przy kliknięciu: pierwszy obiekt z cechą Focusable w górę drzewa
-        for (const Entity* hit : hits) {
-            for (const Entity* e = hit; e && !frame.focus; e = e->parent_)
-                frame.focus = dynamic_cast<const Focusable*>(e);
-            if (frame.focus) break;
-        }
-        frame.press = Receiver(hits, [](const Entity& e) { return e.HandlesClick(); });
-        frame.drag = Receiver(hits, [](const Entity& e) { return e.HandlesDrag(); });
-    }
-    if (input.MouseReleased(MOUSE_BUTTON_LEFT))
-        frame.release = Receiver(hits, [](const Entity& e) { return e.HandlesMouseUp(); });
-    if (input.MouseWheel() != 0.0f)
-        frame.scroll = Receiver(hits, [](const Entity& e) { return e.HandlesScroll(); });
-    return frame;
 }
 
 const SceneCamera* Entity::ViewCamera() const {

@@ -52,7 +52,7 @@ class Polygon : public Shape {
     /** @brief Podaje wierzchołki wielokąta. */
     const std::vector<Point2D>& Vertices() const { return vertices_; }
 
-    /** @copydoc Updatable::Contains */
+    /** @copydoc Entity::Contains */
     bool Contains(Vector2 point) const override;
 
   protected:

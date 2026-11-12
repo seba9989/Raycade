@@ -86,7 +86,7 @@ class RenderGroup : public Entity {
     /** @brief Sprawdza, czy tekstura jest wygładzana. */
     bool IsSmooth() const { return smooth_; }
 
-    /** @copydoc Updatable::Contains */
+    /** @copydoc Entity::Contains */
     bool Contains(Vector2 point) const override;
 
     /** @brief Udostępnia teksturę (np. do własnego rysowania jej kopii). */

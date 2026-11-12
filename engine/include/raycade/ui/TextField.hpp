@@ -161,7 +161,7 @@ class TextField : public Entity, public Focusable {
     /** @brief Pole z fokusem przejmuje klawiaturę. */
     bool CapturesKeyboard() const override { return true; }
 
-    /** @copydoc Updatable::Contains */
+    /** @copydoc Entity::Contains */
     bool Contains(Vector2 point) const override;
 
   protected:

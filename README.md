@@ -67,7 +67,7 @@ engine/
     shapes/  shapes.hpp     figury geometryczne (namespace shapes)
     visual/  visual.hpp     obrazy, tekst, płótno, RenderGroup (namespace visual)
     ui/      ui.hpp         interfejs (namespace ui)
-    scene/                  Scene, SceneCamera
+    scene/                  Scene, SceneCamera, PointerSystem (trafienia myszą)
     engine/                 typy ustawień silnika, makro SCENE
     Engine.hpp              okno, pętla, sceny
   src/                    implementacja w tym samym układzie

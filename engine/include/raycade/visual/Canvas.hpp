@@ -90,7 +90,7 @@ class Canvas : public Entity {
         return {static_cast<float>(bitmap_.Width()), static_cast<float>(bitmap_.Height())};
     }
 
-    /** @copydoc Updatable::Contains */
+    /** @copydoc Entity::Contains */
     bool Contains(Vector2 point) const override;
 
   protected:

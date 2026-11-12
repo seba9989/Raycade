@@ -24,7 +24,7 @@ class Rect : public Shape {
     /** @brief Podaje szerokość i wysokość. */
     Vector2 Size() const { return size_; }
 
-    /** @copydoc Updatable::Contains */
+    /** @copydoc Entity::Contains */
     bool Contains(Vector2 point) const override;
 
   protected:

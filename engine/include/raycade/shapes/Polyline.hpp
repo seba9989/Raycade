@@ -43,7 +43,7 @@ class Polyline : public Shape {
     bool IsClosed() const { return closed_; }
 
     /**
-     * @copydoc Updatable::Contains
+     * @copydoc Entity::Contains
      * @details Łamana zamknięta jest traktowana jak wielokąt, otwarta - jak zbiór odcinków.
      */
     bool Contains(Vector2 point) const override;

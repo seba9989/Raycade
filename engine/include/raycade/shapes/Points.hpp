@@ -27,7 +27,7 @@ class Points : public Shape {
     /** @brief Podaje pozycje punktów (względem pozycji obiektu). */
     const std::vector<Point2D>& Positions() const { return positions_; }
 
-    /** @copydoc Updatable::Contains */
+    /** @copydoc Entity::Contains */
     bool Contains(Vector2 point) const override;
 
   protected:

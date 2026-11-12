@@ -24,7 +24,7 @@ class Circle : public Shape {
     /** @brief Podaje promień. */
     float Radius() const { return radius_; }
 
-    /** @copydoc Updatable::Contains */
+    /** @copydoc Entity::Contains */
     bool Contains(Vector2 point) const override;
 
   protected:

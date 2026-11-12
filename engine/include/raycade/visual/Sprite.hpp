@@ -370,7 +370,7 @@ class Sprite : public Entity {
         return self;
     }
 
-    /** @copydoc Updatable::Contains */
+    /** @copydoc Entity::Contains */
     bool Contains(Vector2 point) const override;
 
   protected:

@@ -24,7 +24,7 @@ class Ellipse : public Shape {
     /** @brief Podaje promienie {poziomy, pionowy}. */
     Vector2 Radius() const { return radius_; }
 
-    /** @copydoc Updatable::Contains */
+    /** @copydoc Entity::Contains */
     bool Contains(Vector2 point) const override;
 
   protected:

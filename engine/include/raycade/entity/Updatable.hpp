@@ -23,12 +23,12 @@ using Callback = std::type_identity_t<std::function<void(Self&, Args...)>>;
 
 /**
  * @brief Zdarzenia myszy przydzielone jednemu obiektowi w bieżącej klatce.
- * @details Wypełnia je Entity na podstawie trafień policzonych przez scenę (patrz
- * @ref entity_trafienia), więc obiekt nie sprawdza kursora sam.
+ * @details Wypełnia je Entity::Update() z wyniku PointerSystem (PointerFrame), więc obiekt nie
+ * sprawdza kursora sam - patrz @ref entity_trafienia.
  */
 struct PointerEvents {
-    bool hovered =
-        false; /**< Kursor nad obiektem (albo nad jego potomkiem) i nic go nie zasłania. */
+    /** Kursor nad obiektem (albo nad jego potomkiem) i nic go nie zasłania. */
+    bool hovered = false;
     bool pressed = false;   /**< Obiekt dostaje OnClick w tej klatce. */
     bool released = false;  /**< Obiekt dostaje OnMouseUp w tej klatce. */
     bool scrolled = false;  /**< Obiekt dostaje OnScroll w tej klatce. */
@@ -36,22 +36,15 @@ struct PointerEvents {
 };
 
 /**
- * @brief Obiekt aktualizowany co klatkę.
- * @details Klasa obsługuje tylko własne zdarzenia. Aktualizacja dzieci należy do Entity.
- * Domyślna implementacja Contains() nie ma obszaru reagowania na mysz.
+ * @brief Obiekt aktualizowany co klatkę: Tick(), OnUpdate() i zdarzenia wejścia.
+ * @details Klasa tylko przechowuje i wywołuje własne zdarzenia. Nie zna geometrii ani drzewa:
+ * - obszar trafienia (Contains()) i aktualizacja dzieci należą do Entity,
+ * - to, który obiekt jest pod kursorem i kto dostaje zdarzenie myszy, ustala PointerSystem
+ *   sceny.
  */
 class Updatable {
   public:
     virtual ~Updatable() = default;
-
-    /**
-     * @brief Sprawdza trafienie punktem w obiekt.
-     * @details Punkt jest w układzie sceny (po przeliczeniu kursora przez kamerę), czyli w tym
-     * samym co World() i TryToLocal() - patrz @ref entity_uklady.
-     * @param point Punkt w układzie sceny.
-     * @return true, gdy punkt należy do obiektu.
-     */
-    virtual bool Contains([[maybe_unused]] Vector2 point) const { return false; }
 
     /**
      * @brief Sprawdza, czy kursor jest nad obiektem.
@@ -206,12 +199,13 @@ class Updatable {
      */
     virtual void Tick([[maybe_unused]] float dt, [[maybe_unused]] const Input& input) {}
 
-    std::function<void(float)> update_;                       /**< Callback wykonywany co klatkę. */
-    std::function<void()> click_;                             /**< Reakcja na kliknięcie. */
-    std::function<void()> mouseEnter_;                        /**< Reakcja na wejście kursora. */
-    std::function<void()> mouseLeave_;                        /**< Reakcja na wyjście kursora. */
-    std::vector<std::pair<int, std::function<void()>>> keys_; /**< Reakcje na klawisze. */
-    /** Reakcje na puszczenie klawiszy. */
+    std::function<void(float)> update_; /**< Callback wykonywany co klatkę. */
+    std::function<void()> click_;       /**< Reakcja na kliknięcie. */
+    std::function<void()> mouseEnter_;  /**< Reakcja na wejście kursora. */
+    std::function<void()> mouseLeave_;  /**< Reakcja na wyjście kursora. */
+    /** Reakcje na naciśnięcie klawiszy (kod klawisza, funkcja). */
+    std::vector<std::pair<int, std::function<void()>>> keys_;
+    /** Reakcje na puszczenie klawiszy (kod klawisza, funkcja). */
     std::vector<std::pair<int, std::function<void()>>> keysReleased_;
     std::function<void()> mouseUp_;     /**< Reakcja na puszczenie przycisku nad obiektem. */
     std::function<void(float)> scroll_; /**< Reakcja na kółko myszy nad obiektem. */
@@ -231,7 +225,8 @@ class Updatable {
     }
 
   private:
-    friend class Entity;
+    friend class Entity;        // wywołuje HandleEvents() w Update()
+    friend class PointerSystem; // pyta Handles*(), żeby wybrać odbiorcę zdarzenia myszy
 
     /**
      * @brief Opakowuje funkcję zdarzenia tak, by otrzymywała obiekt jako jego konkretny typ.
@@ -244,7 +239,11 @@ class Updatable {
         return [&self, fn = std::move(callback)] { fn(self); };
     }
 
-    /** @name Czy obiekt obsługuje dane zdarzenie myszy (do wyboru odbiorcy przez scenę) */
+    /**
+     * @name Czy obiekt obsługuje dane zdarzenie myszy
+     * Obiekt bez zdarzenia przepuszcza je do przodka albo obiektów pod spodem - na tej
+     * podstawie PointerSystem wybiera odbiorcę (patrz @ref entity_trafienia).
+     */
     /** @{ */
     bool HandlesClick() const { return static_cast<bool>(click_); }
     bool HandlesMouseUp() const { return static_cast<bool>(mouseUp_); }
@@ -256,7 +255,7 @@ class Updatable {
      * @brief Wywołuje callbacki myszy i klawiatury, Tick() i callback aktualizacji.
      * @param dt Czas od poprzedniej klatki w sekundach.
      * @param input Stan wejścia.
-     * @param pointer Zdarzenia myszy przydzielone temu obiektowi przez scenę.
+     * @param pointer Zdarzenia myszy przydzielone temu obiektowi w tej klatce.
      */
     void HandleEvents(float dt, const Input& input, const PointerEvents& pointer);
 

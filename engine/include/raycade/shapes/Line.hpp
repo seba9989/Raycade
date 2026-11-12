@@ -37,7 +37,7 @@ class Line : public Shape {
     /** @brief Podaje koniec odcinka (względem pozycji obiektu). */
     Point2D To() const { return to_; }
 
-    /** @copydoc Updatable::Contains */
+    /** @copydoc Entity::Contains */
     bool Contains(Vector2 point) const override;
 
   protected:

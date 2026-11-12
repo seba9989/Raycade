@@ -181,7 +181,7 @@ class Text : public Entity {
      */
     Vector2 Size() const;
 
-    /** @copydoc Updatable::Contains */
+    /** @copydoc Entity::Contains */
     bool Contains(Vector2 point) const override;
 
   protected:

@@ -38,7 +38,7 @@ struct SceneLinks {
 };
 
 /**
- * @brief Wynik trafiania myszą w jednej klatce, liczony przez scenę.
+ * @brief Wynik trafiania myszą w jednej klatce, liczony przez PointerSystem sceny.
  * @details Patrz @ref entity_trafienia.
  */
 struct PointerFrame {
@@ -129,9 +129,9 @@ struct PointerFrame {
  * @endcode
  *
  * @section entity_trafienia Trafianie myszą
- * Scena raz na klatkę zbiera obiekty pod kursorem (te, których Contains() zwraca true)
- * w kolejności od najwyżej narysowanego: obiekty ekranu (ScreenSpace()) nad obiektami świata,
- * wyższa warstwa nad niższą, dziecko nad rodzicem, a w tej samej warstwie - później dodany
+ * Scena (jej PointerSystem) raz na klatkę zbiera obiekty pod kursorem (te, których Contains()
+ * zwraca true) w kolejności od najwyżej narysowanego: obiekty ekranu (ScreenSpace()) nad obiektami
+ * świata, wyższa warstwa nad niższą, dziecko nad rodzicem, a w tej samej warstwie - później dodany
  * nad wcześniejszym. Dla obiektów świata kursor jest najpierw przeliczany przez kamerę sceny.
  * - IsHovered(), OnMouseEnter i OnMouseLeave dotyczą najwyższego trafionego obiektu i jego
  *   przodków (jak :hover w CSS) - obiekt zasłonięty przez inny nie jest najechany.
@@ -228,21 +228,22 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
     }
 
     /**
-     * @brief Obsługuje własne zdarzenia, a następnie aktualizuje dzieci.
-     * @details Wywoływana przez scenę. Logikę klasy pochodnej umieszcza się w Tick().
-     * @param dt Czas od poprzedniej klatki w sekundach.
-     * @param input Stan klawiatury i myszy.
-     * @param pointer Trafienia myszą policzone przez scenę w tej klatce.
-     */
-    void Update(float dt, const Input& input, const PointerFrame& pointer);
-
-    /**
      * @brief Nakłada lokalną macierz i rysuje zawartość obiektu (RenderContent()).
      * @details Metoda jest `final`: własny wygląd klasy pochodnej rysuje się w Draw(),
      * a zmiana sposobu rysowania dzieci - w RenderContent().
      * @param renderer Renderer prymitywów.
      */
     void Render(PrimitiveRenderer& renderer) const final;
+
+    /**
+     * @brief Sprawdza trafienie punktem w obiekt.
+     * @details Punkt jest w układzie sceny (po przeliczeniu kursora przez kamerę), czyli w tym
+     * samym co World() i TryToLocal() - patrz @ref entity_uklady. Domyślnie obiekt nie ma
+     * obszaru trafienia; kształty i własne klasy nadpisują tę metodę.
+     * @param point Punkt w układzie sceny.
+     * @return true, gdy punkt należy do obiektu.
+     */
+    virtual bool Contains([[maybe_unused]] Vector2 point) const { return false; }
 
     /**
      * @brief Oznacza obiekt jako obiekt ekranu (HUD, menu): bez kamery i nad światem.
@@ -387,54 +388,18 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
     bool AnyChildContains(Vector2 point) const;
 
   private:
-    friend class Scene;
+    friend class Scene;         // aktualizuje, podpina (Attach()) i usuwa zniszczone obiekty
+    friend class PointerSystem; // czyta drzewo (dzieci, rodzic, ScreenSpace) przy trafieniach
 
     /**
-     * @brief Dopisuje obiekty pod punktem w kolejności od najwyżej narysowanego.
-     * @details Kolejność odwrotna do Render(): najpierw dzieci (od najwyższej warstwy, w niej
-     * od ostatnio dodanego), potem sam obiekt, bo dzieci są rysowane nad rodzicem.
-     * @param point Punkt w układzie sceny.
-     * @param hits Lista, do której dopisywane są trafienia.
+     * @brief Obsługuje własne zdarzenia, a następnie aktualizuje dzieci.
+     * @details Wywołuje ją tylko scena (i Entity dla swoich dzieci), więc nie jest częścią API
+     * gry. Logikę klasy pochodnej umieszcza się w Tick(), a z zewnątrz - w OnUpdate().
+     * @param dt Czas od poprzedniej klatki w sekundach.
+     * @param input Stan klawiatury i myszy.
+     * @param pointer Trafienia myszą z tej klatki (PointerSystem::Pick()).
      */
-    void CollectHits(Vector2 point, std::vector<const Entity*>& hits) const;
-
-    /**
-     * @brief Porządkuje obiekty od najwyżej narysowanego (odwrotnie niż Render()).
-     * @param entities Obiekty jednego poziomu drzewa.
-     * @return Wskaźniki od najwyższej warstwy, w warstwie od ostatnio dodanego.
-     */
-    static std::vector<const Entity*> TopFirst(
-        const std::vector<std::unique_ptr<Entity>>& entities
-    );
-
-    /**
-     * @brief Wybiera odbiorcę zdarzenia myszy (patrz @ref entity_trafienia).
-     * @param hits Trafienia od najwyżej narysowanego.
-     * @param handles Czy obiekt obsługuje zdarzenie.
-     * @return Odbiorca albo nullptr.
-     */
-    template <typename Predicate>
-    static const Entity* Receiver(const std::vector<const Entity*>& hits, Predicate handles) {
-        for (const Entity* hit : hits)
-            for (const Entity* entity = hit; entity; entity = entity->parent_)
-                if (handles(*entity)) return entity;
-        return nullptr;
-    }
-
-    /**
-     * @brief Liczy trafienia myszą dla jednej klatki.
-     * @details Obiekty ekranu są sprawdzane pierwsze (leżą nad światem) z kursorem w układzie
-     * okna, a obiekty świata - z kursorem przeliczonym przez kamerę.
-     * @param roots Obiekty najwyższego poziomu sceny.
-     * @param input Stan wejścia.
-     * @param camera Kamera sceny.
-     * @return Najwyższy trafiony obiekt i odbiorcy zdarzeń.
-     */
-    static PointerFrame Pointer(
-        const std::vector<std::unique_ptr<Entity>>& roots,
-        const Input& input,
-        const SceneCamera& camera
-    );
+    void Update(float dt, const Input& input, const PointerFrame& pointer);
 
     /** @brief Sprawdza, czy obiekt to podany obiekt albo jego przodek. */
     bool IsSelfOrAncestorOf(const Entity* entity) const;
