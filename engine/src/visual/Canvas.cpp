@@ -4,12 +4,25 @@
  */
 #include <raycade/visual/Canvas.hpp>
 
+#include <algorithm>
+#include <utility>
+
 namespace visual {
 
 void Canvas::EditPixels(const std::function<void(PrimitiveRenderer&)>& paint) {
     PrimitiveRenderer renderer;
     renderer.Target(bitmap_);
     paint(renderer);
+}
+
+void Canvas::Resize(Vector2 size) {
+    Bitmap next{static_cast<int>(size.x), static_cast<int>(size.y), background_};
+    const int width = std::min(next.Width(), bitmap_.Width());
+    const int height = std::min(next.Height(), bitmap_.Height());
+    for (int y = 0; y < height; ++y)
+        for (int x = 0; x < width; ++x)
+            next.Pixel(x, y, bitmap_.Pixel(x, y));
+    bitmap_ = std::move(next);
 }
 
 bool Canvas::Contains(Vector2 point) const {

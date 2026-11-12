@@ -22,17 +22,17 @@ SpriteFrame FrameOf(Rectangle area) {
 
 } // namespace
 
-int SpriteClip::Length() const {
+int SpriteAnimation::Length() const {
     return std::max(1, frames.empty() ? count : static_cast<int>(frames.size()));
 }
 
-int SpriteClip::SheetFrame(int index) const {
+int SpriteAnimation::SheetFrame(int index) const {
     index = std::clamp(index, 0, Length() - 1);
     if (!frames.empty()) return frames[static_cast<std::size_t>(index)];
     return first + index;
 }
 
-float SpriteClip::Duration(int index) const {
+float SpriteAnimation::Duration(int index) const {
     if (index >= 0 && static_cast<std::size_t>(index) < durations.size() &&
         durations[static_cast<std::size_t>(index)] > 0.0f)
         return durations[static_cast<std::size_t>(index)];
@@ -99,55 +99,56 @@ int SpriteSheet::FindFrame(const std::string& name) const {
     return -1;
 }
 
-SpriteSheet& SpriteSheet::Clip(
+SpriteSheet& SpriteSheet::Animation(
     const std::string& name,
     int first,
     int count,
     float fps,
     Playback mode
 ) {
-    SpriteClip clip;
+    SpriteAnimation clip;
     clip.first = first;
     clip.count = count;
     clip.fps = fps;
     clip.mode = mode;
-    return Clip(name, std::move(clip));
+    return Animation(name, std::move(clip));
 }
 
-SpriteSheet& SpriteSheet::Clip(
+SpriteSheet& SpriteSheet::Animation(
     const std::string& name,
     std::vector<int> frames,
     float fps,
     Playback mode
 ) {
-    SpriteClip clip;
+    SpriteAnimation clip;
     clip.frames = std::move(frames);
     clip.fps = fps;
     clip.mode = mode;
-    return Clip(name, std::move(clip));
+    return Animation(name, std::move(clip));
 }
 
-SpriteClip* SpriteSheet::EditClip(const std::string& name, const char* function) {
-    const auto it = clips_.find(name);
-    if (it != clips_.end()) return &it->second;
+SpriteAnimation* SpriteSheet::EditAnimation(const std::string& name, const char* function) {
+    const auto it = animations_.find(name);
+    if (it != animations_.end()) return &it->second;
     ::TraceLog(LOG_WARNING, "SpriteSheet::%s: nieznana animacja \"%s\"", function, name.c_str());
     return nullptr;
 }
 
 SpriteSheet& SpriteSheet::Durations(const std::string& name, std::vector<float> seconds) {
-    if (SpriteClip* clip = EditClip(name, "Durations")) clip->durations = std::move(seconds);
+    if (SpriteAnimation* clip = EditAnimation(name, "Durations"))
+        clip->durations = std::move(seconds);
     return *this;
 }
 
 SpriteSheet& SpriteSheet::Event(const std::string& name, int frame, std::string event) {
-    if (SpriteClip* clip = EditClip(name, "Event"))
+    if (SpriteAnimation* clip = EditAnimation(name, "Event"))
         clip->events.emplace_back(frame, std::move(event));
     return *this;
 }
 
-const SpriteClip* SpriteSheet::FindClip(const std::string& name) const {
-    const auto it = clips_.find(name);
-    return it == clips_.end() ? nullptr : &it->second;
+const SpriteAnimation* SpriteSheet::FindAnimation(const std::string& name) const {
+    const auto it = animations_.find(name);
+    return it == animations_.end() ? nullptr : &it->second;
 }
 
 // ---------------------------------------------------------------- JSON (Aseprite, TexturePacker)
@@ -202,7 +203,11 @@ std::string GroupName(const std::string& frame) {
 }
 
 /** @brief Uzupełnia czasy klatek animacji z czasów zapisanych w klatkach arkusza. */
-void FillDurations(SpriteClip& clip, const std::vector<int>& frames, const SpriteSheet& sheet) {
+void FillDurations(
+    SpriteAnimation& clip,
+    const std::vector<int>& frames,
+    const SpriteSheet& sheet
+) {
     float total = 0;
     clip.durations.clear();
     for (int frame : frames) {
@@ -275,7 +280,7 @@ std::optional<SpriteSheet> SpriteSheet::Load(
                 std::reverse(order.begin(), order.end());
             const bool pingPong = direction == "pingpong" || direction == "pingpong_reverse";
 
-            SpriteClip clip;
+            SpriteAnimation clip;
             clip.mode = pingPong ? Playback::PingPong : Playback::Loop;
             if (const int repeat = ReadRepeat(tag); repeat > 0) {
                 // N odtworzeń i stop: rozpisujemy klatki (tam i z powrotem bez powtarzania
@@ -292,7 +297,7 @@ std::optional<SpriteSheet> SpriteSheet::Load(
             }
             clip.frames = order;
             FillDurations(clip, order, sheet);
-            sheet.clips_[tag.value("name", "")] = std::move(clip);
+            sheet.animations_[tag.value("name", "")] = std::move(clip);
         }
 
         // bez tagów (np. TexturePacker): animacje z nazw klatek, w kolejności pierwszego
@@ -313,10 +318,10 @@ std::optional<SpriteSheet> SpriteSheet::Load(
                 it->second.push_back(i);
             }
             for (auto& [group, order] : groups) {
-                SpriteClip clip;
+                SpriteAnimation clip;
                 clip.frames = order;
                 FillDurations(clip, order, sheet);
-                sheet.clips_[group] = std::move(clip);
+                sheet.animations_[group] = std::move(clip);
             }
         }
     } catch (const nlohmann::json::exception& error) {

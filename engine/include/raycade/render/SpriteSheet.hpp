@@ -29,7 +29,7 @@ enum class Playback {
  * np. {0, 1, 2, 1} albo klatki z różnych wierszy. Indeksy w durations i events to numery
  * klatek w animacji (od 0), a nie w arkuszu.
  */
-struct SpriteClip {
+struct SpriteAnimation {
     int first = 0;                                   /**< Pierwsza klatka zakresu. */
     int count = 1;                                   /**< Liczba klatek zakresu. */
     std::vector<int> frames;                         /**< Klatki arkusza (zamiast zakresu). */
@@ -85,14 +85,14 @@ struct SpriteFrame {
  *
  * Klatki to dowolne prostokąty bitmapy. Najczęstszy przypadek - równa siatka, także
  * z marginesem wokół i odstępami między klatkami - tworzy Grid(); pojedyncze prostokąty
- * (np. z atlasu) dopisuje Frame(). Klatki numeruje się od 0, w siatce wierszami.
+ * (np. z atlasu) dopisuje AddFrame(). Klatki numeruje się od 0, w siatce wierszami.
  * @code{.cpp}
  * auto hero = std::make_shared<SpriteSheet>(
  *     SpriteSheet::Grid(engine.Assets().Bitmap("hero.png"), {32, 32}, {1, 1}, {2, 2}));
- * hero->Clip("stoi", 0, 4, 6)
- *     .Clip("biegnie", 4, 6, 12)
- *     .Clip("skok", 10, 3, 10, Playback::Once)
- *     .Clip("oddech", {0, 1, 2, 1}, 4)
+ * hero->Animation("stoi", 0, 4, 6)
+ *     .Animation("biegnie", 4, 6, 12)
+ *     .Animation("skok", 10, 3, 10, Playback::Once)
+ *     .Animation("oddech", {0, 1, 2, 1}, 4)
  *     .Durations("skok", {0.05f, 0.3f, 0.1f})  // zawieszenie w powietrzu
  *     .Event("biegnie", 2, "krok")
  *     .Event("biegnie", 5, "krok");
@@ -190,7 +190,7 @@ class SpriteSheet {
      * @param area Prostokąt w pikselach bitmapy.
      * @return Ten sam arkusz.
      */
-    SpriteSheet& Frame(Rectangle area) {
+    SpriteSheet& AddFrame(Rectangle area) {
         SpriteFrame frame;
         frame.area = area;
         frames_.push_back(std::move(frame));
@@ -202,7 +202,7 @@ class SpriteSheet {
      * @param frame Klatka.
      * @return Ten sam arkusz.
      */
-    SpriteSheet& Frame(SpriteFrame frame) {
+    SpriteSheet& AddFrame(SpriteFrame frame) {
         frames_.push_back(std::move(frame));
         return *this;
     }
@@ -243,8 +243,8 @@ class SpriteSheet {
      * @param clip Opis animacji.
      * @return Ten sam arkusz.
      */
-    SpriteSheet& Clip(const std::string& name, SpriteClip clip) {
-        clips_[name] = std::move(clip);
+    SpriteSheet& Animation(const std::string& name, SpriteAnimation clip) {
+        animations_[name] = std::move(clip);
         return *this;
     }
 
@@ -257,7 +257,7 @@ class SpriteSheet {
      * @param mode Sposób odtwarzania.
      * @return Ten sam arkusz.
      */
-    SpriteSheet& Clip(
+    SpriteSheet& Animation(
         const std::string& name,
         int first,
         int count,
@@ -273,7 +273,7 @@ class SpriteSheet {
      * @param mode Sposób odtwarzania.
      * @return Ten sam arkusz.
      */
-    SpriteSheet& Clip(
+    SpriteSheet& Animation(
         const std::string& name,
         std::vector<int> frames,
         float fps,
@@ -306,16 +306,16 @@ class SpriteSheet {
      * @param name Nazwa animacji.
      * @return Wskaźnik animacji albo nullptr.
      */
-    const SpriteClip* FindClip(const std::string& name) const;
+    const SpriteAnimation* FindAnimation(const std::string& name) const;
 
     /** @brief Podaje wszystkie animacje według nazw. */
-    const std::map<std::string, SpriteClip>& Clips() const { return clips_; }
+    const std::map<std::string, SpriteAnimation>& Animations() const { return animations_; }
 
   private:
     /** @brief Zwraca animację do zmiany albo nullptr z ostrzeżeniem w logu. */
-    SpriteClip* EditClip(const std::string& name, const char* function);
+    SpriteAnimation* EditAnimation(const std::string& name, const char* function);
 
-    std::shared_ptr<const ::Bitmap> bitmap_;  /**< Bitmapa klatek. */
-    std::vector<SpriteFrame> frames_;         /**< Klatki. */
-    std::map<std::string, SpriteClip> clips_; /**< Animacje (klucz: nazwa). */
+    std::shared_ptr<const ::Bitmap> bitmap_;            /**< Bitmapa klatek. */
+    std::vector<SpriteFrame> frames_;                   /**< Klatki. */
+    std::map<std::string, SpriteAnimation> animations_; /**< Animacje (klucz: nazwa). */
 };

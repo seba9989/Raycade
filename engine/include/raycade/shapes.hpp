@@ -31,10 +31,10 @@
  * przestrzeni nazw. Nie są figurami, więc nie mają Fill() ani Raster().
  *
  * Metody wspólne ma każda figura (z klas Shape, Transformable, Drawable, Updatable i Entity):
- * - przekształcenia: Position(), Translate(), Rotate(), Scale(),
- * - wygląd: Paint(), Fill(), Raster(), Layer(), Blend(), Clip(), Shader(),
+ * - przekształcenia: Position(), Translate(), Rotation(), Rotate(), Scale(), ScaleBy(),
+ * - wygląd: Paint(), Fill(), Raster(), Layer(), Blend(), ClipRect(), Shader(),
  * - drzewo i układ: Spawn(), Children(), ScreenSpace(),
- * - zdarzenia: OnUpdate(), OnClick(), OnMouseUp(), OnMouseEnter(), OnMouseLeave(), OnScroll(),
+ * - zdarzenia: OnUpdate(), OnClick(), OnMouseReleased(), OnMouseEnter(), OnMouseLeave(), OnScroll(),
  *   OnDragStart(), OnDrag(), OnDragEnd(), OnKeyPressed(), OnKeyReleased(),
  * - stan: IsHovered(), IsDragging(), IsFilled(), IsScreenSpace().
  *

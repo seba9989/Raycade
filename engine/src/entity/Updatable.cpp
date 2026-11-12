@@ -14,7 +14,7 @@ void Updatable::HandleEvents(float dt, const Input& input, const PointerEvents& 
         dragFrom_ = input.MousePosition();
         if (dragStart_) dragStart_();
     }
-    if (pointer.released && mouseUp_) mouseUp_();
+    if (pointer.released && mouseReleased_) mouseReleased_();
     if (pointer.scrolled && scroll_) scroll_(input.MouseWheel());
     HandleDrag(input);
     for (const auto& [key, callback] : keys_)

@@ -33,7 +33,7 @@ constexpr const char* kJson = "sprite-test.json";
 
 /** @brief Nazwa trybu do opisu. */
 const char* ModeName(const SpriteSheet& sheet, const std::string& clip) {
-    const SpriteClip* found = sheet.FindClip(clip);
+    const SpriteAnimation* found = sheet.FindAnimation(clip);
     if (!found) return "cały arkusz";
     switch (found->mode) {
     case Playback::Loop:
@@ -69,7 +69,7 @@ SCENE("sprite") {
     // arkusz z Assets jest tylko do odczytu - kopia (bitmapa zostaje wspólna), do której
     // dopisujemy to, czego plik Aseprite nie zapisuje: listę klatek z różnych wierszy i zdarzenia
     const auto sheet = std::make_shared<SpriteSheet>(*fromFile);
-    sheet->Clip("lista", {0, 8, 16, 23, 15, 7}, 3)
+    sheet->Animation("lista", {0, 8, 16, 23, 15, 7}, 3)
         .Event("biegnie", 2, "krok")
         .Event("biegnie", 6, "krok")
         .Event("atak", 5, "trafienie");
@@ -81,7 +81,7 @@ SCENE("sprite") {
         std::string text = std::string{kJson} + " + .png: ";
         text += ok ? ::TextFormat(
                          "%dx%d, klatki %d, animacje %d", image.Width(), image.Height(),
-                         sheet->FrameCount(), static_cast<int>(sheet->Clips().size())
+                         sheet->FrameCount(), static_cast<int>(sheet->Animations().size())
                      )
                    : "BRAK - szachownica zastępcza";
         if (reloads > 0) text += ::TextFormat("   przeładowano (L): %d", reloads);
@@ -192,8 +192,9 @@ SCENE("sprite") {
             const Vector2 size = self.FrameSize();
             info.Content(
                 "Animacja: " +
-                (self.Animation().empty() ? std::string{"(domyślna)"} : self.Animation()) + " [" +
-                ModeName(*self.Sheet(), self.Animation()) + "]\n" +
+                (self.CurrentAnimation().empty() ? std::string{"(domyślna)"}
+                                                 : self.CurrentAnimation()) +
+                " [" + ModeName(*self.Sheet(), self.CurrentAnimation()) + "]\n" +
                 "Klatka: " + std::to_string(self.Frame()) + "   w arkuszu: " +
                 std::to_string(self.SheetFrame()) + " / " + std::to_string(self.SheetFrames()) +
                 "\n" + "Gra: " + (self.IsPlaying() ? "tak" : "nie") +

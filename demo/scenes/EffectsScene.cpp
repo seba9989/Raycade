@@ -4,7 +4,7 @@
  * @details
  * - animacja: koło z arkusza 8 klatek (arkusz rysowany w programie na Bitmap); LPM na kole
  *   wstrzymuje i wznawia animację, X odbija drugie koło,
- * - przycinanie: lista w panelu z Clip() - kółko myszy przewija, wiersze poza panelem nie są
+ * - przycinanie: lista w panelu z ClipRect() - kółko myszy przewija, wiersze poza panelem nie są
  *   widoczne ani klikalne,
  * - shadery: powierzchnia z falującym shaderem (uniform czasu), G włącza szarość całego obrazu
  *   (Engine::PostShader()),
@@ -146,7 +146,7 @@ SCENE("efekty") {
     // jeden opis animacji dla obu sprite'ów: siatka 4 x 2 klatek i nazwane animacje
     const auto wheel =
         std::make_shared<SpriteSheet>(SpriteSheet::Grid(MakeWheelSheet(), {kFrame, kFrame}));
-    wheel->Clip("kreci", 0, 8, 12).Clip("waha", 0, 5, 8, Playback::PingPong);
+    wheel->Animation("kreci", 0, 8, 12).Animation("waha", 0, 5, 8, Playback::PingPong);
     // każde przejście szprychy przez poziom (klatki 0 i 4) - zdarzenie klatki
     wheel->Event("kreci", 0, "poziomo").Event("kreci", 4, "poziomo");
     auto& turns = title({40, 250}, "obroty: 0").FontSize(16);
@@ -176,8 +176,8 @@ SCENE("efekty") {
     title({40, 230}, "drugie: PingPong, Speed(0.5), Paint(SKYBLUE)").FontSize(16);
 
     // ---------------- przycinanie ----------------
-    title({370, 30}, "Clip(): kółko myszy przewija");
-    auto& panel = scene.Spawn<Group>().Position({370, 70}).Clip({0, 0, 260, 200});
+    title({370, 30}, "ClipRect(): kółko myszy przewija");
+    auto& panel = scene.Spawn<Group>().Position({370, 70}).ClipRect({0, 0, 260, 200});
     panel.Spawn<shapes::Rect>().Size({260, 200}).Paint(LIGHTGRAY);
     auto& list = panel.Spawn<Group>();
     for (int i = 0; i < 12; ++i) {
@@ -253,12 +253,10 @@ SCENE("efekty") {
         .Anchor({0.5f, 0.5f})
         .Paint(DARKBLUE)
         .Position({870, 660})
-        .OnUpdate([previous = 1.0f](visual::Text& self, float) mutable {
+        .OnUpdate([](visual::Text& self, float) {
             const float time = static_cast<float>(Engine::Get().Time());
             const float scale = 1.4f + 0.4f * std::sin(time * 2.0f);
-            // Scale() mnoży bieżącą skalę - podajemy zmianę względem poprzedniej klatki
-            self.Scale({scale / previous, scale / previous});
-            previous = scale;
+            self.Scale({scale, scale}); // skala bezwzględna (ScaleBy() mnożyłby bieżącą)
         });
 
     engine.BindAction("nowa pilka", {bind::Key(KEY_B), bind::Gesture(GESTURE_DOUBLETAP)});

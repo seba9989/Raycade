@@ -22,7 +22,7 @@ bool Sprite::IsJsonPath(const std::string& path) {
     return extension == ".json";
 }
 
-const SpriteClip& Sprite::ActiveClip() const {
+const SpriteAnimation& Sprite::ActiveAnimation() const {
     if (clip_) return *clip_;
     // animacja domyślna: cały arkusz z Fps() (pola aktualne przy każdym użyciu)
     defaultClip_.first = 0;
@@ -41,8 +41,8 @@ void Sprite::SetGrid(
         std::make_shared<SpriteSheet>(SpriteSheet::Grid(std::move(bitmap), frame, margin, spacing));
     // animacje z Animation() wywołanego przed Sheet() nie mogą zniknąć
     if (own_)
-        for (const auto& [name, clip] : own_->Clips())
-            sheet->Clip(name, clip);
+        for (const auto& [name, clip] : own_->Animations())
+            sheet->Animation(name, clip);
     own_ = sheet;
     sheet_ = std::move(sheet);
     SheetChanged();
@@ -68,17 +68,17 @@ void Sprite::SheetChanged() {
             for (int i = 0; i < sheet_->FrameCount(); ++i)
                 defaultClip_.durations.push_back(sheet_->FrameInfo(i).duration);
     }
-    ClipsChanged();
+    AnimationsChanged();
     Rewind(frame_);
 }
 
-void Sprite::ClipsChanged() {
-    clip_ = sheet_ && !current_.empty() ? sheet_->FindClip(current_) : nullptr;
+void Sprite::AnimationsChanged() {
+    clip_ = sheet_ && !current_.empty() ? sheet_->FindAnimation(current_) : nullptr;
     ++generation_;
 }
 
 void Sprite::Start(const std::string& name) {
-    const SpriteClip* clip = name.empty() || !sheet_ ? nullptr : sheet_->FindClip(name);
+    const SpriteAnimation* clip = name.empty() || !sheet_ ? nullptr : sheet_->FindAnimation(name);
     if (!name.empty() && !clip) {
         if (name != missing_) {
             missing_ = name;
@@ -99,19 +99,19 @@ void Sprite::Start(const std::string& name) {
 }
 
 void Sprite::Resume() {
-    const SpriteClip& clip = ActiveClip();
+    const SpriteAnimation& clip = ActiveAnimation();
     // jednorazowa animacja zatrzymana na końcu zaczyna od nowa
     if (clip.mode == Playback::Once && frame_ >= clip.Length() - 1) Rewind(0);
     playing_ = true;
 }
 
 void Sprite::Rewind(int frame) {
-    frame_ = std::clamp(frame, 0, ActiveClip().Length() - 1);
+    frame_ = std::clamp(frame, 0, ActiveAnimation().Length() - 1);
     time_ = 0.0f;
 }
 
 int Sprite::SheetFrame() const {
-    return std::clamp(ActiveClip().SheetFrame(frame_), 0, std::max(0, SheetFrames() - 1));
+    return std::clamp(ActiveAnimation().SheetFrame(frame_), 0, std::max(0, SheetFrames() - 1));
 }
 
 Vector2 Sprite::FrameSize() const {
@@ -120,7 +120,7 @@ Vector2 Sprite::FrameSize() const {
     return sheet_->FrameInfo(SheetFrame()).FullSize();
 }
 
-bool Sprite::Advance(const SpriteClip& clip) {
+bool Sprite::Advance(const SpriteAnimation& clip) {
     const int length = clip.Length();
     switch (clip.mode) {
     case Playback::Loop:
@@ -143,7 +143,7 @@ bool Sprite::Advance(const SpriteClip& clip) {
 
 void Sprite::Tick(float dt, const Input&) {
     if (!playing_ || speed_ <= 0.0f) return;
-    const SpriteClip& clip = ActiveClip();
+    const SpriteAnimation& clip = ActiveAnimation();
     if (clip.Length() <= 1) return;
 
     // pętla: przy długiej klatce gry animacja przeskakuje kilka klatek
@@ -172,10 +172,16 @@ void Sprite::Tick(float dt, const Input&) {
     }
 }
 
+Vector2 Sprite::Pivot() const {
+    const Vector2 frame = FrameSize();
+    return {origin_.x + anchor_.x * frame.x, origin_.y + anchor_.y * frame.y};
+}
+
 bool Sprite::Contains(Vector2 point) const {
     const auto local = TryToLocal(point);
     const Vector2 frame = FrameSize();
-    return local && ::CheckCollisionPointRec(*local, {-origin_.x, -origin_.y, frame.x, frame.y});
+    const Vector2 pivot = Pivot();
+    return local && ::CheckCollisionPointRec(*local, {-pivot.x, -pivot.y, frame.x, frame.y});
 }
 
 void Sprite::Draw(PrimitiveRenderer& renderer) const {
@@ -190,7 +196,8 @@ void Sprite::Draw(PrimitiveRenderer& renderer) const {
     // ujemny wymiar źródła odbija obraz (DrawTextureRec)
     if (flipX_) source.width = -source.width;
     if (flipY_) source.height = -source.height;
-    renderer.Blit(*sheet_->Bitmap(), source, {offset.x - origin_.x, offset.y - origin_.y}, color_);
+    const Vector2 pivot = Pivot();
+    renderer.Blit(*sheet_->Bitmap(), source, {offset.x - pivot.x, offset.y - pivot.y}, color_);
 }
 
 } // namespace visual

@@ -57,6 +57,16 @@ w `src/`. Katalogi mają nazwy małymi literami, pliki z klasami - PascalCase.
 - **Bez prefiksu `Get`.** Wyjątek to `Engine::Get()` (dostęp do singletonu). Obiekty podrzędne
   pobiera się metodą nazwaną jak obiekt: `engine.Scene("menu")`, `engine.Input()`,
   `scene.Camera()`, `Context<T>()`.
+- **Rzeczownik ustawia wartość, czasownik ją zmienia.** `Position(p)`, `Rotation(r)`,
+  `Scale(s)` ustawiają wartość bezwzględną (i mają gettery), a `Translate(v)`, `Rotate(r)`,
+  `ScaleBy(s)` dodają albo mnożą bieżącą. Metoda, która dopisuje element do kolekcji, ma
+  prefiks `Add` (`SpriteSheet::AddFrame()`), żeby nie wyglądała jak setter.
+- **Jedna nazwa - jedno znaczenie.** Ta sama nazwa nie oznacza dwóch różnych rzeczy w różnych
+  klasach: przycięcie rysunku to `ClipRect()`, animacja to `Animation()` (w `visual::Sprite`
+  i w `SpriteSheet`), zdarzenie puszczenia przycisku to `OnMouseReleased()` - jak zapytanie
+  `Input::MouseReleased()`, a nie stan `Input::MouseUp()`.
+- **Punkt zaczepienia** obiektów z rozmiarem (`visual::Sprite`, `visual::Text`) to
+  `Origin()` w pikselach plus `Anchor()` jako część rozmiaru; wynik podaje `Pivot()`.
 - **Zdarzenia zaczynają się od `On`:** `OnClick()`, `OnUpdate()`, `OnDraw()`.
 
 ## Łańcuchowanie

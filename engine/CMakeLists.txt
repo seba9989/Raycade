@@ -45,7 +45,6 @@ add_library(raycade STATIC
     src/physics/CollisionObject.cpp
     src/physics/CollisionShape.cpp
     src/physics/PhysicsWorld.cpp
-    src/physics/RigidBody.cpp
     src/scene/PointerSystem.cpp
     src/scene/Scene.cpp
     src/scene/SceneCamera.cpp

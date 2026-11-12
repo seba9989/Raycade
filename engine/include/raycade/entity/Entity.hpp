@@ -46,7 +46,7 @@ struct SceneLinks {
 struct PointerFrame {
     const Entity* target = nullptr;   /**< Najwyżej narysowany obiekt pod kursorem. */
     const Entity* press = nullptr;    /**< Odbiorca OnClick. */
-    const Entity* release = nullptr;  /**< Odbiorca OnMouseUp. */
+    const Entity* release = nullptr;  /**< Odbiorca OnMouseReleased. */
     const Entity* scroll = nullptr;   /**< Odbiorca OnScroll. */
     const Entity* drag = nullptr;     /**< Obiekt, który zaczyna przeciąganie. */
     const Focusable* focus = nullptr; /**< Obiekt, który dostaje fokus po kliknięciu. */
@@ -67,7 +67,7 @@ struct PointerFrame {
  * - OnUpdate - co klatkę,
  * - OnClick - kliknięcie lewym przyciskiem myszy na obiekcie,
  * - OnMouseEnter / OnMouseLeave - kursor wszedł na obiekt / zszedł z niego,
- * - OnMouseUp - puszczenie lewego przycisku nad obiektem,
+ * - OnMouseReleased - puszczenie lewego przycisku nad obiektem,
  * - OnScroll - kółko myszy nad obiektem,
  * - OnDragStart / OnDrag / OnDragEnd - przeciąganie lewym przyciskiem,
  * - OnKeyPressed / OnKeyReleased - naciśnięcie / puszczenie konkretnego klawisza.
@@ -137,7 +137,7 @@ struct PointerFrame {
  * nad wcześniejszym. Dla obiektów świata kursor jest najpierw przeliczany przez kamerę sceny.
  * - IsHovered(), OnMouseEnter i OnMouseLeave dotyczą najwyższego trafionego obiektu i jego
  *   przodków (jak :hover w CSS) - obiekt zasłonięty przez inny nie jest najechany.
- * - OnClick, OnMouseUp, OnScroll i przeciąganie dostaje jeden obiekt: pierwszy z takim
+ * - OnClick, OnMouseReleased, OnScroll i przeciąganie dostaje jeden obiekt: pierwszy z takim
  *   zdarzeniem, szukając od najwyższego trafionego w górę jego przodków. Obiekt bez tego
  *   zdarzenia (np. ozdobny kontur albo część gracza) przepuszcza je do przodka, a gdy żaden
  *   przodek go nie obsługuje - do obiektów pod spodem.
@@ -267,6 +267,15 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
      * @return Pozycja w świecie.
      */
     Vector2 WorldPosition() const { return World({0.0f, 0.0f}); }
+
+    /**
+     * @brief Oblicza kąt obrotu obiektu w układzie sceny (z uwzględnieniem rodziców).
+     * @return Kąt w radianach; dla obrotu lokalnego służy Rotation().
+     */
+    float WorldRotation() const {
+        const AffineMatrix2D world = WorldTransform();
+        return std::atan2(world.b, world.a);
+    }
 
     /**
      * @brief Oblicza pozycję obiektu w oknie (po przejściu przez kamerę sceny).

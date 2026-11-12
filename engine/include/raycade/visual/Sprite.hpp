@@ -26,7 +26,7 @@ namespace visual {
  * @code{.cpp}
  * auto coin = std::make_shared<SpriteSheet>(
  *     SpriteSheet::Grid(engine.Assets().Bitmap("coin.png"), {16, 16}));
- * coin->Clip("kreci", 0, 8, 8);
+ * coin->Animation("kreci", 0, 8, 8);
  * for (int i = 0; i < 10; ++i)
  *     scene.Spawn<visual::Sprite>().Sheet(coin).Play("kreci").Position({i * 40.0f, 0});
  * @endcode
@@ -48,7 +48,7 @@ namespace visual {
  *     .Sheet("hero.png", {32, 32})           // klatki 32x32, plik z assets/
  *     .Animation("stoi", 0, 4, 6)            // klatki 0-3, 6 FPS, w pętli
  *     .Animation("biegnie", 4, 6, 12)        // klatki 4-9, 12 FPS
- *     .Animation("skok", 10, 3, 10, false)   // klatki 10-12, raz
+ *     .Animation("skok", 10, 3, 10, Playback::Once) // klatki 10-12, raz
  *     .Origin({16, 32})                      // pozycja = środek stóp
  *     .Position({400, 300})
  *     .Play("stoi")
@@ -158,7 +158,7 @@ class Sprite : public Entity {
      * @param first Numer pierwszej klatki w arkuszu.
      * @param count Liczba kolejnych klatek.
      * @param fps Szybkość w klatkach na sekundę.
-     * @param loop true - w pętli, false - raz, potem zatrzymanie na ostatniej klatce i OnFinish.
+     * @param mode Sposób odtwarzania (domyślnie w pętli).
      * @return Ten sam obiekt.
      */
     template <typename Self>
@@ -168,10 +168,10 @@ class Sprite : public Entity {
         int first,
         int count,
         float fps,
-        bool loop = true
+        Playback mode = Playback::Loop
     ) {
-        self.MutableSheet().Clip(name, first, count, fps, loop ? Playback::Loop : Playback::Once);
-        self.ClipsChanged();
+        self.MutableSheet().Animation(name, first, count, fps, mode);
+        self.AnimationsChanged();
         return self;
     }
 
@@ -191,8 +191,8 @@ class Sprite : public Entity {
         float fps,
         Playback mode = Playback::Loop
     ) {
-        self.MutableSheet().Clip(name, std::move(frames), fps, mode);
-        self.ClipsChanged();
+        self.MutableSheet().Animation(name, std::move(frames), fps, mode);
+        self.AnimationsChanged();
         return self;
     }
 
@@ -203,14 +203,14 @@ class Sprite : public Entity {
      * @return Ten sam obiekt.
      */
     template <typename Self>
-    Self& Animation(this Self& self, const std::string& name, SpriteClip clip) {
-        self.MutableSheet().Clip(name, std::move(clip));
-        self.ClipsChanged();
+    Self& Animation(this Self& self, const std::string& name, SpriteAnimation clip) {
+        self.MutableSheet().Animation(name, std::move(clip));
+        self.AnimationsChanged();
         return self;
     }
 
     /** @brief Podaje nazwę bieżącej animacji ("" - cały arkusz). */
-    const std::string& Animation() const { return current_; }
+    const std::string& CurrentAnimation() const { return current_; }
 
     /**
      * @brief Ustawia szybkość animacji domyślnej (całego arkusza).
@@ -343,6 +343,28 @@ class Sprite : public Entity {
     Vector2 Origin() const { return origin_; }
 
     /**
+     * @brief Ustawia punkt zaczepienia jako część rozmiaru klatki.
+     * @details {0, 0} - lewy górny róg, {0.5, 0.5} - środek, {0.5, 1} - środek dolnej krawędzi.
+     * Pozycja obiektu wskazuje punkt Origin() + Anchor() * FrameSize() - tak samo jak
+     * w visual::Text. Punkt nadąża za rozmiarem klatki, więc nie trzeba go liczyć w pikselach.
+     * @param anchor Ułamek szerokości i wysokości klatki.
+     * @return Ten sam obiekt.
+     */
+    template <typename Self> Self& Anchor(this Self& self, Vector2 anchor) {
+        self.anchor_ = anchor;
+        return self;
+    }
+
+    /** @brief Podaje punkt zaczepienia jako część rozmiaru klatki. */
+    Vector2 Anchor() const { return anchor_; }
+
+    /**
+     * @brief Podaje punkt zaczepienia w pikselach klatki: Origin() + Anchor() * FrameSize().
+     * @return Punkt, który wskazuje pozycja obiektu.
+     */
+    Vector2 Pivot() const;
+
+    /**
      * @brief Ustawia zdarzenie końca animacji jednorazowej (Playback::Once).
      * @param callback Funkcja otrzymująca sprite i nazwę zakończonej animacji.
      * @return Ten sam obiekt.
@@ -388,7 +410,7 @@ class Sprite : public Entity {
     static bool IsJsonPath(const std::string& path);
 
     /** @brief Bieżąca animacja (dla "" i nazwy spoza arkusza - cały arkusz z Fps()). */
-    const SpriteClip& ActiveClip() const;
+    const SpriteAnimation& ActiveAnimation() const;
 
     /** @brief Ustawia prywatny arkusz z siatki, zachowując animacje z Animation(). */
     void SetGrid(
@@ -405,7 +427,7 @@ class Sprite : public Entity {
     void SheetChanged();
 
     /** @brief Odświeża wskaźnik bieżącej animacji po zmianie animacji arkusza. */
-    void ClipsChanged();
+    void AnimationsChanged();
 
     /** @brief Przełącza na animację, jeśli to inna niż bieżąca, i ją odtwarza. */
     void Start(const std::string& name);
@@ -420,12 +442,12 @@ class Sprite : public Entity {
      * @brief Przechodzi do następnej klatki zgodnie z Playback.
      * @return false, gdy animacja jednorazowa się skończyła.
      */
-    bool Advance(const SpriteClip& clip);
+    bool Advance(const SpriteAnimation& clip);
 
     std::shared_ptr<const SpriteSheet> sheet_; /**< Arkusz (może być współdzielony). */
     std::shared_ptr<SpriteSheet> own_;         /**< Arkusz prywatny (== sheet_) albo nullptr. */
-    const SpriteClip* clip_ = nullptr;         /**< Bieżąca animacja w sheet_ albo nullptr. */
-    mutable SpriteClip defaultClip_;           /**< Animacja domyślna (cały arkusz). */
+    const SpriteAnimation* clip_ = nullptr;    /**< Bieżąca animacja w sheet_ albo nullptr. */
+    mutable SpriteAnimation defaultClip_;      /**< Animacja domyślna (cały arkusz). */
     std::string current_;                      /**< Nazwa bieżącej animacji. */
     std::uint32_t generation_ = 0;             /**< Licznik zmian animacji (dla callbacków). */
     float fps_ = 10.0f;                        /**< Szybkość animacji domyślnej. */
@@ -436,7 +458,8 @@ class Sprite : public Entity {
     bool playing_ = false;                     /**< Czy animacja trwa. */
     bool flipX_ = false;                       /**< Odbicie w poziomie. */
     bool flipY_ = false;                       /**< Odbicie w pionie. */
-    Vector2 origin_{0, 0};                     /**< Punkt zaczepienia w klatce. */
+    Vector2 origin_{0, 0};                     /**< Punkt zaczepienia w klatce (piksele). */
+    Vector2 anchor_{0, 0};                     /**< Punkt zaczepienia (część rozmiaru klatki). */
     std::function<void(const std::string&)> finish_;     /**< Koniec animacji jednorazowej. */
     std::function<void(const std::string&)> frameEvent_; /**< Zdarzenie klatki. */
     std::string missing_; /**< Ostatnia nieznana nazwa z Play() (ostrzeżenie tylko raz). */

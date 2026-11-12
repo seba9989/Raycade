@@ -31,12 +31,14 @@ class Canvas : public Entity {
     Canvas() { Paint(WHITE); }
 
     /**
-     * @brief Ustawia rozmiar, tworząc bitmapę od nowa.
+     * @brief Ustawia rozmiar płótna, zachowując narysowane piksele.
+     * @details Część, która mieści się w nowym rozmiarze, zostaje; nowy obszar ma kolor
+     * Background(). Tak jak Size() w innych obiektach - zmienia wymiar, a nie zawartość.
      * @param size Szerokość i wysokość w pikselach.
      * @return To samo płótno.
      */
     template <typename Self> Self& Size(this Self& self, Vector2 size) {
-        self.bitmap_ = Bitmap{static_cast<int>(size.x), static_cast<int>(size.y), self.background_};
+        self.Resize(size);
         return self;
     }
 
@@ -100,6 +102,7 @@ class Canvas : public Entity {
   private:
     /** @brief Wspólna część Edit() - rysowanie rendererem z celem na bitmapie płótna. */
     void EditPixels(const std::function<void(PrimitiveRenderer&)>& paint);
+    void Resize(Vector2 size);
 
     Bitmap bitmap_;            /**< Zawartość płótna. */
     Color background_ = WHITE; /**< Kolor używany przez Clear(). */

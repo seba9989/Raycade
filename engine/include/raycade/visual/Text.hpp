@@ -173,6 +173,12 @@ class Text : public Entity {
     Vector2 Anchor() const { return anchor_; }
 
     /**
+     * @brief Podaje punkt zaczepienia w pikselach napisu: Origin() + Anchor() * Size().
+     * @return Punkt, który wskazuje pozycja obiektu.
+     */
+    Vector2 Pivot() const;
+
+    /**
      * @brief Mierzy napis.
      * @details Wynik jest zapamiętywany do zmiany treści albo parametrów tekstu. Font
      * domyślny raylib jest dostępny dopiero po otwarciu okna - wcześniej pomiar napisu bez

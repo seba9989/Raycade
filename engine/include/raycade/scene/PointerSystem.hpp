@@ -14,7 +14,7 @@
 /**
  * @brief System sceny, który raz na klatkę ustala, co jest pod kursorem myszy.
  * @details Przechodzi po drzewie obiektów sceny i pyta je o obszar trafienia
- * (Entity::Contains()), a potem wybiera odbiorców zdarzeń OnClick, OnMouseUp, OnScroll
+ * (Entity::Contains()), a potem wybiera odbiorców zdarzeń OnClick, OnMouseReleased, OnScroll
  * i przeciągania według reguł z @ref entity_trafienia. Wynik (PointerFrame) scena przekazuje
  * obiektom w Entity::Update().
  *

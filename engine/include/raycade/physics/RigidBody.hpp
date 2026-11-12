@@ -191,9 +191,6 @@ class RigidBody : public PhysicsBody {
     /** @brief Środek masy w układzie sceny (z ostatniego kroku fizyki). */
     Vector2 CenterOfMass() const { return centerOfMass_; }
 
-    /** @brief Kąt obrotu bryły w układzie sceny, w radianach. */
-    float Rotation() const;
-
   private:
     friend class PhysicsWorld;
 

@@ -76,7 +76,7 @@
  * przeciągać, a monety klikać przy dowolnym przybliżeniu i obrocie; przyciski w rogu są
  * obiektami ekranu (HUD).
  * Na scenie `efekty` koło z arkusza klatek (visual::Sprite) obraca się animacją - LPM ją
- * wstrzymuje, X odbija drugie koło; lista w panelu z Clip() przewija się kółkiem myszy;
+ * wstrzymuje, X odbija drugie koło; lista w panelu z ClipRect() przewija się kółkiem myszy;
  * powierzchnia faluje shaderem, a G włącza szarość całego obrazu (Engine::PostShader());
  * piłki odbijają się z fizyką w kroku stałym (OnFixedUpdate()), LPM usuwa piłkę (Destroy()),
  * a B albo podwójne kliknięcie (gest) dodaje nową. Napisy sceny mają polskie znaki dzięki

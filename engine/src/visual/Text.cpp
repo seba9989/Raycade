@@ -26,10 +26,15 @@ Vector2 Text::Size() const {
     return *size_;
 }
 
-Vector2 Text::TopLeft() const {
-    if (anchor_.x == 0.0f && anchor_.y == 0.0f) return {-origin_.x, -origin_.y};
+Vector2 Text::Pivot() const {
+    if (anchor_.x == 0.0f && anchor_.y == 0.0f) return origin_; // bez pomiaru tekstu
     const Vector2 size = Size();
-    return {-origin_.x - anchor_.x * size.x, -origin_.y - anchor_.y * size.y};
+    return {origin_.x + anchor_.x * size.x, origin_.y + anchor_.y * size.y};
+}
+
+Vector2 Text::TopLeft() const {
+    const Vector2 pivot = Pivot();
+    return {-pivot.x, -pivot.y};
 }
 
 bool Text::Contains(Vector2 point) const {

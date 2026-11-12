@@ -29,7 +29,7 @@ PointerFrame PointerSystem::Pick(
         frame.drag = Receiver(hits, [](const Entity& e) { return e.HandlesDrag(); });
     }
     if (input.MouseReleased(MOUSE_BUTTON_LEFT))
-        frame.release = Receiver(hits, [](const Entity& e) { return e.HandlesMouseUp(); });
+        frame.release = Receiver(hits, [](const Entity& e) { return e.HandlesMouseReleased(); });
     if (input.MouseWheel() != 0.0f)
         frame.scroll = Receiver(hits, [](const Entity& e) { return e.HandlesScroll(); });
     return frame;
@@ -57,7 +57,7 @@ void PointerSystem::CollectHits(
 ) {
     if (entity.destroyed_) return;
     // poza przycięciem nie widać ani obiektu, ani dzieci - nie da się ich kliknąć
-    if (const auto& clip = entity.Clip()) {
+    if (const auto& clip = entity.ClipRect()) {
         const auto local = entity.TryToLocal(point);
         if (!local || !::CheckCollisionPointRec(*local, *clip)) return;
     }

@@ -46,28 +46,28 @@ class Drawable {
      * @code{.cpp}
      * scene.Spawn<Group>()
      *     .Position({50, 50})
-     *     .Clip({0, 0, 300, 200}) // dzieci widać tylko w prostokącie 300x200
+     *     .ClipRect({0, 0, 300, 200}) // dzieci widać tylko w prostokącie 300x200
      *     .Children([](Group& panel) { panel.Spawn<shapes::Circle>().Radius(250); });
      * @endcode
      * @param area Prostokąt w układzie lokalnym.
      * @return Ten sam obiekt.
      */
-    template <typename Self> Self& Clip(this Self& self, Rectangle area) {
+    template <typename Self> Self& ClipRect(this Self& self, Rectangle area) {
         self.clip_ = area;
         return self;
     }
 
     /**
-     * @brief Wyłącza przycinanie (stan domyślny): `.Clip(std::nullopt)`.
+     * @brief Wyłącza przycinanie (stan domyślny): `.ClipRect(std::nullopt)`.
      * @return Ten sam obiekt.
      */
-    template <typename Self> Self& Clip(this Self& self, std::nullopt_t) {
+    template <typename Self> Self& ClipRect(this Self& self, std::nullopt_t) {
         self.clip_.reset();
         return self;
     }
 
     /** @brief Podaje prostokąt przycięcia (w układzie lokalnym) albo std::nullopt. */
-    const std::optional<Rectangle>& Clip() const { return clip_; }
+    const std::optional<Rectangle>& ClipRect() const { return clip_; }
 
     /**
      * @brief Rysuje obiekt przez shader GPU.

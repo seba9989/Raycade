@@ -30,7 +30,7 @@ struct PointerEvents {
     /** Kursor nad obiektem (albo nad jego potomkiem) i nic go nie zasłania. */
     bool hovered = false;
     bool pressed = false;   /**< Obiekt dostaje OnClick w tej klatce. */
-    bool released = false;  /**< Obiekt dostaje OnMouseUp w tej klatce. */
+    bool released = false;  /**< Obiekt dostaje OnMouseReleased w tej klatce. */
     bool scrolled = false;  /**< Obiekt dostaje OnScroll w tej klatce. */
     bool dragStart = false; /**< Obiekt zaczyna przeciąganie w tej klatce. */
 };
@@ -148,8 +148,8 @@ class Updatable {
      * @param callback Funkcja otrzymująca obiekt.
      * @return Ten sam obiekt.
      */
-    template <typename Self> Self& OnMouseUp(this Self& self, Callback<Self> callback) {
-        self.mouseUp_ = Bind(self, std::move(callback));
+    template <typename Self> Self& OnMouseReleased(this Self& self, Callback<Self> callback) {
+        self.mouseReleased_ = Bind(self, std::move(callback));
         return self;
     }
 
@@ -231,11 +231,11 @@ class Updatable {
     std::vector<std::pair<int, std::function<void()>>> keys_;
     /** Reakcje na puszczenie klawiszy (kod klawisza, funkcja). */
     std::vector<std::pair<int, std::function<void()>>> keysReleased_;
-    std::function<void()> mouseUp_;     /**< Reakcja na puszczenie przycisku nad obiektem. */
-    std::function<void(float)> scroll_; /**< Reakcja na kółko myszy nad obiektem. */
-    std::function<void()> dragStart_;   /**< Początek przeciągania. */
-    std::function<void(Vector2)> drag_; /**< Ruch podczas przeciągania. */
-    std::function<void()> dragEnd_;     /**< Koniec przeciągania. */
+    std::function<void()> mouseReleased_; /**< Reakcja na puszczenie przycisku nad obiektem. */
+    std::function<void(float)> scroll_;   /**< Reakcja na kółko myszy nad obiektem. */
+    std::function<void()> dragStart_;     /**< Początek przeciągania. */
+    std::function<void(Vector2)> drag_;   /**< Ruch podczas przeciągania. */
+    std::function<void()> dragEnd_;       /**< Koniec przeciągania. */
 
     /**
      * @brief Zamienia ruch kursora (w układzie ekranu) na przesunięcie dla OnDrag().
@@ -270,7 +270,7 @@ class Updatable {
      */
     /** @{ */
     bool HandlesClick() const { return static_cast<bool>(click_); }
-    bool HandlesMouseUp() const { return static_cast<bool>(mouseUp_); }
+    bool HandlesMouseReleased() const { return static_cast<bool>(mouseReleased_); }
     bool HandlesScroll() const { return static_cast<bool>(scroll_); }
     bool HandlesDrag() const { return dragStart_ || drag_ || dragEnd_; }
     /** @} */

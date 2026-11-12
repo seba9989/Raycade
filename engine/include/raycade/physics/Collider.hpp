@@ -64,9 +64,9 @@ class Collider : public S, public CollisionShape {
     /**
      * @brief Dopasowuje prostokątny collider do bieżącej klatki sprite'a.
      * @details Ustawia Position() i Size() tak, żeby collider pokrywał prostokąt klatki
-     * (FrameSize()) z uwzględnieniem Origin() sprite'a. Sprite musi mieć tego samego rodzica co
-     * collider (zwykle oba są dziećmi ciała). Wymiary są kopiowane raz - collider nie śledzi
-     * późniejszych zmian klatki ani obrotu i skali samego sprite'a.
+     * (FrameSize()) z uwzględnieniem Pivot() (Origin() i Anchor()) sprite'a. Sprite musi mieć tego
+     * samego rodzica co collider (zwykle oba są dziećmi ciała). Wymiary są kopiowane raz - collider
+     * nie śledzi późniejszych zmian klatki ani obrotu i skali samego sprite'a.
      * @code{.cpp}
      * auto& hero = Spawn<visual::Sprite>().Sheet(sheet).Origin({16, 32});
      * Spawn<collider::Rect>().Fit(hero, 4); // o 4 px mniejszy z każdej strony niż klatka
@@ -79,7 +79,7 @@ class Collider : public S, public CollisionShape {
         requires std::same_as<S, shapes::Rect>
     Self& Fit(this Self& self, const visual::Sprite& sprite, float inset = 0.0f) {
         const Vector2 frame = sprite.FrameSize();
-        const Vector2 origin = sprite.Origin();
+        const Vector2 origin = sprite.Pivot();
         const Vector2 position = sprite.Position();
         self.Position({position.x - origin.x + inset, position.y - origin.y + inset});
         self.Size({std::max(0.0f, frame.x - 2.0f * inset), std::max(0.0f, frame.y - 2.0f * inset)});
