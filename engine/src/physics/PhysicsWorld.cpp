@@ -148,6 +148,23 @@ bool PhysicsWorld::MoveAndSlide(CharacterBody& body) {
         return false;
     }
 
+    // wożenie przez platformę: przesunięcie punktu pod postacią od jej ostatniego ruchu
+    body.platformVelocity_ = {};
+    const PhysicsBody* floorBody = wasOnFloor ? body.floorBody_ : nullptr;
+    // postać przeniesiona w kodzie (np. Position() przy odrodzeniu) nie stoi już na tej podłodze
+    const Vector2 position = body.WorldPosition();
+    const bool moved = std::fabs(position.x - body.floorWorld_.x) > 0.01f ||
+                       std::fabs(position.y - body.floorWorld_.y) > 0.01f;
+    if (floorBody && !moved && Find(floorBody)) {
+        const Vector2 now = floorBody->World(body.floorLocal_);
+        const Vector2 carry{now.x - body.floorWorld_.x, now.y - body.floorWorld_.y};
+        if (Dot(carry, carry) > 0.0f) {
+            body.MoveInScene(carry);
+            if (delta_ > 0.0f) body.platformVelocity_ = {carry.x / delta_, carry.y / delta_};
+        }
+    }
+    const PhysicsBody* standingOn = nullptr; // podłoga po tym ruchu
+
     const float distance = std::sqrt(Dot(motion, motion));
     const int substeps =
         std::clamp(static_cast<int>(std::ceil(distance / kMaxSubstepDistance)), 1, kMaxSubsteps);
@@ -163,6 +180,7 @@ bool PhysicsWorld::MoveAndSlide(CharacterBody& body) {
             // podłoga: wypchnięcie pionowo w górę (bez zsuwania się z pochylni)
             body.onFloor_ = true;
             body.floorNormal_ = n;
+            standingOn = hit.other;
             const float lift = hit.depth / upness;
             body.MoveInScene({up.x * lift, up.y * lift});
             const float into = Dot(body.velocity_, up);
@@ -215,6 +233,18 @@ bool PhysicsWorld::MoveAndSlide(CharacterBody& body) {
         }
         if (!floor) body.Position(before); // nic pod spodem - postać spada normalnie
     }
+
+    // zapamiętanie podłogi do wożenia w następnym ruchu
+    body.floorBody_ = body.onFloor_ ? standingOn : nullptr;
+    if (body.floorBody_) {
+        body.floorWorld_ = body.WorldPosition();
+        body.floorLocal_ = body.floorBody_->ToLocal(body.floorWorld_);
+    }
+    // zejście z jadącej platformy (skok, krawędź) - postać zachowuje jej prędkość
+    if (wasOnFloor && !body.onFloor_)
+        body.velocity_ = {
+            body.velocity_.x + body.platformVelocity_.x, body.velocity_.y + body.platformVelocity_.y
+        };
     return !body.collisions_.empty();
 }
 

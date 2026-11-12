@@ -115,6 +115,17 @@ class CharacterBody : public PhysicsBody {
     /** @brief Sprawdza, czy po ostatnim MoveAndSlide() postać dotyka sufitu. */
     bool IsOnCeiling() const { return onCeiling_; }
 
+    /**
+     * @brief Prędkość podłogi, na której stała postać (np. jadącej platformy), w px/s.
+     * @details MoveAndSlide() przesuwa postać razem z podłogą, na której stoi: platforma
+     * przesuwana w kodzie (Position(), Translate(), Rotate()) wiezie postać, także po łuku, gdy
+     * się obraca. Gdy postać opuszcza podłogę (skok, zejście z krawędzi), prędkość platformy jest
+     * dodawana do Velocity() - skok z jadącej platformy nie urywa się w miejscu.
+     * @return Przesunięcie podłogi pod postacią w ostatnim kroku podzielone przez krok; {0, 0}
+     * dla nieruchomej podłogi.
+     */
+    Vector2 PlatformVelocity() const { return platformVelocity_; }
+
     /** @brief Normalna podłogi z ostatniego MoveAndSlide() (gdy IsOnFloor()). */
     Vector2 FloorNormal() const { return floorNormal_; }
 
@@ -133,4 +144,10 @@ class CharacterBody : public PhysicsBody {
     bool onCeiling_ = false;            /**< Dotyka sufitu. */
     Vector2 floorNormal_{0.0f, -1.0f};  /**< Normalna podłogi. */
     std::vector<Collision> collisions_; /**< Zderzenia z ostatniego ruchu. */
+    // Podłoga, na której postać stała po ostatnim ruchu - do wożenia przez platformy. Wskaźnik
+    // jest tylko porównywany z listą ciał świata, zanim zostanie użyty (podłoga mogła zniknąć).
+    const PhysicsBody* floorBody_ = nullptr; /**< Ciało pod postacią albo nullptr. */
+    Vector2 floorLocal_{};                   /**< Punkt pod postacią w układzie podłogi. */
+    Vector2 floorWorld_{};                   /**< Ten punkt w układzie sceny przy zapisie. */
+    Vector2 platformVelocity_{};             /**< Prędkość podłogi pod postacią. */
 };
