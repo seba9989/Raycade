@@ -198,7 +198,7 @@ class Input {
      * @brief Pobiera ruch kółka myszy w obu osiach (np. touchpad, kółko poziome).
      * @return Ruch w osi X i Y.
      */
-    Vector2 MouseWheelV() const { return mouse_ ? ::GetMouseWheelMoveV() : Vector2{0, 0}; }
+    Vector2 MouseWheelVector() const { return mouse_ ? ::GetMouseWheelMoveV() : Vector2{0, 0}; }
 
     /** @} */
 

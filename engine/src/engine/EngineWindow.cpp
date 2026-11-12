@@ -50,10 +50,6 @@ Engine& Engine::VSync(bool value) {
     return WindowFlag(FLAG_VSYNC_HINT, value, "VSync", false);
 }
 
-bool Engine::IsVSync() const {
-    return (windowFlags_ & FLAG_VSYNC_HINT) != 0;
-}
-
 int Engine::ScreenWidth() const {
     return initialized_ ? ::GetScreenWidth() : 0;
 }
@@ -151,9 +147,10 @@ Engine& Engine::Monitor(int monitor) {
     return *this;
 }
 
-Engine& Engine::WindowPosition(int x, int y) {
-    windowPosition_ = Vector2{static_cast<float>(x), static_cast<float>(y)};
-    if (initialized_) ::SetWindowPosition(x, y);
+Engine& Engine::WindowPosition(Vector2 position) {
+    windowPosition_ = position;
+    if (initialized_)
+        ::SetWindowPosition(static_cast<int>(position.x), static_cast<int>(position.y));
     return *this;
 }
 

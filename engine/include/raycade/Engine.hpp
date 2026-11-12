@@ -209,7 +209,7 @@ class Engine : public Contextable {
     Engine& VSync(bool value = true);
 
     /** @brief Sprawdza, czy włączona jest synchronizacja pionowa. */
-    bool IsVSync() const;
+    bool IsVSync() const { return (windowFlags_ & FLAG_VSYNC_HINT) != 0; }
 
     /**
      * @brief Pozwala użytkownikowi zmieniać rozmiar okna myszą.
@@ -217,6 +217,9 @@ class Engine : public Contextable {
      * @return Ten sam silnik.
      */
     Engine& Resizable(bool value = true);
+
+    /** @brief Sprawdza, czy okno ma zmienny rozmiar. */
+    bool IsResizable() const { return (windowFlags_ & FLAG_WINDOW_RESIZABLE) != 0; }
 
     /**
      * @brief Włącza wygładzanie krawędzi (MSAA 4x).
@@ -226,6 +229,9 @@ class Engine : public Contextable {
      */
     Engine& Msaa(bool value = true);
 
+    /** @brief Sprawdza, czy włączone jest wygładzanie krawędzi (MSAA 4x). */
+    bool IsMsaa() const { return (windowFlags_ & FLAG_MSAA_4X_HINT) != 0; }
+
     /**
      * @brief Włącza obsługę wysokiego DPI (ostry obraz przy skalowaniu systemu, np. 150%).
      * @details Działa tylko przed Init().
@@ -234,6 +240,9 @@ class Engine : public Contextable {
      */
     Engine& HighDpi(bool value = true);
 
+    /** @brief Sprawdza, czy włączona jest obsługa wysokiego DPI. */
+    bool IsHighDpi() const { return (windowFlags_ & FLAG_WINDOW_HIGHDPI) != 0; }
+
     /**
      * @brief Usuwa ramkę i pasek tytułu okna.
      * @param value Czy okno ma być bez ramki.
@@ -241,12 +250,18 @@ class Engine : public Contextable {
      */
     Engine& Undecorated(bool value = true);
 
+    /** @brief Sprawdza, czy okno jest bez ramki. */
+    bool IsUndecorated() const { return (windowFlags_ & FLAG_WINDOW_UNDECORATED) != 0; }
+
     /**
      * @brief Utrzymuje okno zawsze nad innymi oknami.
      * @param value Czy okno ma być zawsze na wierzchu.
      * @return Ten sam silnik.
      */
     Engine& AlwaysOnTop(bool value = true);
+
+    /** @brief Sprawdza, czy okno jest zawsze na wierzchu. */
+    bool IsAlwaysOnTop() const { return (windowFlags_ & FLAG_WINDOW_TOPMOST) != 0; }
 
     /**
      * @brief Ustawia minimalny rozmiar okna (przy zmiennym rozmiarze).
@@ -314,6 +329,9 @@ class Engine : public Contextable {
         return *this;
     }
 
+    /** @brief Sprawdza, czy odczyt klawiatury jest włączony. */
+    bool IsKeyboardEnabled() const { return input_.IsKeyboardEnabled(); }
+
     /**
      * @brief Włącza lub wyłącza odczyt myszy.
      * @details Wyłączenie myszy wyłącza też zdarzenia myszy obiektów sceny.
@@ -325,6 +343,9 @@ class Engine : public Contextable {
         return *this;
     }
 
+    /** @brief Sprawdza, czy odczyt myszy jest włączony. */
+    bool IsMouseEnabled() const { return input_.IsMouseEnabled(); }
+
     /**
      * @brief Włącza lub wyłącza odczyt padów.
      * @param value Czy włączyć pady.
@@ -335,6 +356,9 @@ class Engine : public Contextable {
         return *this;
     }
 
+    /** @brief Sprawdza, czy odczyt padów jest włączony. */
+    bool IsGamepadEnabled() const { return input_.IsGamepadEnabled(); }
+
     /**
      * @brief Włącza lub wyłącza odczyt ekranu dotykowego.
      * @param value Czy włączyć dotyk.
@@ -344,6 +368,9 @@ class Engine : public Contextable {
         input_.Touch(value);
         return *this;
     }
+
+    /** @brief Sprawdza, czy odczyt ekranu dotykowego jest włączony. */
+    bool IsTouchEnabled() const { return input_.IsTouchEnabled(); }
 
     /**
      * @brief Wybiera gesty rozpoznawane przez raylib (domyślnie wszystkie).
@@ -801,6 +828,9 @@ class Engine : public Contextable {
     /** @brief Sprawdza, czy kursor jest ukryty (także gdy jest zablokowany). */
     bool IsCursorHidden() const;
 
+    /** @brief Sprawdza, czy kursor jest zablokowany w oknie (LockCursor()). */
+    bool IsCursorLocked() const { return cursorLocked_; }
+
     /** @brief Sprawdza, czy kursor znajduje się nad oknem. */
     bool IsCursorOnScreen() const;
 
@@ -910,11 +940,10 @@ class Engine : public Contextable {
 
     /**
      * @brief Ustawia pozycję okna na pulpicie.
-     * @param x Pozycja pozioma.
-     * @param y Pozycja pionowa.
+     * @param position Pozycja lewego górnego rogu okna w pikselach pulpitu (jak WindowPosition()).
      * @return Ten sam silnik.
      */
-    Engine& WindowPosition(int x, int y);
+    Engine& WindowPosition(Vector2 position);
 
     /**
      * @brief Ustawia przezroczystość całego okna.
@@ -1079,6 +1108,9 @@ class Engine : public Contextable {
      * @return Ten sam silnik.
      */
     Engine& EventWaiting(bool value = true);
+
+    /** @brief Sprawdza, czy silnik czeka na zdarzenia zamiast ciągle odświeżać. */
+    bool IsEventWaiting() const { return eventWaiting_; }
 
     /** @} */
 
@@ -1340,6 +1372,8 @@ class Engine : public Contextable {
     std::optional<int> monitor_;            /**< Monitor do ustawienia przy Init(). */
     unsigned int gestures_ = 0b1111111111;  /**< Rozpoznawane gesty (domyślnie wszystkie). */
     std::optional<float> opacity_;          /**< Przezroczystość okna do ustawienia przy Init(). */
+    bool cursorLocked_ = false;             /**< Czy kursor jest zablokowany (LockCursor()). */
+    bool eventWaiting_ = false;             /**< Czy włączone jest EventWaiting(). */
     unsigned int windowFlags_ = 0;          /**< Flagi okna (FLAG_*) z Resizable() itd. */
     std::optional<std::pair<int, int>> minSize_; /**< Minimalny rozmiar okna. */
     std::optional<std::pair<int, int>> maxSize_; /**< Maksymalny rozmiar okna. */

@@ -19,6 +19,7 @@ Engine& Engine::ClipboardText(const std::string& text) {
 }
 
 Engine& Engine::EventWaiting(bool value) {
+    eventWaiting_ = value;
     if (value)
         ::EnableEventWaiting();
     else

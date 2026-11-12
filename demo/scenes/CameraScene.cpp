@@ -185,7 +185,7 @@ SCENE("kamera") {
             camera.Zoom(), camera.Rotation() * RAD2DEG, camera.IsFollowing() ? "tak" : "nie",
             mouse.x, mouse.y
         );
-        ::DrawRectangle(0, 0, 850, 70, Fade(RAYWHITE, 0.85f));
+        ::DrawRectangle(0, 0, 850, 70, ::Fade(RAYWHITE, 0.85f));
         ::DrawText("Kamera 2D", 20, 12, 22, DARKGRAY);
         ::DrawText(info, 20, 42, 16, DARKGRAY);
         ::DrawText(("Monety: " + std::to_string(coins)).c_str(), 870, 160, 20, DARKGRAY);

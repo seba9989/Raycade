@@ -149,7 +149,7 @@ SCENE("trafienia") {
         .Label("Okno")
         .Size({140, 170})
         .Position({500, 240})
-        .Paint(Fade(BLACK, 0.6f))
+        .Paint(::Fade(BLACK, 0.6f))
         .Layer(2)
         .OnClick([](Button&) {})
         .OnDrag([](Button& self, Vector2 delta) { self.Translate(delta); });

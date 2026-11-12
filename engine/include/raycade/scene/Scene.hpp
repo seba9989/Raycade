@@ -164,8 +164,8 @@ class Scene : public Contextable {
 
     /**
      * @brief Rysuje obrysy wszystkich colliderów (jak „Visible Collision Shapes” w Godocie).
-     * @details StaticBody - niebieskie, CharacterBody - zielone, Area - pomarańczowe,
-     * wyłączone collidery - szare.
+     * @details StaticBody - błękitne, CharacterBody - zielone, RigidBody - fioletowe (z kropką
+     * w środku masy), Area - pomarańczowe, wyłączone collidery - szare.
      * @param value Czy rysować.
      * @return Ta sama scena.
      */
@@ -193,16 +193,10 @@ class Scene : public Contextable {
     bool IsPhysicsInterpolation() const { return physics_.IsInterpolation(); }
 
     /**
-     * @brief Ustawia ułamek drogi do następnego kroku stałego - wywołuje silnik przed Draw().
-     * @param alpha Engine::FixedAlpha() (1, gdy krok stały jest wyłączony).
-     */
-    void FixedAlpha(float alpha) { physics_.Alpha(alpha); }
-
-    /**
      * @brief Szuka pierwszego ciała na odcinku from-to (RayCast2D z Godota).
-     * @details Trafia ciała (StaticBody, CharacterBody), nie obszary. Promień zaczynający się
-     * wewnątrz collidera go nie trafia; platformę jednostronną trafia tylko od jej „góry”.
-     * Współrzędne są w układzie sceny (świata).
+     * @details Trafia ciała (StaticBody, CharacterBody, RigidBody), nie obszary. Promień
+     * zaczynający się wewnątrz collidera go nie trafia; platformę jednostronną trafia tylko od jej
+     * „góry”. Współrzędne są w układzie sceny (świata).
      * @code{.cpp}
      * // czy przeciwnik widzi gracza - nic z warstwy World nie stoi między nimi
      * const bool sees = !scene.Raycast(enemy.WorldPosition(), player.WorldPosition(), World);
@@ -260,6 +254,19 @@ class Scene : public Contextable {
 
     /** @} */
 
+  protected:
+    /** @brief Poziom wyżej w łańcuchu kontekstu sceny to silnik. */
+    const Contextable* ContextParent() const override { return ContextRoot(); }
+
+  private:
+    friend class Engine; // wywołuje FixedAlpha(), FixedUpdate(), Update() i Draw()
+
+    /**
+     * @brief Ustawia ułamek drogi do następnego kroku stałego - wywołuje silnik przed Draw().
+     * @param alpha Engine::FixedAlpha() (1, gdy krok stały jest wyłączony).
+     */
+    void FixedAlpha(float alpha) { physics_.Alpha(alpha); }
+
     /**
      * @brief Wykonuje jeden krok stały sceny: OnFixedUpdate(), krok obiektów i zdarzenia fizyki.
      * @details Wywoływana przez silnik w pętli kroku stałego.
@@ -284,11 +291,6 @@ class Scene : public Contextable {
      */
     void Draw(PrimitiveRenderer& renderer) const;
 
-  protected:
-    /** @brief Poziom wyżej w łańcuchu kontekstu sceny to silnik. */
-    const Contextable* ContextParent() const override { return ContextRoot(); }
-
-  private:
     /** @brief Wywołuje OnBlur() / OnFocus(), jeśli fokus zmienił się od ostatniego razu. */
     void NotifyFocus();
     /**
@@ -314,9 +316,9 @@ class Scene : public Contextable {
     SceneCamera camera_;
     FocusState
         focus_; /**< Fokus klawiatury (niszczony po obiektach, które się z niego wypisują). */
-    /** Powiązania ze sceną wspólne dla wszystkich jej obiektów (patrz SceneLinks). */
     /** Świat fizyki; zna listę obiektów sceny (entities_), ale używa jej dopiero w klatce. */
     PhysicsWorld physics_{entities_};
+    /** Powiązania ze sceną wspólne dla wszystkich jej obiektów (patrz SceneLinks). */
     SceneLinks links_{this, this, &camera_, &focus_, &physics_};
     PointerSystem pointer_;     /**< Wybór obiektów pod kursorem i odbiorców zdarzeń myszy. */
     bool tabNavigation_ = true; /**< Czy Tab przenosi fokus. */

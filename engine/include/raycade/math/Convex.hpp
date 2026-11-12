@@ -1,13 +1,11 @@
 /**
  * @file Convex.hpp
- * @brief Figury wypukłe do wykrywania kolizji: funkcja wsparcia, GJK, EPA i podział wielokąta.
+ * @brief Figury wypukłe opisujące kształty kolizji i podział wielokąta na części wypukłe.
  */
 #pragma once
 
 #include <raylib.h>
 
-#include <array>
-#include <optional>
 #include <span>
 #include <vector>
 
@@ -21,9 +19,8 @@
  * - elipsę (także okrąg) - środek i dwie półosie, które po obrocie i nierównej skali
  *   przestają być prostopadłe, a figura nadal jest elipsą.
  *
- * Algorytmy kolizji (GJK, EPA) nie znają rodzaju figury - pytają tylko o Support(), czyli
- * najdalszy punkt figury w danym kierunku. Dzięki temu jedna para funkcji obsługuje każdą
- * parę kształtów, zamiast osobnego testu dla każdej kombinacji.
+ * Fizyka (Box2D) buduje z tych części swoje kształty, a podgląd kolizji rysuje ich obrys.
+ * Support() - najdalszy punkt figury w danym kierunku - wystarcza do opisania każdej z nich.
  */
 struct ConvexPart {
     /** @brief Rodzaj części. */
@@ -76,96 +73,6 @@ struct ConvexPart {
      */
     std::vector<Point2D> Outline(int segments = 24) const;
 };
-
-/**
- * @brief Wnikanie dwóch figur: kierunek i odległość, o jaką trzeba je rozsunąć.
- */
-struct Penetration {
-    Vector2 normal{}; /**< Kierunek (jednostkowy), w którym trzeba przesunąć pierwszą figurę. */
-    float depth = 0;  /**< Odległość przesunięcia, po której figury tylko się stykają. */
-};
-
-/**
- * @brief Sprawdza, czy dwie figury wypukłe mają część wspólną (algorytm GJK).
- * @details GJK szuka w różnicy Minkowskiego A - B (wszystkie wektory a - b) trójkąta
- * zawierającego początek układu. Jeśli go znajdzie, figury się przecinają. Samo stykanie
- * brzegami nie jest liczone jako przecięcie.
- * @return true, gdy figury nachodzą na siebie.
- */
-bool ConvexOverlap(const ConvexPart& a, const ConvexPart& b);
-
-/**
- * @brief Liczy wnikanie dwóch figur wypukłych (GJK, a potem EPA).
- * @details EPA (Expanding Polytope Algorithm) rozszerza trójkąt z GJK o kolejne punkty
- * wsparcia, aż znajdzie krawędź różnicy Minkowskiego najbliższą początkowi układu - jej
- * normalna to kierunek, a odległość - głębokość wnikania. Dla elips wynik jest przybliżony
- * (z dokładnością do ułamka piksela).
- * @return Wnikanie albo std::nullopt, gdy figury się nie przecinają.
- */
-std::optional<Penetration> ConvexPenetration(const ConvexPart& a, const ConvexPart& b);
-
-/**
- * @brief Trafienie promieniem w figurę wypukłą.
- */
-struct ConvexRayHit {
-    float fraction = 0; /**< Miejsce trafienia jako ułamek odcinka from-to (0 - from, 1 - to). */
-    Vector2 normal{};   /**< Normalna powierzchni w punkcie trafienia (na zewnątrz figury). */
-};
-
-/**
- * @brief Pierwsze trafienie odcinkiem from-to w figurę wypukłą.
- * @details Wielokąt - obcinanie Cyrusa-Becka (półpłaszczyzny krawędzi), odcinek - przecięcie
- * dwóch odcinków, elipsa - równanie kwadratowe w układzie, w którym elipsa jest okręgiem
- * jednostkowym. Punkty są pomijane (promień trafiłby je tylko przypadkiem).
- * @param part Figura.
- * @param from Początek promienia.
- * @param to Koniec promienia.
- * @return Trafienie albo std::nullopt - także gdy promień zaczyna się wewnątrz figury.
- */
-std::optional<ConvexRayHit> ConvexRaycast(const ConvexPart& part, Vector2 from, Vector2 to);
-
-/**
- * @brief Geometryczne własności masy figury (dla gęstości 1).
- */
-struct ConvexMass {
-    float area = 0;     /**< Pole (0 dla punktu i odcinka). */
-    Vector2 centroid{}; /**< Środek ciężkości. */
-    float inertia = 0;  /**< Biegunowy moment bezwładności względem środka ciężkości (∫ r² dA). */
-};
-
-/**
- * @brief Pole, środek ciężkości i moment bezwładności figury.
- * @details Wielokąt - wzory z rozkładu na trójkąty o wspólnym wierzchołku; elipsa jako obraz
- * koła jednostkowego: pole π|det A|, moment pole * (|axisX|² + |axisY|²) / 4. Punkt i odcinek
- * mają pole 0 (środek - średnia wierzchołków).
- */
-ConvexMass ConvexMassProperties(const ConvexPart& part);
-
-/**
- * @brief Punkt styku dwóch figur.
- */
-struct ContactPoint {
-    Vector2 point{}; /**< Punkt styku w układzie sceny. */
-    float depth = 0; /**< Wnikanie w tym punkcie. */
-};
-
-/**
- * @brief Punkty styku dwóch nachodzących figur (1 albo 2) - do fizyki brył sztywnych.
- * @details Dla dwóch wielokątów: krawędź odniesienia (bardziej prostopadła do normalnej) obcina
- * krawędź drugiej figury bocznymi płaszczyznami (clipping), więc skrzynia leżąca płasko
- * dostaje dwa punkty i nie kołysze się. Z elipsą albo punktem styk jest jeden: najgłębszy punkt.
- * @param a Pierwsza figura.
- * @param b Druga figura.
- * @param penetration Wynik ConvexPenetration(a, b) (normalna wypycha a z b).
- * @param points Tablica na punkty.
- * @return Liczba punktów (0, 1 albo 2).
- */
-int ConvexContacts(
-    const ConvexPart& a,
-    const ConvexPart& b,
-    const Penetration& penetration,
-    std::array<ContactPoint, 2>& points
-);
 
 /**
  * @brief Sprawdza, czy wielokąt (łamana zwyczajna zamknięta) jest wypukły.

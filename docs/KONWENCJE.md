@@ -10,7 +10,7 @@ warstwy wcześniejsze na liście:
 
 | Katalog      | Zawartość                                                       | Może dołączać               |
 |--------------|-----------------------------------------------------------------|-----------------------------|
-| `math/`      | AffineMatrix2D, Point2D, LineSegment, geometria, ConvexPart (GJK/EPA) | -                     |
+| `math/`      | AffineMatrix2D, Point2D, LineSegment, geometria, ConvexPart (części kształtów kolizji) | - |
 | `render/`    | Bitmap, Assets, RenderTarget, ClipStack, ShaderProgram, Typeface, PrimitiveRenderer | math    |
 | `input/`     | Input, akcje i osie                                             | -                           |
 | `entity/`    | Entity, Group i klasy bazowe (Transformable, Drawable, Updatable...) | math, render, input    |
@@ -18,7 +18,7 @@ warstwy wcześniejsze na liście:
 | `visual/`    | obrazy, tekst i grupy rysowane do tekstury z przestrzeni nazw `visual` | entity i jej zależności |
 | `ui/`        | elementy interfejsu z przestrzeni nazw `ui`                     | entity i jej zależności     |
 | `physics/`   | `Collider<S>`, StaticBody, CharacterBody, RigidBody, Area, PhysicsWorld (Box2D) | shapes, visual i ich zależności |
-| `scene/`     | Scene, SceneCamera, PointerSystem (trafienia myszą)             | entity i jej zależności     |
+| `scene/`     | Scene, SceneCamera, PointerSystem (trafienia myszą)             | physics i jej zależności (Scene ma PhysicsWorld) |
 | `engine/EngineTypes.hpp` | typy ustawień: LogLevel, Scaling                    | -                           |
 | `Engine.hpp` | pętla, okno, sceny, zasoby                                      | wszystkie powyższe          |
 | `engine/SceneMacro.hpp` | makro SCENE (wymaga pełnej klasy Engine)             | `Engine.hpp`                |
@@ -72,7 +72,7 @@ template <typename Self> Self& Radius(this Self& self, float radius) {
 ```
 
 Pola i prywatne metody klasy czyta się wprost przez `self` (`self.radius_`,
-`self.ClampFrame()`), bez rzutowania na klasę bazową - dostęp jest sprawdzany w klasie,
+`self.SheetChanged()` w `visual::Sprite`), bez rzutowania na klasę bazową - dostęp jest sprawdzany w klasie,
 która definiuje metodę, więc działa też dla prywatnych składowych.
 
 Dzięki temu łańcuch zachowuje typ także w klasie pochodnej
@@ -88,10 +88,14 @@ w lambdzie nazywamy `fn`, nie tak samo jak parametr (projekt kompiluje się z `-
   i w kształtach z `shapes` są typu `Point2D`; listy wierzchołków to `std::vector<Point2D>`.
   Pojedynczy `Vector2` albo `{x, y}` konwertuje się na `Point2D` niejawnie.
 - **Rozmiar, promień i przesunięcie to `Vector2`**, bo to wektory, a nie punkty.
+- **Wymiary okna i monitora w pikselach są `int`**, jak w raylib: `Window(w, h)`,
+  `Resolution(w, h)`, `MinSize()`, `MaxSize()`, `ScreenWidth()`. Pozycje (okna, kursora) są
+  `Vector2` - setter przyjmuje ten sam typ, który zwraca getter (`WindowPosition()`).
 - **API sceny i wejścia używa `Vector2`** (`Position()`, `Translate()`, `Contains()`,
   `MousePosition()`), bo wartości pochodzą wprost z raylib.
-- **Kąty są w radianach** wszędzie w API; przeliczenie na stopnie dla raylib jest w jednym
-  miejscu (`SceneCamera::Rotation()`).
+- **Kąty są w radianach** wszędzie w API; przeliczenie ze stopni raylib jest tylko tam, gdzie
+  silnik opakowuje wartość raylib (`SceneCamera::Rotation()`, `Input::GestureDragAngle()`,
+  `Input::GesturePinchAngle()`).
 
 ## Zasoby
 

@@ -269,9 +269,10 @@ PhysicsWorld::~PhysicsWorld() {
     if (b2World_IsValid(impl_->world)) b2DestroyWorld(impl_->world);
 }
 
-void PhysicsWorld::Gravity(Vector2 gravity) {
+PhysicsWorld& PhysicsWorld::Gravity(Vector2 gravity) {
     gravity_ = gravity;
     b2World_SetGravity(impl_->world, ToB2(gravity));
+    return *this;
 }
 
 void PhysicsWorld::CollectShapes(const Entity& object, std::vector<const CollisionShape*>& shapes) {
@@ -1309,7 +1310,7 @@ void PhysicsWorld::Draw(PrimitiveRenderer& renderer) const {
                 parts.clear();
                 shape->WorldParts(parts);
                 renderer.Reset().TargetScreen().Paint(
-                    shape->IsDisabled() ? Fade(GRAY, 0.5f) : color
+                    shape->IsDisabled() ? ::Fade(GRAY, 0.5f) : color
                 );
                 for (const ConvexPart& part : parts) {
                     const std::vector<Point2D> outline = part.Outline();

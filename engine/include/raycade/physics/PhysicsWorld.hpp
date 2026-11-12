@@ -70,25 +70,34 @@ class PhysicsWorld {
     PhysicsWorld& operator=(const PhysicsWorld&) = delete;
 
     /** @brief Ustawia grawitację w pikselach/s² (czyta ją CollisionObject::Gravity()). */
-    void Gravity(Vector2 gravity);
+    PhysicsWorld& Gravity(Vector2 gravity);
 
     /** @brief Podaje grawitację. */
     Vector2 Gravity() const { return gravity_; }
 
     /** @brief Włącza rysowanie colliderów (Scene::DebugColliders()). */
-    void Debug(bool value) { debug_ = value; }
+    PhysicsWorld& Debug(bool value) {
+        debug_ = value;
+        return *this;
+    }
 
     /** @brief Sprawdza, czy collidery są rysowane. */
     bool IsDebug() const { return debug_; }
 
     /** @brief Włącza interpolację rysowania obiektów fizyki (Scene::PhysicsInterpolation()). */
-    void Interpolation(bool value) { interpolation_ = value; }
+    PhysicsWorld& Interpolation(bool value) {
+        interpolation_ = value;
+        return *this;
+    }
 
     /** @brief Sprawdza, czy interpolacja rysowania jest włączona. */
     bool IsInterpolation() const { return interpolation_; }
 
     /** @brief Ustawia ułamek drogi do następnego kroku stałego (Engine::FixedAlpha()). */
-    void Alpha(float alpha) { alpha_ = alpha; }
+    PhysicsWorld& Alpha(float alpha) {
+        alpha_ = alpha;
+        return *this;
+    }
 
     /** @brief Ułamek drogi do następnego kroku stałego - położenie rysowania między krokami. */
     float Alpha() const { return alpha_; }

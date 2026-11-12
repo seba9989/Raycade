@@ -210,7 +210,7 @@ SCENE("efekty") {
     if (!wave || !gray) engine.Log(LogLevel::Warning, "shader demo nie dziala");
     scene.Spawn<visual::RenderGroup>()
         .Size({260, 200})
-        .Background(Fade(SKYBLUE, 0.4f))
+        .Background(::Fade(SKYBLUE, 0.4f))
         .Position({690, 70})
         .Shader(wave)
         .Children([](visual::RenderGroup& surface) {

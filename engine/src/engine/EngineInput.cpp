@@ -36,6 +36,7 @@ Engine& Engine::HideCursor(bool value) {
 
 Engine& Engine::LockCursor(bool value) {
     if (!RequireWindow("LockCursor")) return *this;
+    cursorLocked_ = value;
     if (value)
         ::DisableCursor();
     else

@@ -79,12 +79,12 @@ SCENE("sprite") {
     // linia stanu pliku; reloads - ile razy przeładowano klawiszem L
     const auto describe = [&file, sheet](const Bitmap& image, bool ok, int reloads) {
         std::string text = std::string{kJson} + " + .png: ";
-        text += ok ? TextFormat(
+        text += ok ? ::TextFormat(
                          "%dx%d, klatki %d, animacje %d", image.Width(), image.Height(),
                          sheet->FrameCount(), static_cast<int>(sheet->Clips().size())
                      )
                    : "BRAK - szachownica zastępcza";
-        if (reloads > 0) text += TextFormat("   przeładowano (L): %d", reloads);
+        if (reloads > 0) text += ::TextFormat("   przeładowano (L): %d", reloads);
         file.Content(text).Paint(ok ? DARKGREEN : MAROON);
     };
     describe(*bitmap, bitmap->IsLoaded(), 0);
@@ -183,7 +183,7 @@ SCENE("sprite") {
                 sheet->Bitmap(fresh);
                 sheetView.Sheet(fresh);
                 describe(*fresh, true, ++reloads);
-                addEvent(TextFormat("L: przeładowano (%dx%d)", fresh->Width(), fresh->Height()));
+                addEvent(::TextFormat("L: przeładowano (%dx%d)", fresh->Width(), fresh->Height()));
             }
         )
         .OnUpdate([&info, &marker, sheet, preview](visual::Sprite& self, float) {
@@ -197,7 +197,7 @@ SCENE("sprite") {
                 "Klatka: " + std::to_string(self.Frame()) + "   w arkuszu: " +
                 std::to_string(self.SheetFrame()) + " / " + std::to_string(self.SheetFrames()) +
                 "\n" + "Gra: " + (self.IsPlaying() ? "tak" : "nie") +
-                "   Speed: " + TextFormat("%.3g", self.Speed()) + "\n" + "FlipX: " +
+                "   Speed: " + ::TextFormat("%.3g", self.Speed()) + "\n" + "FlipX: " +
                 (self.IsFlipX() ? "tak" : "nie") + "   FlipY: " + (self.IsFlipY() ? "tak" : "nie") +
                 "\n" + "FrameSize: " + std::to_string(static_cast<int>(size.x)) + "x" +
                 std::to_string(static_cast<int>(size.y))
