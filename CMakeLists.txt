@@ -46,6 +46,26 @@ if(NOT TARGET nlohmann_json::nlohmann_json)
     FetchContent_MakeAvailable(nlohmann_json)
 endif()
 
+# Box2D v3 - fizyka brył sztywnych (biblioteka w C). Z systemu (devenv/Nix), a jeśli jej nie ma -
+# pobierana jak raylib. Testy, przykłady i benchmarki Box2D nie są budowane.
+if(NOT TARGET box2d::box2d)
+    find_package(box2d 3.1 QUIET)
+endif()
+if(NOT TARGET box2d::box2d)
+    message(STATUS "box2d nie znaleziony w systemie - pobieranie przez FetchContent")
+    include(FetchContent)
+    FetchContent_Declare(
+        box2d
+        GIT_REPOSITORY https://github.com/erincatto/box2d.git
+        GIT_TAG v3.1.1
+        GIT_SHALLOW TRUE
+    )
+    set(BOX2D_UNIT_TESTS OFF CACHE BOOL "" FORCE)
+    set(BOX2D_SAMPLES OFF CACHE BOOL "" FORCE)
+    set(BOX2D_BENCHMARKS OFF CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(box2d)
+endif()
+
 # Wspólne ostrzeżenia kompilatora dla biblioteki i demo (cel bez źródeł).
 add_library(raycade_warnings INTERFACE)
 if(MSVC)

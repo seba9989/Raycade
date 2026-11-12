@@ -64,8 +64,11 @@ target_include_directories(raycade PUBLIC
 target_compile_features(raycade PUBLIC cxx_std_23)
 
 # raylib jest częścią API (Color, Vector2, KEY_*), dlatego PUBLIC.
-# nlohmann/json tylko w implementacji (SpriteSheet.cpp) - nie trafia do nagłówków API.
-target_link_libraries(raycade PUBLIC raylib PRIVATE raycade_warnings nlohmann_json::nlohmann_json)
+# nlohmann/json (SpriteSheet.cpp) i Box2D (src/physics) tylko w implementacji - nie trafiają
+# do nagłówków API, więc gra ich nie widzi.
+target_link_libraries(
+    raycade PUBLIC raylib PRIVATE raycade_warnings nlohmann_json::nlohmann_json box2d::box2d
+)
 
 # Nagłówki zawierają polskie znaki (UTF-8) - MSVC bez /utf-8 czyta je w stronie kodowej
 # systemu, więc opcja musi trafić także do każdego pliku gry, który je dołącza.
