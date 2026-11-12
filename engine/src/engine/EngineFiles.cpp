@@ -7,7 +7,7 @@
 
 /**
  * @details Katalog zasobów jest znany od razu (nie wymaga okna), a Assets trafia do kontekstu
- * silnika, żeby obiekty sceny (np. shapes::Sprite::Sheet() z nazwą pliku) korzystały z tej
+ * silnika, żeby obiekty sceny (np. visual::Sprite::Sheet() z nazwą pliku) korzystały z tej
  * samej pamięci podręcznej. Init() odnawia wpis po Shutdown(), które czyści kontekst.
  */
 Engine::Engine() {

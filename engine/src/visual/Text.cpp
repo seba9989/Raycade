@@ -2,9 +2,9 @@
  * @file Text.cpp
  * @brief Pomiar, test trafienia i rysowanie napisu.
  */
-#include <raycade/shapes/Text.hpp>
+#include <raycade/visual/Text.hpp>
 
-namespace shapes {
+namespace visual {
 
 TextStyle Text::Style() const {
     TextStyle style;
@@ -44,4 +44,4 @@ void Text::Draw(PrimitiveRenderer&) const {
     Face().Draw(content_, TopLeft(), Style(), color_);
 }
 
-} // namespace shapes
+} // namespace visual

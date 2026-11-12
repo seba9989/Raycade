@@ -4,12 +4,12 @@
  */
 #pragma once
 
-#include <raycade/entity/Entity.hpp>
+#include <raycade/shapes/Shape.hpp>
 
 namespace shapes {
 
 /** @brief Okrąg lub koło; pozycja obiektu oznacza środek. */
-class Circle : public Entity {
+class Circle : public Shape {
   public:
     /**
      * @brief Ustawia promień.
@@ -21,21 +21,8 @@ class Circle : public Entity {
         return self;
     }
 
-    /**
-     * @brief Wybiera własny algorytm z ośmiokrotną symetrią zamiast raylib.
-     * @param value true dla algorytmu własnego, false dla raylib.
-     * @return Ten sam okrąg.
-     */
-    template <typename Self> Self& Symmetric(this Self& self, bool value = true) {
-        self.symmetric_ = value;
-        return self;
-    }
-
     /** @brief Podaje promień. */
     float Radius() const { return radius_; }
-
-    /** @brief Sprawdza, czy okrąg rysuje własny algorytm z symetrią. */
-    bool IsSymmetric() const { return symmetric_; }
 
     /** @copydoc Updatable::Contains */
     bool Contains(Vector2 point) const override;
@@ -45,8 +32,7 @@ class Circle : public Entity {
     void Draw(PrimitiveRenderer& renderer) const override;
 
   private:
-    float radius_ = 10.0f;   /**< Promień w pikselach. */
-    bool symmetric_ = false; /**< Czy użyć własnego algorytmu. */
+    float radius_ = 10.0f; /**< Promień w pikselach. */
 };
 
 } // namespace shapes

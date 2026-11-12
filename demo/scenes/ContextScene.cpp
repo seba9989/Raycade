@@ -87,7 +87,7 @@ class Tile : public Entity {
  * @brief Panel z trzema kafelkami, który udostępnia im własny Theme.
  * @details Domyślny Theme powstaje w konstruktorze; scena może go nadpisać po Spawn.
  */
-class Panel : public shapes::Group {
+class Panel : public Group {
   public:
     Panel() {
         ProvideContext<Theme>(Theme{0, "panel (domyslny)"});

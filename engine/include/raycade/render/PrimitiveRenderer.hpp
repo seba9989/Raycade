@@ -15,6 +15,16 @@
 #include <raycade/render/Bitmap.hpp>
 
 /**
+ * @brief Algorytm rasteryzacji figur: z raylib albo własny z laboratorium.
+ * @details Wybiera go PrimitiveRenderer::Raster() oraz shapes::Shape::Raster() - opis, który
+ * algorytm włącza się w której figurze, jest przy PrimitiveRenderer::Raster().
+ */
+enum class Rasterizer {
+    Raylib, /**< Funkcje raylib (domyślnie). */
+    Custom, /**< Własne algorytmy: przyrostowy odcinka, punktu środkowego okręgu i elipsy. */
+};
+
+/**
  * @brief Renderer prymitywów dwuwymiarowych ze stanem podobnym do pędzla.
  * @details Stan obejmuje kolor, wypełnienie, wybór algorytmów oraz cel rysowania:
  * ekran lub Bitmap. Metody zwracają referencję do tego samego obiektu, więc wywołania
@@ -57,27 +67,23 @@ class PrimitiveRenderer {
     }
 
     /**
-     * @brief Wybiera własny algorytm przyrostowy dla odcinków.
-     * @details Dotyczy wszystkiego, co składa się z odcinków: Line(), Lines(), Polyline()
-     * oraz konturów Rect(), Triangle() i Polygon(). Wypełnień nie zmienia.
-     * @param value true dla algorytmu własnego, false dla raylib.
+     * @brief Wybiera algorytm rasteryzacji kolejnych figur.
+     * @details Rasterizer::Custom włącza własne algorytmy:
+     * - przyrostowy algorytm odcinka (LineIncremental()) dla wszystkiego, co składa się
+     *   z odcinków: Line(), Lines(), Polyline() oraz konturów Rect(), Triangle() i Polygon();
+     *   wypełnień nie zmienia,
+     * - algorytm punktu środkowego z symetrią ośmiokrotną dla Circle() (CircleSymmetric()),
+     * - algorytm punktu środkowego z symetrią czterokrotną dla Ellipse() (EllipseSymmetric()).
+     * @param raster Rasterizer::Raylib (domyślnie) albo Rasterizer::Custom.
      * @return Ten sam renderer.
      */
-    PrimitiveRenderer& Incremental(bool value = true) {
-        incremental_ = value;
+    PrimitiveRenderer& Raster(Rasterizer raster) {
+        raster_ = raster;
         return *this;
     }
 
-    /**
-     * @brief Wybiera własny algorytm z symetrią dla okręgów i elips.
-     * @details Okrąg korzysta z symetrii ośmiokrotnej, elipsa - z czterokrotnej.
-     * @param value true dla algorytmu własnego, false dla raylib.
-     * @return Ten sam renderer.
-     */
-    PrimitiveRenderer& Symmetric(bool value = true) {
-        symmetric_ = value;
-        return *this;
-    }
+    /** @brief Podaje wybrany algorytm rasteryzacji. */
+    Rasterizer Raster() const { return raster_; }
 
     /**
      * @brief Przywraca czarny kolor, brak wypełnienia i algorytmy raylib.
@@ -123,7 +129,7 @@ class PrimitiveRenderer {
     PrimitiveRenderer& Point(Point2D position);
 
     /**
-     * @brief Rysuje odcinek wybranym algorytmem (patrz Incremental()).
+     * @brief Rysuje odcinek wybranym algorytmem (patrz Raster()).
      * @param from Początek.
      * @param to Koniec.
      * @return Ten sam renderer.
@@ -140,7 +146,7 @@ class PrimitiveRenderer {
     PrimitiveRenderer& Rect(Point2D position, Vector2 size);
 
     /**
-     * @brief Rysuje okrąg albo koło wybranym algorytmem (patrz Symmetric()).
+     * @brief Rysuje okrąg albo koło wybranym algorytmem (patrz Raster()).
      * @param center Środek.
      * @param radius Promień.
      * @return Ten sam renderer.
@@ -149,8 +155,8 @@ class PrimitiveRenderer {
     PrimitiveRenderer& Circle(Point2D center, float radius);
 
     /**
-     * @brief Rysuje elipsę wybranym algorytmem (patrz Symmetric()).
-     * @details Na bitmapie używany jest zawsze algorytm własny, także gdy Symmetric(false),
+     * @brief Rysuje elipsę wybranym algorytmem (patrz Raster()).
+     * @details Na bitmapie używany jest zawsze algorytm własny, także przy Rasterizer::Raylib,
      * bo raylib nie ma funkcji rysującej elipsę na obrazie w RAM.
      * @param center Środek.
      * @param radius Promienie {poziomy, pionowy}.
@@ -339,9 +345,11 @@ class PrimitiveRenderer {
      */
     void ScanlineFill(std::span<const Point2D> vertices);
 
-    Color color_ = BLACK;      /**< Bieżący kolor. */
-    bool filled_ = false;      /**< Czy figury są wypełniane. */
-    bool incremental_ = false; /**< Czy odcinki rysuje algorytm przyrostowy. */
-    bool symmetric_ = false;   /**< Czy okręgi i elipsy rysuje algorytm z symetrią. */
-    Bitmap* target_ = nullptr; /**< Bitmapa docelowa; nullptr oznacza ekran. */
+    /** @brief Sprawdza, czy wybrano własne algorytmy (Rasterizer::Custom). */
+    bool IsCustom() const { return raster_ == Rasterizer::Custom; }
+
+    Color color_ = BLACK;                    /**< Bieżący kolor. */
+    bool filled_ = false;                    /**< Czy figury są wypełniane. */
+    Rasterizer raster_ = Rasterizer::Raylib; /**< Algorytm rasteryzacji. */
+    Bitmap* target_ = nullptr;               /**< Bitmapa docelowa; nullptr oznacza ekran. */
 };

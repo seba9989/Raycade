@@ -79,7 +79,7 @@ struct SpriteFrame {
 /**
  * @brief Arkusz klatek (bitmapa + prostokąty klatek) z nazwanymi animacjami.
  * @details Opis animacji należy do arkusza, a nie do sprite'a, więc dziesięciu przeciwników
- * dzieli jeden obiekt - definiuje się go raz, a każdy shapes::Sprite pamięta tylko własny
+ * dzieli jeden obiekt - definiuje się go raz, a każdy visual::Sprite pamięta tylko własny
  * stan odtwarzania (animacja, klatka, czas). Arkusz przekazuje się jako
  * `std::shared_ptr<const SpriteSheet>`.
  *
@@ -97,14 +97,14 @@ struct SpriteFrame {
  *     .Event("biegnie", 2, "krok")
  *     .Event("biegnie", 5, "krok");
  * for (int i = 0; i < 10; ++i)
- *     scene.Spawn<shapes::Sprite>().Sheet(hero).Play("biegnie").Position({i * 40.0f, 0});
+ *     scene.Spawn<visual::Sprite>().Sheet(hero).Play("biegnie").Position({i * 40.0f, 0});
  * @endcode
  *
  * Arkusz z programu graficznego wczytuje Load() z pliku JSON - najprościej przez pamięć
  * podręczną zasobów (Assets::Sheet()):
  * @code{.cpp}
  * auto hero = engine.Assets().Sheet("hero.json"); // obraz, klatki i animacje z tagów
- * scene.Spawn<shapes::Sprite>().Sheet(hero).Play("run");
+ * scene.Spawn<visual::Sprite>().Sheet(hero).Play("run");
  * @endcode
  */
 class SpriteSheet {

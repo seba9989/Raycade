@@ -60,8 +60,8 @@ bool LineSegment::Intersects(const LineSegment& other) const {
            (d3 == 0 && OnSegment(c, d, a)) || (d4 == 0 && OnSegment(c, d, b));
 }
 
-const LineSegment& LineSegment::Draw(PrimitiveRenderer& renderer, bool incremental) const {
-    renderer.Incremental(incremental).Line(from_, to_);
+const LineSegment& LineSegment::Draw(PrimitiveRenderer& renderer) const {
+    renderer.Line(from_, to_);
     return *this;
 }
 

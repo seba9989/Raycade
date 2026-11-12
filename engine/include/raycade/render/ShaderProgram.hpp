@@ -20,14 +20,14 @@ class Bitmap;
  * uniformów i ustawia je po nazwie. Klasa nazywa się ShaderProgram, bo nazwę Shader ma już
  * struktura raylib.
  *
- * Shader podpina się do obiektu (Drawable::Shader()), powierzchni (shapes::Surface - efekt na
+ * Shader podpina się do obiektu (Drawable::Shader()), grupy (visual::RenderGroup - efekt na
  * całym rysunku dzieci) albo do całego obrazu gry (Engine::PostShader()). Obiekty dzielą
  * shader przez std::shared_ptr, więc jeden program może obsłużyć wiele obiektów.
  *
  * Shader wczytuje się po otwarciu okna (wymaga kontekstu OpenGL) - np. w konfiguracji sceny.
  * @code{.cpp}
  * auto wave = Shared(ShaderProgram::Load("", "assets/wave.fs")); // nullptr przy błędzie
- * scene.Spawn<shapes::Surface>().Size({300, 200}).Shader(wave);
+ * scene.Spawn<visual::RenderGroup>().Size({300, 200}).Shader(wave);
  * scene.OnUpdate([wave](float) {
  *     if (wave) wave->Uniform("time", static_cast<float>(Engine::Get().Time()));
  * });

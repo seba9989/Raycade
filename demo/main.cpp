@@ -25,7 +25,7 @@
  * - `engine/` - biblioteka statyczna Raycade (cel CMake `raycade::raycade`):
  *   nagłówek zbiorczy `engine/umbrella/raycade`, pozostałe publiczne nagłówki
  *   w `engine/include/raycade/` w katalogach-warstwach (`math`, `render`, `input`, `entity`,
- *   `shapes`, `ui`, `scene`), implementacja w `engine/src/` w tym samym układzie.
+ *   `shapes`, `visual`, `ui`, `scene`), implementacja w `engine/src/` w tym samym układzie.
  * - `demo/` - program demonstracyjny: ten plik i sceny z laboratoriów (`demo/scenes/`).
  * - `docs/` - konfiguracja Doxygena i @ref konwencje "konwencje kodu".
  *
@@ -43,7 +43,7 @@
  * - @ref Entity łączy drzewo obiektów z @ref Updatable, @ref Drawable i @ref Transformable;
  *   ich settery i zdarzenia zwracają konkretny typ figury dzięki deducing this (C++23).
  * - @ref PrimitiveRenderer rysuje na ekranie albo na @ref Bitmap.
- * - @ref shapes::Canvas udostępnia bitmapę do algorytmów wypełniania.
+ * - @ref visual::Canvas udostępnia bitmapę do algorytmów wypełniania.
  *
  * @section algorytmy Algorytmy laboratoriów
  * Własny algorytm przyrostowy odcinka, okrąg z ośmiokrotną symetrią, elipsa
@@ -75,7 +75,7 @@
  * przybliża, Q/E obracają widok, F przełącza podążanie, a R resetuje kamerę. Skrzynie można
  * przeciągać, a monety klikać przy dowolnym przybliżeniu i obrocie; przyciski w rogu są
  * obiektami ekranu (HUD).
- * Na scenie `efekty` koło z arkusza klatek (shapes::Sprite) obraca się animacją - LPM ją
+ * Na scenie `efekty` koło z arkusza klatek (visual::Sprite) obraca się animacją - LPM ją
  * wstrzymuje, X odbija drugie koło; lista w panelu z Clip() przewija się kółkiem myszy;
  * powierzchnia faluje shaderem, a G włącza szarość całego obrazu (Engine::PostShader());
  * piłki odbijają się z fizyką w kroku stałym (OnFixedUpdate()), LPM usuwa piłkę (Destroy()),
@@ -86,7 +86,7 @@
  * przechodzi między polami, Enter w imieniu przenosi do e-maila, a w e-mailu - tak jak
  * przycisk "Zapisz" - sprawdza dane i dopisuje osobę do listy. Pole z fokusem przejmuje
  * klawiaturę (cyfry nie przełączają wtedy scen), Escape zdejmuje fokus.
- * Scena `sprite` służy do testowania shapes::Sprite i SpriteSheet. Arkusz wczytuje przez
+ * Scena `sprite` służy do testowania visual::Sprite i SpriteSheet. Arkusz wczytuje przez
  * Engine::Assets() z pliku `demo/assets/sprite-test.json` w formacie eksportu Aseprite (klatki
  * z czasami i tagi animacji), a obraz - z `sprite-test.png` wskazanego w JSON; podgląd arkusza
  * pokazuje ramką bieżącą klatkę. Postać sterują klawisze: Q, W, E, R, C animacje z tagów

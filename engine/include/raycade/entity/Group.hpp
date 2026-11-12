@@ -1,12 +1,10 @@
 /**
  * @file Group.hpp
- * @brief Kształt Group - niewidoczny rodzic do grupowania obiektów.
+ * @brief Group - niewidoczny rodzic do grupowania obiektów.
  */
 #pragma once
 
 #include <raycade/entity/Entity.hpp>
-
-namespace shapes {
 
 /**
  * @brief Niewidoczny rodzic służący do grupowania i przesuwania dzieci.
@@ -19,5 +17,3 @@ class Group : public Entity {
     /** @brief Grupa nie rysuje niczego - widoczne są tylko jej dzieci. */
     void Draw(PrimitiveRenderer&) const override {}
 };
-
-} // namespace shapes

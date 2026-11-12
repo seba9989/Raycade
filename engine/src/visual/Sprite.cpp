@@ -2,12 +2,12 @@
  * @file Sprite.cpp
  * @brief Animacja klatkowa: arkusz, postęp czasu, wybór klatki i rysowanie.
  */
-#include <raycade/shapes/Sprite.hpp>
+#include <raycade/visual/Sprite.hpp>
 
 #include <algorithm>
 #include <cctype>
 
-namespace shapes {
+namespace visual {
 
 bool Sprite::HasFrames() const {
     return sheet_ && sheet_->Bitmap() && !sheet_->Bitmap()->IsEmpty() && sheet_->FrameCount() > 0;
@@ -193,4 +193,4 @@ void Sprite::Draw(PrimitiveRenderer& renderer) const {
     renderer.Blit(*sheet_->Bitmap(), source, {offset.x - origin_.x, offset.y - origin_.y}, color_);
 }
 
-} // namespace shapes
+} // namespace visual

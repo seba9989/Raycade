@@ -11,7 +11,7 @@
  * - usuwanie i krok stały: piłki odbijają się z fizyką liczoną w OnFixedUpdate(); LPM na piłce
  *   usuwa ją (Destroy()), B albo podwójne kliknięcie w boisko (gest GESTURE_DOUBLETAP) dodaje
  *   nową,
- * - tekst: napisy to obiekty shapes::Text rysowane czcionką z polskimi znakami z pliku
+ * - tekst: napisy to obiekty visual::Text rysowane czcionką z polskimi znakami z pliku
  *   `assets/font.ttf` (w repozytorium DejaVu Sans; bez niego - font raylib).
  */
 
@@ -133,8 +133,8 @@ SCENE("efekty") {
     std::shared_ptr<const Typeface> font = engine.Assets().Font("font.ttf");
     const bool hasFont = !font->IsDefault();
     scene.ProvideContext<DefaultTypeface>(font);
-    const auto title = [&scene](Vector2 position, std::string content) -> shapes::Text& {
-        return scene.Spawn<shapes::Text>()
+    const auto title = [&scene](Vector2 position, std::string content) -> visual::Text& {
+        return scene.Spawn<visual::Text>()
             .Content(std::move(content))
             .FontSize(18)
             .Paint(DARKGRAY)
@@ -150,36 +150,36 @@ SCENE("efekty") {
     // każde przejście szprychy przez poziom (klatki 0 i 4) - zdarzenie klatki
     wheel->Event("kreci", 0, "poziomo").Event("kreci", 4, "poziomo");
     auto& turns = title({40, 250}, "obroty: 0").FontSize(16);
-    scene.Spawn<shapes::Sprite>()
+    scene.Spawn<visual::Sprite>()
         .Sheet(wheel)
         .Play("kreci")
         .Origin({kFrame / 2, kFrame / 2})
         .Position({100, 140})
         .Scale({2, 2})
-        .OnClick([](shapes::Sprite& self) {
+        .OnClick([](visual::Sprite& self) {
             if (self.IsPlaying())
                 self.Pause();
             else
                 self.Play();
         })
-        .OnFrameEvent([&turns, count = 0](shapes::Sprite&, const std::string&) mutable {
+        .OnFrameEvent([&turns, count = 0](visual::Sprite&, const std::string&) mutable {
             turns.Content("obroty: " + std::to_string(++count / 2));
         });
-    scene.Spawn<shapes::Sprite>()
+    scene.Spawn<visual::Sprite>()
         .Sheet(wheel)
         .Play("waha")
         .Speed(0.5f)
         .Origin({kFrame / 2, kFrame / 2})
         .Position({230, 140})
         .Paint(SKYBLUE)
-        .OnKeyPressed(KEY_X, [](shapes::Sprite& self) { self.FlipX(!self.IsFlipX()); });
+        .OnKeyPressed(KEY_X, [](visual::Sprite& self) { self.FlipX(!self.IsFlipX()); });
     title({40, 230}, "drugie: PingPong, Speed(0.5), Paint(SKYBLUE)").FontSize(16);
 
     // ---------------- przycinanie ----------------
     title({370, 30}, "Clip(): kółko myszy przewija");
-    auto& panel = scene.Spawn<shapes::Group>().Position({370, 70}).Clip({0, 0, 260, 200});
+    auto& panel = scene.Spawn<Group>().Position({370, 70}).Clip({0, 0, 260, 200});
     panel.Spawn<shapes::Rect>().Size({260, 200}).Paint(LIGHTGRAY);
-    auto& list = panel.Spawn<shapes::Group>();
+    auto& list = panel.Spawn<Group>();
     for (int i = 0; i < 12; ++i) {
         list.Spawn<shapes::Rect>()
             .Position({10, 10.0f + static_cast<float>(i) * 40})
@@ -188,7 +188,7 @@ SCENE("efekty") {
             .Fill()
             .OnClick([](shapes::Rect& self) { self.Paint(GOLD); })
             .Children([i](shapes::Rect& row) {
-                row.Spawn<shapes::Text>()
+                row.Spawn<visual::Text>()
                     .Content("Wiersz " + std::to_string(i + 1) + " (LPM)")
                     .FontSize(18)
                     .Paint(DARKBROWN)
@@ -196,7 +196,7 @@ SCENE("efekty") {
             });
     }
     // zdarzenie na tle panelu: przewijanie listy w granicach
-    panel.OnScroll([&list](shapes::Group&, float wheelMove) {
+    panel.OnScroll([&list](Group&, float wheelMove) {
         Vector2 position = list.Position();
         position.y = std::clamp(position.y + wheelMove * 30, -290.0f, 0.0f);
         list.Position(position);
@@ -204,16 +204,16 @@ SCENE("efekty") {
     panel.Spawn<shapes::Rect>().Size({260, 200}).Paint(DARKGRAY).Layer(1); // ramka nad listą
 
     // ---------------- shadery ----------------
-    title({690, 30}, "Shader na Surface, G - szarość");
+    title({690, 30}, "Shader na RenderGroup, G - szarość");
     auto wave = Shared(ShaderProgram::FromCode("", kWaveShader));
     auto gray = Shared(ShaderProgram::FromCode("", kGrayShader));
     if (!wave || !gray) engine.Log(LogLevel::Warning, "shader demo nie dziala");
-    scene.Spawn<shapes::Surface>()
+    scene.Spawn<visual::RenderGroup>()
         .Size({260, 200})
         .Background(Fade(SKYBLUE, 0.4f))
         .Position({690, 70})
         .Shader(wave)
-        .Children([](shapes::Surface& surface) {
+        .Children([](visual::RenderGroup& surface) {
             surface.Spawn<shapes::Circle>().Position({70, 100}).Radius(50).Paint(RED).Fill();
             surface.Spawn<shapes::Rect>()
                 .Position({130, 40})
@@ -247,13 +247,13 @@ SCENE("efekty") {
 
     // tekst powiększany Scale() zostaje ostry (atlas w rozmiarze na ekranie), a znaki spoza
     // przygotowanego zestawu (×, ·, €) czcionka dokłada sama przy pierwszym użyciu
-    scene.Spawn<shapes::Text>()
+    scene.Spawn<visual::Text>()
         .Content("Skala ×2 · 50 €")
         .FontSize(18)
         .Anchor({0.5f, 0.5f})
         .Paint(DARKBLUE)
         .Position({870, 660})
-        .OnUpdate([previous = 1.0f](shapes::Text& self, float) mutable {
+        .OnUpdate([previous = 1.0f](visual::Text& self, float) mutable {
             const float time = static_cast<float>(Engine::Get().Time());
             const float scale = 1.4f + 0.4f * std::sin(time * 2.0f);
             // Scale() mnoży bieżącą skalę - podajemy zmianę względem poprzedniej klatki

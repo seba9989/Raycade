@@ -2,9 +2,9 @@
  * @file Canvas.cpp
  * @brief Płótno: rysowanie po bitmapie, test trafienia i wyświetlanie.
  */
-#include <raycade/shapes/Canvas.hpp>
+#include <raycade/visual/Canvas.hpp>
 
-namespace shapes {
+namespace visual {
 
 void Canvas::EditPixels(const std::function<void(PrimitiveRenderer&)>& paint) {
     PrimitiveRenderer renderer;
@@ -24,4 +24,4 @@ void Canvas::Draw(PrimitiveRenderer& renderer) const {
     if (bitmap_.Width() > 0) renderer.Blit(bitmap_, {0.0f, 0.0f}, color_);
 }
 
-} // namespace shapes
+} // namespace visual

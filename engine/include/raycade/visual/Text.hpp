@@ -1,6 +1,6 @@
 /**
  * @file Text.hpp
- * @brief Kształt Text - napis z wybraną czcionką, wyrównaniem i łamaniem wierszy.
+ * @brief Obiekt Text - napis z wybraną czcionką, wyrównaniem i łamaniem wierszy.
  */
 #pragma once
 
@@ -12,7 +12,7 @@
 #include <raycade/entity/Entity.hpp>
 #include <raycade/render/Typeface.hpp>
 
-namespace shapes {
+namespace visual {
 
 /**
  * @brief Napis (także wielowierszowy), którego pozycja oznacza punkt zaczepienia.
@@ -30,7 +30,7 @@ namespace shapes {
  * Punkt zaczepienia leży w pozycji obiektu i wokół niego działa obrót i skala. To Origin()
  * w pikselach plus Anchor() jako część rozmiaru napisu - domyślnie lewy górny róg.
  * @code{.cpp}
- * scene.Spawn<shapes::Text>()
+ * scene.Spawn<visual::Text>()
  *     .Content("Koniec gry\nNaciśnij Enter")
  *     .FontSize(32)
  *     .Align(TextAlign::Center)
@@ -145,7 +145,7 @@ class Text : public Entity {
     /**
      * @brief Ustawia przesunięcie punktu zaczepienia w pikselach (od lewego górnego rogu).
      * @details Pozycja obiektu wskazuje punkt Origin() + Anchor() * Size(), a obrót i skala
-     * działają wokół niego - tak samo jak shapes::Sprite::Origin().
+     * działają wokół niego - tak samo jak visual::Sprite::Origin().
      * @param origin Punkt w pikselach napisu.
      * @return Ten sam obiekt.
      */
@@ -211,4 +211,4 @@ class Text : public Entity {
     mutable const Typeface* measured_ = nullptr; /**< Czcionka zapamiętanego pomiaru. */
 };
 
-} // namespace shapes
+} // namespace visual

@@ -155,14 +155,13 @@ class LineSegment {
     bool Intersects(const LineSegment& other) const;
 
     /**
-     * @brief Rysuje odcinek bieżącym kolorem renderera wybranym algorytmem.
+     * @brief Rysuje odcinek bieżącym kolorem i algorytmem renderera.
+     * @details Algorytm wybiera się na rendererze, w tym samym wywołaniu:
+     * `segment.Draw(renderer.Raster(Rasterizer::Custom))`.
      * @param renderer Renderer docelowy.
-     * @param incremental true dla algorytmu przyrostowego, false dla domyślnego z raylib.
      * @return Ten sam odcinek.
-     * @note Ustawia na rendererze flagę Incremental(incremental), która - jak cały stan
-     * pędzla - obowiązuje także dla kolejnych wywołań, aż do jej zmiany lub Reset().
      */
-    const LineSegment& Draw(PrimitiveRenderer& renderer, bool incremental = false) const;
+    const LineSegment& Draw(PrimitiveRenderer& renderer) const;
 
   private:
     Point2D from_; /**< Początek odcinka. */

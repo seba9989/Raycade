@@ -1,6 +1,6 @@
 /**
  * @file Canvas.hpp
- * @brief Kształt Canvas - płótno z bitmapą w RAM do rysowania i wypełniania.
+ * @brief Obiekt Canvas - płótno z bitmapą w RAM do rysowania i wypełniania.
  */
 #pragma once
 
@@ -9,7 +9,7 @@
 #include <raycade/entity/Entity.hpp>
 #include <raycade/render/Bitmap.hpp>
 
-namespace shapes {
+namespace visual {
 
 /**
  * @brief Płótno: bitmapa w RAM wyświetlana w pozycji obiektu (lewy górny róg).
@@ -17,7 +17,7 @@ namespace shapes {
  * w odróżnieniu od ekranu da się z niego odczytać kolory pikseli. Współrzędne w Edit()
  * są liczone od lewego górnego rogu płótna.
  * @code{.cpp}
- * scene.Spawn<shapes::Canvas>().Position({50, 50}).Size({300, 200}).Background(WHITE)
+ * scene.Spawn<visual::Canvas>().Position({50, 50}).Size({300, 200}).Background(WHITE)
  *     .Edit([](PrimitiveRenderer& r) { r.Paint(BLACK).Circle({150, 100}, 80); });
  * @endcode
  */
@@ -25,7 +25,7 @@ class Canvas : public Entity {
   public:
     /**
      * @brief Puste płótno z kolorem mnożącym WHITE (piksele bez zmian).
-     * @details Paint() działa tu jak w shapes::Sprite i shapes::Surface: mnoży piksele
+     * @details Paint() działa tu jak w visual::Sprite i visual::RenderGroup: mnoży piksele
      * bitmapy przy wyświetlaniu, a samej bitmapy nie zmienia.
      */
     Canvas() { Paint(WHITE); }
@@ -69,7 +69,7 @@ class Canvas : public Entity {
     /**
      * @brief Rysuje po bitmapie płótna (zmienia jej piksele na stałe).
      * @details Wcześniej Content(); nazwa Content() oznacza w silniku treść tekstu
-     * (shapes::Text, ui::TextField).
+     * (visual::Text, ui::TextField).
      * @param paint Funkcja otrzymująca renderer z celem ustawionym już na bitmapę płótna.
      * @return Ten sam obiekt.
      */
@@ -105,4 +105,4 @@ class Canvas : public Entity {
     Color background_ = WHITE; /**< Kolor używany przez Clear(). */
 };
 
-} // namespace shapes
+} // namespace visual

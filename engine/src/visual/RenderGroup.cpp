@@ -1,17 +1,17 @@
 /**
- * @file Surface.cpp
+ * @file RenderGroup.cpp
  * @brief Rysowanie dzieci do tekstury GPU i wyświetlanie jej.
  */
-#include <raycade/shapes/Surface.hpp>
+#include <raycade/visual/RenderGroup.hpp>
 
-namespace shapes {
+namespace visual {
 
-bool Surface::Contains(Vector2 point) const {
+bool RenderGroup::Contains(Vector2 point) const {
     const auto local = TryToLocal(point);
     return local && ::CheckCollisionPointRec(*local, {0, 0, size_.x, size_.y});
 }
 
-void Surface::RenderContent(PrimitiveRenderer& renderer) const {
+void RenderGroup::RenderContent(PrimitiveRenderer& renderer) const {
     if (size_.x < 1 || size_.y < 1) return;
     if (!target_.IsValid()) {
         target_ = RenderTarget{static_cast<int>(size_.x), static_cast<int>(size_.y)};
@@ -27,4 +27,4 @@ void Surface::RenderContent(PrimitiveRenderer& renderer) const {
     EndEffects();
 }
 
-} // namespace shapes
+} // namespace visual

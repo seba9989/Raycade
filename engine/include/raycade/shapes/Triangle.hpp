@@ -5,13 +5,20 @@
 #pragma once
 
 #include <array>
+#include <vector>
 
-#include <raycade/entity/Entity.hpp>
+#include <raycade/shapes/Polygon.hpp>
 
 namespace shapes {
 
-/** @brief Trójkąt z wierzchołkami lokalnymi względem pozycji obiektu. */
-class Triangle : public Entity {
+/**
+ * @brief Trójkąt z wierzchołkami lokalnymi względem pozycji obiektu.
+ * @details Wielokąt o trzech wierzchołkach - test trafienia (i w przyszłości kolizje) dziedziczy
+ * po Polygon, a rysuje się funkcjami trójkąta z PrimitiveRenderer. Setter Vertices() przyjmuje
+ * dokładnie trzy punkty, a Edges() z Polygon jest niedostępne, więc trójkąt nie może dostać
+ * innej liczby wierzchołków.
+ */
+class Triangle : public Polygon {
   public:
     /**
      * @brief Ustawia trzy wierzchołki trójkąta.
@@ -21,41 +28,18 @@ class Triangle : public Entity {
      * @return Ten sam trójkąt.
      */
     template <typename Self> Self& Vertices(this Self& self, Point2D a, Point2D b, Point2D c) {
-        self.a_ = a;
-        self.b_ = b;
-        self.c_ = c;
-        return self;
+        return self.Polygon::Vertices(std::vector<Point2D>{a, b, c});
     }
 
     /** @brief Podaje trzy wierzchołki. */
-    std::array<Point2D, 3> Vertices() const { return {a_, b_, c_}; }
+    std::array<Point2D, 3> Vertices() const;
 
-    /**
-     * @brief Rysuje kontur własnym algorytmem przyrostowym zamiast raylib.
-     * @details Nie zmienia wypełnienia (Fill()).
-     * @param value true dla algorytmu własnego, false dla raylib.
-     * @return Ten sam obiekt.
-     */
-    template <typename Self> Self& Incremental(this Self& self, bool value = true) {
-        self.incremental_ = value;
-        return self;
-    }
-
-    /** @brief Sprawdza, czy kontur rysuje algorytm przyrostowy. */
-    bool IsIncremental() const { return incremental_; }
-
-    /** @copydoc Updatable::Contains */
-    bool Contains(Vector2 point) const override;
+    /** @brief Trójkąt ma zawsze trzy wierzchołki - budowanie z krawędzi jest wyłączone. */
+    template <typename Self> Self& Edges(this Self& self, const std::vector<LineSegment>&) = delete;
 
   protected:
     /** @copydoc Drawable::Draw */
     void Draw(PrimitiveRenderer& renderer) const override;
-
-  private:
-    Point2D a_;                /**< Pierwszy wierzchołek. */
-    Point2D b_;                /**< Drugi wierzchołek. */
-    Point2D c_;                /**< Trzeci wierzchołek. */
-    bool incremental_ = false; /**< Czy kontur rysuje algorytm przyrostowy. */
 };
 
 } // namespace shapes

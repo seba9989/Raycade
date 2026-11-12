@@ -99,7 +99,7 @@ class TextField : public Entity, public Focusable {
     }
 
     /**
-     * @brief Ustawia odstęp między znakami, jak shapes::Text::Spacing().
+     * @brief Ustawia odstęp między znakami, jak visual::Text::Spacing().
      * @param spacing Odstęp w pikselach; ujemna wartość - domyślny
      * (Typeface::DefaultSpacing(): 0 dla TTF/OTF, FontSize() / 10 dla fontu raylib).
      * @return Ten sam obiekt.

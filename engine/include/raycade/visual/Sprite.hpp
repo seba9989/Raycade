@@ -1,6 +1,6 @@
 /**
  * @file Sprite.hpp
- * @brief Kształt Sprite - klatka z arkusza (SpriteSheet) z animacją poklatkową.
+ * @brief Obiekt Sprite - klatka z arkusza (SpriteSheet) z animacją poklatkową.
  */
 #pragma once
 
@@ -16,7 +16,7 @@
 #include <raycade/render/Bitmap.hpp>
 #include <raycade/render/SpriteSheet.hpp>
 
-namespace shapes {
+namespace visual {
 
 /**
  * @brief Obraz z arkusza klatek z animacją poklatkową.
@@ -28,7 +28,7 @@ namespace shapes {
  *     SpriteSheet::Grid(engine.Assets().Bitmap("coin.png"), {16, 16}));
  * coin->Clip("kreci", 0, 8, 8);
  * for (int i = 0; i < 10; ++i)
- *     scene.Spawn<shapes::Sprite>().Sheet(coin).Play("kreci").Position({i * 40.0f, 0});
+ *     scene.Spawn<visual::Sprite>().Sheet(coin).Play("kreci").Position({i * 40.0f, 0});
  * @endcode
  *
  * Dla pojedynczego obiektu wystarczy skrót: Sheet() z bitmapą albo nazwą pliku tworzy
@@ -44,7 +44,7 @@ namespace shapes {
  * Rotate() i Scale(). Paint() mnoży kolory klatki (domyślnie WHITE - bez zmian), a Fade()
  * koloru daje półprzezroczystość.
  * @code{.cpp}
- * scene.Spawn<shapes::Sprite>()
+ * scene.Spawn<visual::Sprite>()
  *     .Sheet("hero.png", {32, 32})           // klatki 32x32, plik z assets/
  *     .Animation("stoi", 0, 4, 6)            // klatki 0-3, 6 FPS, w pętli
  *     .Animation("biegnie", 4, 6, 12)        // klatki 4-9, 12 FPS
@@ -52,8 +52,8 @@ namespace shapes {
  *     .Origin({16, 32})                      // pozycja = środek stóp
  *     .Position({400, 300})
  *     .Play("stoi")
- *     .OnFinish([](shapes::Sprite& self, const std::string&) { self.Play("stoi"); })
- *     .OnUpdate([](shapes::Sprite& self, float) {
+ *     .OnFinish([](visual::Sprite& self, const std::string&) { self.Play("stoi"); })
+ *     .OnUpdate([](visual::Sprite& self, float) {
  *         self.Play(IsKeyDown(KEY_D) ? "biegnie" : "stoi");
  *     });
  * @endcode
@@ -111,8 +111,8 @@ class Sprite : public Entity {
      * katalogu assets/. Brakujący plik daje szachownicę zastępczą (Assets::Missing()) i wpis
      * w logu. Bez Assets w kontekście plik jest wczytywany bezpośrednio.
      * @code{.cpp}
-     * scene.Spawn<shapes::Sprite>().Sheet("hero.json").Play("run");
-     * scene.Spawn<shapes::Sprite>().Sheet("coin.png", {16, 16}).Play();
+     * scene.Spawn<visual::Sprite>().Sheet("hero.json").Play("run");
+     * scene.Spawn<visual::Sprite>().Sheet("coin.png", {16, 16}).Play();
      * @endcode
      * @param path Nazwa pliku w assets/ (np. "hero.json", "hero.png") albo pełna ścieżka.
      * @param frameSize Rozmiar jednej klatki obrazu; {0, 0} - cały obraz.
@@ -442,4 +442,4 @@ class Sprite : public Entity {
     std::string missing_; /**< Ostatnia nieznana nazwa z Play() (ostrzeżenie tylko raz). */
 };
 
-} // namespace shapes
+} // namespace visual

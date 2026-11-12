@@ -37,10 +37,10 @@
  * auto font = assets.Font("Roboto.ttf");
  * auto hero = assets.Sheet("hero.json"); // Aseprite / TexturePacker
  * for (int i = 0; i < 10; ++i)
- *     scene.Spawn<shapes::Sprite>().Sheet(coin, {16, 16}).Play().Position({i * 40.0f, 0});
+ *     scene.Spawn<visual::Sprite>().Sheet(coin, {16, 16}).Play().Position({i * 40.0f, 0});
  * @endcode
  *
- * Silnik udostępnia swoje Assets w kontekście (Contextable), dlatego shapes::Sprite::Sheet()
+ * Silnik udostępnia swoje Assets w kontekście (Contextable), dlatego visual::Sprite::Sheet()
  * z nazwą pliku korzysta z tej samej pamięci podręcznej. Poddrzewo może podać własne:
  * `menu.SetContext(menuAssets)`.
  */

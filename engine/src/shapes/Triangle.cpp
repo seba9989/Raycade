@@ -1,17 +1,20 @@
 /**
  * @file Triangle.cpp
- * @brief Rysowanie i test trafienia kształtu shapes::Triangle.
+ * @brief Rysowanie kształtu shapes::Triangle.
  */
 #include <raycade/shapes/Triangle.hpp>
 
 namespace shapes {
 
-bool Triangle::Contains(Vector2 point) const {
-    return ::CheckCollisionPointTriangle(point, World(a_), World(b_), World(c_));
+std::array<Point2D, 3> Triangle::Vertices() const {
+    const std::vector<Point2D>& vertices = Polygon::Vertices();
+    if (vertices.size() != 3) return {};
+    return {vertices[0], vertices[1], vertices[2]};
 }
 
 void Triangle::Draw(PrimitiveRenderer& renderer) const {
-    renderer.Paint(color_).Fill(filled_).Incremental(incremental_).Triangle(a_, b_, c_);
+    const std::array<Point2D, 3> v = Vertices();
+    Brush(renderer).Triangle(v[0], v[1], v[2]);
 }
 
 } // namespace shapes

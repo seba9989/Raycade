@@ -42,12 +42,12 @@ class Drawable {
      * przesuwa się razem z obiektem, rodzicami i kamerą. Kliknięcia poza nim nie trafiają ani
      * w obiekt, ani w dzieci. Zagnieżdżone przycięcia się przecinają. Przy obrocie przycinana
      * jest obwiednia prostokąta na ekranie - do dokładnego przycinania obróconej grupy służy
-     * shapes::Surface. Przydaje się np. w przewijanym panelu, minimapie i polu tekstowym.
+     * visual::RenderGroup. Przydaje się np. w przewijanym panelu, minimapie i polu tekstowym.
      * @code{.cpp}
-     * scene.Spawn<shapes::Group>()
+     * scene.Spawn<Group>()
      *     .Position({50, 50})
      *     .Clip({0, 0, 300, 200}) // dzieci widać tylko w prostokącie 300x200
-     *     .Children([](shapes::Group& panel) { panel.Spawn<shapes::Circle>().Radius(250); });
+     *     .Children([](Group& panel) { panel.Spawn<shapes::Circle>().Radius(250); });
      * @endcode
      * @param area Prostokąt w układzie lokalnym.
      * @return Ten sam obiekt.
@@ -72,7 +72,7 @@ class Drawable {
     /**
      * @brief Rysuje obiekt przez shader GPU.
      * @details Jak Blend() - dotyczy tylko własnego rysunku obiektu, bez dzieci. Żeby nałożyć
-     * efekt na całą grupę, shader ustawia się na shapes::Surface (działa na teksturze z
+     * efekt na całą grupę, shader ustawia się na visual::RenderGroup (działa na teksturze z
      * rysunkiem dzieci). Shader niepoprawnie wczytany (ShaderProgram::IsValid() == false) jest
      * pomijany.
      * @code{.cpp}
@@ -125,23 +125,8 @@ class Drawable {
         return self;
     }
 
-    /**
-     * @brief Włącza lub wyłącza wypełnienie figury.
-     * @details Działa w Rect, Triangle, Circle, Ellipse i Polygon; pozostałe kształty
-     * je ignorują.
-     * @param value Czy figura ma być wypełniona.
-     * @return Ten sam obiekt jako jego konkretny typ.
-     */
-    template <typename Self> Self& Fill(this Self& self, bool value = true) {
-        self.filled_ = value;
-        return self;
-    }
-
-    /** @brief Podaje kolor figury ustawiony przez Paint(). */
+    /** @brief Podaje kolor obiektu ustawiony przez Paint(). */
     Color Paint() const { return color_; }
-
-    /** @brief Sprawdza, czy figura jest wypełniona (Fill()). */
-    bool IsFilled() const { return filled_; }
 
     /**
      * @brief Ustawia obiekty od najniższej warstwy, zachowując kolejność dodania.
@@ -154,7 +139,7 @@ class Drawable {
     /**
      * @brief Włącza tryb mieszania i shader obiektu (Blend(), Shader()).
      * @details Para z EndEffects(). Drawable::Render() otacza nimi Draw(); klasa, która rysuje
-     * inaczej (np. shapes::Surface - teksturę), otacza nimi własne rysowanie.
+     * inaczej (np. visual::RenderGroup - teksturę), otacza nimi własne rysowanie.
      */
     void BeginEffects() const;
 
@@ -164,8 +149,7 @@ class Drawable {
     /** @brief Rysuje sam obiekt bez dzieci. */
     virtual void Draw(PrimitiveRenderer& renderer) const = 0;
 
-    Color color_ = BLACK;                   /**< Kolor figury. */
-    bool filled_ = false;                   /**< Czy figura jest wypełniona. */
+    Color color_ = BLACK;                   /**< Kolor obiektu. */
     int layer_ = 0;                         /**< Warstwa wśród rodzeństwa. */
     int blend_ = BLEND_ALPHA;               /**< Tryb mieszania kolorów. */
     std::optional<Rectangle> clip_;         /**< Przycięcie rysunku (układ lokalny). */

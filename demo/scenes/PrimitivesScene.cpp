@@ -75,14 +75,18 @@ SCENE("prymitywy") {
         .OnMouseLeave([](shapes::Polyline& self) { self.Paint(PURPLE); });
 
     // porównanie: algorytm przyrostowy (czerwony) i raylib (niebieski)
-    scene.Spawn<shapes::Line>().From({100, 400}).To({400, 550}).Incremental().Paint(RED);
+    scene.Spawn<shapes::Line>()
+        .From({100, 400})
+        .To({400, 550})
+        .Raster(Rasterizer::Custom)
+        .Paint(RED);
     scene.Spawn<shapes::Line>().From({500, 400}).To({800, 550}).Paint(BLUE);
 
     // odcinek: PPM przesuwa koniec, SPACJA przełącza algorytm
     scene.Spawn<shapes::Line>()
         .From({500, 300})
         .To({700, 300})
-        .Incremental()
+        .Raster(Rasterizer::Custom)
         .Paint(RED)
         .OnUpdate([](shapes::Line& self, float) {
             const Engine& engine = Engine::Get();
@@ -90,7 +94,8 @@ SCENE("prymitywy") {
         })
         .OnKeyPressed(KEY_SPACE, [incremental = true](shapes::Line& self) mutable {
             incremental = !incremental;
-            self.Incremental(incremental).Paint(incremental ? RED : BLUE);
+            self.Raster(incremental ? Rasterizer::Custom : Rasterizer::Raylib)
+                .Paint(incremental ? RED : BLUE);
         });
 
     // wersje tablicowe: chmura punktów i "gwiazda" z niezależnych odcinków
@@ -118,11 +123,11 @@ SCENE("prymitywy") {
             }
             return vertices;
         }())
-        .Incremental()
+        .Raster(Rasterizer::Custom)
         .Paint(DARKPURPLE);
 
     // układ słoneczny: planeta krąży wokół słońca, księżyc (dziecko planety) wokół planety
-    scene.Spawn<shapes::Group>().Position({880, 420}).Children([](shapes::Group& system) {
+    scene.Spawn<Group>().Position({880, 420}).Children([](Group& system) {
         system.Spawn<shapes::Circle>().Radius(18).Paint(ORANGE).Fill(); // słońce w środku grupy
 
         system.Spawn<shapes::Circle>()
@@ -159,16 +164,16 @@ SCENE("prymitywy") {
     const std::vector<LineSegment> incremental{{{845, 510}, {995, 545}}, {{845, 525}, {880, 600}}};
 
     scene.OnDraw([=](PrimitiveRenderer& renderer) {
-        renderer.Paint(DARKGREEN).Incremental().Polyline(zigzag);
-        renderer.Paint(DARKGREEN).Incremental(false).Polyline(diamond, true);
-        renderer.Paint(MAROON).Incremental().Polyline(bowTie);
+        renderer.Paint(DARKGREEN).Raster(Rasterizer::Custom).Polyline(zigzag);
+        renderer.Paint(DARKGREEN).Raster(Rasterizer::Raylib).Polyline(diamond, true);
+        renderer.Paint(MAROON).Raster(Rasterizer::Custom).Polyline(bowTie);
 
         renderer.Paint(BLUE);
         for (const LineSegment& segment : library)
-            segment.Draw(renderer); // algorytm domyślny (raylib)
+            segment.Draw(renderer.Raster(Rasterizer::Raylib)); // algorytm raylib
         renderer.Paint(RED);
         for (const LineSegment& segment : incremental)
-            segment.Draw(renderer, true); // algorytm przyrostowy
+            segment.Draw(renderer.Raster(Rasterizer::Custom)); // algorytm przyrostowy
 
         renderer.Paint(BLACK);
         for (const LineSegment& segment : library) {

@@ -7,13 +7,12 @@
 #include <utility>
 #include <vector>
 
-#include <raycade/entity/Entity.hpp>
-#include <raycade/shapes/HitDistance.hpp>
+#include <raycade/shapes/Shape.hpp>
 
 namespace shapes {
 
 /** @brief Zbiór punktów, których pozycje są lokalne względem obiektu. */
-class Points : public Entity {
+class Points : public Shape {
   public:
     /**
      * @brief Ustawia pozycje punktów.

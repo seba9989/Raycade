@@ -13,7 +13,7 @@ bool Polygon::Contains(Vector2 point) const {
 }
 
 void Polygon::Draw(PrimitiveRenderer& renderer) const {
-    renderer.Paint(color_).Fill(filled_).Incremental(incremental_).Polygon(vertices_);
+    Brush(renderer).Polygon(vertices_);
 }
 
 } // namespace shapes

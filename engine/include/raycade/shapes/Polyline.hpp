@@ -6,8 +6,7 @@
 
 #include <vector>
 
-#include <raycade/entity/Entity.hpp>
-#include <raycade/shapes/HitDistance.hpp>
+#include <raycade/shapes/Shape.hpp>
 
 namespace shapes {
 
@@ -15,7 +14,7 @@ namespace shapes {
  * @brief Otwarta lub zamknięta łamana o lokalnych współrzędnych wierzchołków.
  * @details W przeciwieństwie do Polygon nie sprawdza samoprzecięć.
  */
-class Polyline : public Entity {
+class Polyline : public Shape {
   public:
     /**
      * @brief Ustawia wierzchołki łamanej.
@@ -37,24 +36,11 @@ class Polyline : public Entity {
         return self;
     }
 
-    /**
-     * @brief Wybiera własny algorytm przyrostowy dla odcinków.
-     * @param value Czy włączyć algorytm własny.
-     * @return Ta sama łamana.
-     */
-    template <typename Self> Self& Incremental(this Self& self, bool value = true) {
-        self.incremental_ = value;
-        return self;
-    }
-
     /** @brief Podaje wierzchołki łamanej. */
     const std::vector<Point2D>& Vertices() const { return vertices_; }
 
     /** @brief Sprawdza, czy łamana jest zamknięta. */
     bool IsClosed() const { return closed_; }
-
-    /** @brief Sprawdza, czy odcinki rysuje algorytm przyrostowy. */
-    bool IsIncremental() const { return incremental_; }
 
     /**
      * @copydoc Updatable::Contains
@@ -69,7 +55,6 @@ class Polyline : public Entity {
   private:
     std::vector<Point2D> vertices_; /**< Wierzchołki względem pozycji obiektu. */
     bool closed_ = false;           /**< Czy łamana jest zamknięta. */
-    bool incremental_ = false;      /**< Czy użyć algorytmu przyrostowego. */
 };
 
 } // namespace shapes

@@ -15,8 +15,7 @@ using pixel::Round;
 PrimitiveRenderer& PrimitiveRenderer::Reset() {
     color_ = BLACK;
     filled_ = false;
-    incremental_ = false;
-    symmetric_ = false;
+    raster_ = Rasterizer::Raylib;
     return *this;
 }
 
@@ -39,7 +38,7 @@ PrimitiveRenderer& PrimitiveRenderer::Point(Point2D position) {
 }
 
 PrimitiveRenderer& PrimitiveRenderer::Line(Point2D from, Point2D to) {
-    if (incremental_)
+    if (IsCustom())
         LineIncremental(from, to);
     else if (target_)
         ::ImageDrawLineV(&target_->Edit(), from, to, color_);
@@ -91,7 +90,7 @@ void PrimitiveRenderer::LineIncremental(Vector2 from, Vector2 to) {
 
 PrimitiveRenderer& PrimitiveRenderer::Rect(Point2D position, Vector2 size) {
     const Rectangle rectangle{position.X(), position.Y(), size.x, size.y};
-    if (incremental_ && !filled_) {
+    if (IsCustom() && !filled_) {
         // kontur z czterech odcinków, jak Polygon() - piksele [x, x + w - 1] x [y, y + h - 1],
         // czyli te same co w konturze raylib
         const float right = position.X() + size.x - 1.0f;
@@ -124,7 +123,7 @@ PrimitiveRenderer& PrimitiveRenderer::Triangle(Point2D a, Point2D b, Point2D c) 
             ::ImageDrawTriangle(&target_->Edit(), a, b, c, color_);
         else
             ::DrawTriangle(a, b, c, color_);
-    } else if (incremental_) {
+    } else if (IsCustom()) {
         const Point2D corners[] = {a, b, c};
         Polyline(corners, true);
     } else {

@@ -12,7 +12,7 @@ bool Circle::Contains(Vector2 point) const {
 }
 
 void Circle::Draw(PrimitiveRenderer& renderer) const {
-    renderer.Paint(color_).Fill(filled_).Symmetric(symmetric_).Circle({0.0f, 0.0f}, radius_);
+    Brush(renderer).Circle({0.0f, 0.0f}, radius_);
 }
 
 } // namespace shapes

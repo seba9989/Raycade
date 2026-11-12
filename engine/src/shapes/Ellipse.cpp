@@ -15,7 +15,7 @@ bool Ellipse::Contains(Vector2 point) const {
 }
 
 void Ellipse::Draw(PrimitiveRenderer& renderer) const {
-    renderer.Paint(color_).Fill(filled_).Symmetric(symmetric_).Ellipse({0.0f, 0.0f}, radius_);
+    Brush(renderer).Ellipse({0.0f, 0.0f}, radius_);
 }
 
 } // namespace shapes

@@ -4,13 +4,12 @@
  */
 #pragma once
 
-#include <raycade/entity/Entity.hpp>
-#include <raycade/shapes/HitDistance.hpp>
+#include <raycade/shapes/Shape.hpp>
 
 namespace shapes {
 
 /** @brief Pojedynczy punkt rysowany w pozycji obiektu. */
-class Point : public Entity {
+class Point : public Shape {
   public:
     /** @copydoc Updatable::Contains */
     bool Contains(Vector2 point) const override;

@@ -13,17 +13,19 @@ warstwy wcześniejsze na liście:
 | `math/`      | AffineMatrix2D, Point2D, LineSegment, algorytmy geometrii       | -                           |
 | `render/`    | Bitmap, Assets, RenderTarget, ClipStack, ShaderProgram, Typeface, PrimitiveRenderer | math    |
 | `input/`     | Input, akcje i osie                                             | -                           |
-| `entity/`    | Entity i klasy bazowe (Transformable, Drawable, Updatable...)   | math, render, input         |
-| `shapes/`    | kształty z przestrzeni nazw `shapes`                            | entity i jej zależności     |
+| `entity/`    | Entity, Group i klasy bazowe (Transformable, Drawable, Updatable...) | math, render, input    |
+| `shapes/`    | figury geometryczne z przestrzeni nazw `shapes` (baza `shapes::Shape`) | entity i jej zależności |
+| `visual/`    | obrazy, tekst i grupy rysowane do tekstury z przestrzeni nazw `visual` | entity i jej zależności |
 | `ui/`        | elementy interfejsu z przestrzeni nazw `ui`                     | entity i jej zależności     |
 | `scene/`     | Scene, SceneCamera                                              | entity i jej zależności     |
 | `engine/EngineTypes.hpp` | typy ustawień: LogLevel, Scaling                    | -                           |
 | `Engine.hpp` | pętla, okno, sceny, zasoby                                      | wszystkie powyższe          |
 | `engine/SceneMacro.hpp` | makro SCENE (wymaga pełnej klasy Engine)             | `Engine.hpp`                |
 
-Nagłówek zbiorczy katalogu leży obok niego (`shapes.hpp` obok `shapes/`, `ui.hpp` obok
-`ui/`). `<raycade>` (w `engine/umbrella/`) dołącza `Engine.hpp`, `engine/SceneMacro.hpp`,
-`shapes.hpp` i `ui.hpp`. Źródła w `engine/src/` odwzorowują ten sam układ. Implementacja
+Nagłówek zbiorczy katalogu leży obok niego (`shapes.hpp` obok `shapes/`, `visual.hpp` obok
+`visual/`, `ui.hpp` obok `ui/`). `<raycade>` (w `engine/umbrella/`) dołącza `Engine.hpp`,
+`engine/SceneMacro.hpp`, `entity/Group.hpp`, `shapes.hpp`, `visual.hpp` i `ui.hpp`. Źródła
+w `engine/src/` odwzorowują ten sam układ. Implementacja
 `Engine` jest w `src/engine/`, podzielona tematycznie na pliki `Engine*.cpp` - który plik
 zawiera którą grupę metod, opisuje tabela w dokumentacji `Engine.hpp`. Nagłówki prywatne
 implementacji (np. `src/render/primitive_renderer/Pixel.hpp`) zostają w `src/`.
@@ -43,8 +45,11 @@ w `src/`. Katalogi mają nazwy małymi literami, pliki z klasami - PascalCase.
 - **Setter i getter mają tę samą nazwę.** Setter przyjmuje wartość i zwraca obiekt
   (`Size(v)`), getter nie ma argumentów i zwraca wartość (`Size()`).
 - **Getter stanu logicznego ma prefiks `Is`:** `IsFullscreen()`, `IsHovered()`,
-  `IsIncremental()`. Setter takiej flagi to sama nazwa z domyślnym `true`:
-  `Fullscreen()`, `Incremental()`, `Fill()`.
+  `IsFilled()`. Setter takiej flagi to sama nazwa z domyślnym `true`:
+  `Fullscreen()`, `Fill()`.
+- **Wybór jednej z kilku wartości to setter z typem wyliczeniowym**, a nie kilka flag:
+  `Raster(Rasterizer::Custom)`, `ScaleMode(Scaling::Fit)`. Typ ma inną nazwę niż metoda
+  (`Rasterizer`, nie `Raster`), bo wewnątrz klasy nazwa metody zasłoniłaby typ.
 - **Zapytania z argumentem nie mają prefiksu:** `KeyDown(key)`, `FileExists(path)`,
   `Contains(point)`. Wyjątek: zapytanie o flagę stanu ma prefiks `Is`, tak jak w raylib -
   `Engine::IsWindowState(FLAG_...)` czyta się jak pytanie o stan, a nie o zdarzenie.

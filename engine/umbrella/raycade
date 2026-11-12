@@ -2,8 +2,9 @@
 /**
  * @file raycade
  * @brief Nagłówek zbiorczy Raycade - jedyny, który musi dołączyć gra.
- * @details Udostępnia Engine (z makrem SCENE), Scene, Entity, kształty z przestrzeni nazw
- * @ref shapes, elementy interfejsu z @ref ui, PrimitiveRenderer, Bitmap i Point2D/LineSegment.
+ * @details Udostępnia Engine (z makrem SCENE), Scene, Entity, Group, figury z przestrzeni nazw
+ * @ref shapes, obrazy i tekst z @ref visual, elementy interfejsu z @ref ui, PrimitiveRenderer,
+ * Bitmap i Point2D/LineSegment.
  *
  * Plik nie ma rozszerzenia, jak nagłówki biblioteki standardowej (`<vector>`). Leży w osobnym
  * katalogu `engine/umbrella/`, bo w `engine/include/` nazwę `raycade` zajmuje katalog
@@ -24,6 +25,8 @@
 // IWYU pragma: begin_exports
 #include <raycade/Engine.hpp>
 #include <raycade/engine/SceneMacro.hpp>
+#include <raycade/entity/Group.hpp>
 #include <raycade/shapes.hpp>
 #include <raycade/ui.hpp>
+#include <raycade/visual.hpp>
 // IWYU pragma: end_exports

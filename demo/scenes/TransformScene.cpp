@@ -25,14 +25,14 @@ SCENE("transformacje") {
         .Fill()
         .Scale({1.5f, 0.6f}); // względem własnej pozycji (650, 200)
 
-    scene.Spawn<shapes::Group>().Position({200, 440}).Layer(1).Children([](shapes::Group& self) {
+    scene.Spawn<Group>().Position({200, 440}).Layer(1).Children([](Group& self) {
         self.Spawn<shapes::Rect>().Position({-50, -30}).Size({100, 60}).Paint(GRAY);
         self.Spawn<shapes::Circle>().Position({80, 0}).Radius(25).Paint(GRAY);
     });
 
-    scene.Spawn<shapes::Group>()
+    scene.Spawn<Group>()
         .Position({200, 440})
-        .Children([](shapes::Group& self) {
+        .Children([](Group& self) {
             self.Spawn<shapes::Rect>().Position({-50, -30}).Size({100, 60}).Paint(GOLD).Fill();
             self.Spawn<shapes::Circle>().Position({80, 0}).Radius(25).Paint(ORANGE).Fill();
         })

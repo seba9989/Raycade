@@ -164,7 +164,8 @@ int Engine::Run() {
         // dopiero teraz: OnUpdate albo scena mogły w tej klatce włączyć lub wyłączyć skalowanie
         const bool scaled = target_.IsValid();
         // przy skalowaniu gra rysuje do tekstury w swojej rozdzielczości, a nie na ekran;
-        // RenderTarget, bo tekstury obiektów (shapes::Surface) muszą wracać do niej, nie na ekran
+        // RenderTarget, bo tekstury obiektów (visual::RenderGroup) muszą wracać do niej, nie na
+        // ekran
         if (scaled)
             target_.Begin();
         else

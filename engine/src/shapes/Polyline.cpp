@@ -4,6 +4,8 @@
  */
 #include <raycade/shapes/Polyline.hpp>
 
+#include "HitDistance.hpp"
+
 namespace shapes {
 
 bool Polyline::Contains(Vector2 point) const {
@@ -16,7 +18,7 @@ bool Polyline::Contains(Vector2 point) const {
 }
 
 void Polyline::Draw(PrimitiveRenderer& renderer) const {
-    renderer.Paint(color_).Incremental(incremental_).Polyline(vertices_, closed_);
+    Brush(renderer).Polyline(vertices_, closed_);
 }
 
 } // namespace shapes

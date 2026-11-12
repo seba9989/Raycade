@@ -1242,7 +1242,7 @@ class Engine : public Contextable {
     }
 
     /**
-     * @brief Czyści teksturę renderowaną (np. zawartość shapes::Surface).
+     * @brief Czyści teksturę renderowaną (np. zawartość visual::RenderGroup).
      * @param target Tekstura docelowa.
      * @param color Kolor czyszczenia.
      * @return Ten sam silnik.

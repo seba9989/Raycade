@@ -24,7 +24,6 @@ add_library(raycade STATIC
     src/entity/Entity.cpp
     src/entity/Focusable.cpp
     src/entity/Updatable.cpp
-    src/shapes/Canvas.cpp
     src/shapes/Circle.cpp
     src/shapes/Ellipse.cpp
     src/shapes/Line.cpp
@@ -34,10 +33,11 @@ add_library(raycade STATIC
     src/shapes/Polygon.cpp
     src/shapes/Polyline.cpp
     src/shapes/Rect.cpp
-    src/shapes/Sprite.cpp
-    src/shapes/Surface.cpp
-    src/shapes/Text.cpp
     src/shapes/Triangle.cpp
+    src/visual/Canvas.cpp
+    src/visual/RenderGroup.cpp
+    src/visual/Sprite.cpp
+    src/visual/Text.cpp
     src/ui/TextField.cpp
     src/scene/Scene.cpp
     src/scene/SceneCamera.cpp

@@ -91,7 +91,7 @@ class Card : public Entity {
  * OnClick ani OnDrag, zdarzenie idzie do rodzica - robota. IsHovered() robota jest prawdą,
  * gdy kursor jest nad którąkolwiek częścią.
  */
-class Robot : public shapes::Group {
+class Robot : public Group {
   public:
     Robot() {
         body_ = &Spawn<shapes::Rect>().Position({-40, 0}).Size({80, 90}).Paint(GRAY).Fill();

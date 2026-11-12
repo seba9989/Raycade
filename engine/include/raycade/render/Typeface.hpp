@@ -65,11 +65,11 @@ struct TypefaceOptions {
  * Domyślny font raylib (pusty Typeface) ma tylko znaki ASCII - polskie litery wyświetla jako
  * znaki zapytania.
  *
- * Kształt shapes::Text i pole ui::TextField przyjmują czcionkę przez Font(); bez tego szukają
+ * Kształt visual::Text i pole ui::TextField przyjmują czcionkę przez Font(); bez tego szukają
  * DefaultTypeface w kontekście (Contextable), a na końcu używają fontu raylib.
  * @code{.cpp}
  * engine.ProvideContext<DefaultTypeface>(engine.Assets().Font("Roboto.ttf"));
- * scene.Spawn<shapes::Text>().Content("Zażółć gęślą jaźń").FontSize(24);
+ * scene.Spawn<visual::Text>().Content("Zażółć gęślą jaźń").FontSize(24);
  * @endcode
  */
 class Typeface {
@@ -227,7 +227,7 @@ class Typeface {
 
 /**
  * @brief Czcionka domyślna dla tekstów w poddrzewie (wartość kontekstu).
- * @details shapes::Text i ui::TextField bez własnej czcionki (Font()) szukają tej wartości
+ * @details visual::Text i ui::TextField bez własnej czcionki (Font()) szukają tej wartości
  * w kontekście: w obiekcie, jego przodkach, scenie i silniku.
  * @code{.cpp}
  * engine.ProvideContext<DefaultTypeface>(font);        // cała gra

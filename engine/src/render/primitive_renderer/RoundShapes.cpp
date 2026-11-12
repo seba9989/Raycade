@@ -105,7 +105,7 @@ template <typename PlotFn> void EllipseQuadrant(long long a, long long b, PlotFn
 } // namespace
 
 PrimitiveRenderer& PrimitiveRenderer::Circle(Point2D center, float radius) {
-    if (symmetric_) {
+    if (IsCustom()) {
         CircleSymmetric(center, radius);
     } else if (target_) {
         if (filled_)
@@ -178,7 +178,7 @@ void PrimitiveRenderer::CircleSymmetric(Vector2 center, float radius) {
 
 PrimitiveRenderer& PrimitiveRenderer::Ellipse(Point2D center, Vector2 radius) {
     // raylib nie ma funkcji rysującej elipsę na Image, więc na bitmapie zawsze własny algorytm
-    if (symmetric_ || target_) {
+    if (IsCustom() || target_) {
         EllipseSymmetric(center, radius);
     } else {
         if (filled_)

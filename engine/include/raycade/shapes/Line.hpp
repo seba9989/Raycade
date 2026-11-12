@@ -4,13 +4,12 @@
  */
 #pragma once
 
-#include <raycade/entity/Entity.hpp>
-#include <raycade/shapes/HitDistance.hpp>
+#include <raycade/shapes/Shape.hpp>
 
 namespace shapes {
 
 /** @brief Odcinek, którego końce są określone względem pozycji obiektu. */
-class Line : public Entity {
+class Line : public Shape {
   public:
     /**
      * @brief Ustawia początek odcinka.
@@ -32,24 +31,11 @@ class Line : public Entity {
         return self;
     }
 
-    /**
-     * @brief Wybiera własny algorytm przyrostowy zamiast raylib.
-     * @param value Czy włączyć algorytm własny.
-     * @return Ten sam odcinek.
-     */
-    template <typename Self> Self& Incremental(this Self& self, bool value = true) {
-        self.incremental_ = value;
-        return self;
-    }
-
     /** @brief Podaje początek odcinka (względem pozycji obiektu). */
     Point2D From() const { return from_; }
 
     /** @brief Podaje koniec odcinka (względem pozycji obiektu). */
     Point2D To() const { return to_; }
-
-    /** @brief Sprawdza, czy odcinek rysuje algorytm przyrostowy. */
-    bool IsIncremental() const { return incremental_; }
 
     /** @copydoc Updatable::Contains */
     bool Contains(Vector2 point) const override;
@@ -59,9 +45,8 @@ class Line : public Entity {
     void Draw(PrimitiveRenderer& renderer) const override;
 
   private:
-    Point2D from_;             /**< Początek względem pozycji obiektu. */
-    Point2D to_;               /**< Koniec względem pozycji obiektu. */
-    bool incremental_ = false; /**< Czy użyć algorytmu przyrostowego. */
+    Point2D from_; /**< Początek względem pozycji obiektu. */
+    Point2D to_;   /**< Koniec względem pozycji obiektu. */
 };
 
 } // namespace shapes

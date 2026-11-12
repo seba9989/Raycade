@@ -6,8 +6,8 @@
 
 #include <vector>
 
-#include <raycade/entity/Entity.hpp>
 #include <raycade/math/Geometry.hpp>
+#include <raycade/shapes/Shape.hpp>
 
 namespace shapes {
 
@@ -17,7 +17,7 @@ namespace shapes {
  * można to sprawdzić przez IsSimple(). Fill() wypełnia wielokąt algorytmem scanline
  * z kontrolą parzystości.
  */
-class Polygon : public Entity {
+class Polygon : public Shape {
   public:
     /**
      * @brief Ustawia wierzchołki obwodu.
@@ -42,16 +42,6 @@ class Polygon : public Entity {
     }
 
     /**
-     * @brief Wybiera algorytm przyrostowy dla konturu.
-     * @param value Czy włączyć algorytm własny.
-     * @return Ten sam wielokąt.
-     */
-    template <typename Self> Self& Incremental(this Self& self, bool value = true) {
-        self.incremental_ = value;
-        return self;
-    }
-
-    /**
      * @brief Sprawdza, czy wielokąt jest łamaną zwyczajną.
      * @details Wynik jest liczony raz, przy ustawieniu wierzchołków, a nie przy każdym teście
      * trafienia.
@@ -62,9 +52,6 @@ class Polygon : public Entity {
     /** @brief Podaje wierzchołki wielokąta. */
     const std::vector<Point2D>& Vertices() const { return vertices_; }
 
-    /** @brief Sprawdza, czy kontur rysuje algorytm przyrostowy. */
-    bool IsIncremental() const { return incremental_; }
-
     /** @copydoc Updatable::Contains */
     bool Contains(Vector2 point) const override;
 
@@ -74,7 +61,6 @@ class Polygon : public Entity {
 
   private:
     std::vector<Point2D> vertices_; /**< Wierzchołki względem pozycji obiektu. */
-    bool incremental_ = false;      /**< Czy użyć algorytmu przyrostowego. */
     bool simple_ = false;           /**< Zapamiętany wynik IsSimplePolygon(). */
 };
 

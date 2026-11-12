@@ -63,8 +63,9 @@ engine/
     math/                   macierz przekształceń, Point2D, geometria
     render/                 Bitmap, RenderTarget, PrimitiveRenderer
     input/                  klawiatura, mysz, pad, akcje i osie
-    entity/                 Entity i klasy bazowe
-    shapes/  shapes.hpp     kształty (namespace shapes)
+    entity/                 Entity, Group i klasy bazowe
+    shapes/  shapes.hpp     figury geometryczne (namespace shapes)
+    visual/  visual.hpp     obrazy, tekst, płótno, RenderGroup (namespace visual)
     ui/      ui.hpp         interfejs (namespace ui)
     scene/                  Scene, SceneCamera
     engine/                 typy ustawień silnika, makro SCENE

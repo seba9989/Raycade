@@ -109,7 +109,7 @@ struct PointerFrame {
  * Update() nie jest wirtualna, a Render() jest `final` - zdarzenia, dzieci i macierz obsługuje
  * zawsze Entity.
  * @code{.cpp}
- * class Player : public shapes::Group {
+ * class Player : public Group {
  *   public:
  *     Player() { Spawn<shapes::Rect>().Position({-15, -20}).Size({30, 40}).Fill(); }
  *     template <typename Self> Self& Speed(this Self& self, float speed) {
@@ -163,9 +163,9 @@ struct PointerFrame {
  * @code{.cpp}
  * struct Theme { Color accent = RED; };
  *
- * scene.Spawn<shapes::Group>()
+ * scene.Spawn<Group>()
  *     .ProvideContext<Theme>(Theme{GOLD})                 // całe menu w złotym kolorze
- *     .Children([](shapes::Group& menu) { menu.Spawn<Button>(); });
+ *     .Children([](Group& menu) { menu.Spawn<Button>(); });
  *
  * // w Button::OnMount() albo Button::Tick():
  * if (const Theme* theme = Context<Theme>()) Paint(theme->accent);
@@ -332,7 +332,7 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
     /**
      * @brief Rysuje zawartość obiektu w jego układzie lokalnym (macierz jest już nałożona).
      * @details Domyślnie: własny kształt (Draw()), a nad nim dzieci według warstw. Klasa
-     * pochodna może to zmienić, np. shapes::Surface rysuje dzieci do tekstury.
+     * pochodna może to zmienić, np. visual::RenderGroup rysuje dzieci do tekstury.
      * @param renderer Renderer prymitywów.
      */
     virtual void RenderContent(PrimitiveRenderer& renderer) const {
@@ -348,7 +348,7 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
 
     /**
      * @brief Czy dzieci mogą zostać trafione myszą w tym punkcie.
-     * @details Domyślnie zawsze. Obiekt, który przycina rysunek dzieci (np. shapes::Surface),
+     * @details Domyślnie zawsze. Obiekt, który przycina rysunek dzieci (np. visual::RenderGroup),
      * zwraca false poza swoim obszarem - niewidocznych części nie da się kliknąć.
      * @param point Punkt w układzie sceny.
      * @return Czy sprawdzać trafienia w dzieci.

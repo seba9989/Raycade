@@ -7,13 +7,12 @@
 #include <utility>
 #include <vector>
 
-#include <raycade/entity/Entity.hpp>
-#include <raycade/shapes/HitDistance.hpp>
+#include <raycade/shapes/Shape.hpp>
 
 namespace shapes {
 
 /** @brief Zbiór niezależnych odcinków tworzonych z kolejnych par wierzchołków. */
-class Lines : public Entity {
+class Lines : public Shape {
   public:
     /**
      * @brief Ustawia pary końców odcinków.
@@ -25,21 +24,8 @@ class Lines : public Entity {
         return self;
     }
 
-    /**
-     * @brief Wybiera algorytm przyrostowy dla odcinków.
-     * @param value Czy włączyć algorytm własny.
-     * @return Ten sam zbiór.
-     */
-    template <typename Self> Self& Incremental(this Self& self, bool value = true) {
-        self.incremental_ = value;
-        return self;
-    }
-
     /** @brief Podaje pary końców odcinków. */
     const std::vector<Point2D>& Vertices() const { return vertices_; }
-
-    /** @brief Sprawdza, czy odcinki rysuje algorytm przyrostowy. */
-    bool IsIncremental() const { return incremental_; }
 
     /** @copydoc Updatable::Contains */
     bool Contains(Vector2 point) const override;
@@ -50,7 +36,6 @@ class Lines : public Entity {
 
   private:
     std::vector<Point2D> vertices_; /**< Pary końców odcinków. */
-    bool incremental_ = false;      /**< Czy użyć algorytmu przyrostowego. */
 };
 
 } // namespace shapes

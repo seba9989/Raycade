@@ -4,6 +4,8 @@
  */
 #include <raycade/shapes/Point.hpp>
 
+#include "HitDistance.hpp"
+
 namespace shapes {
 
 bool Point::Contains(Vector2 point) const {
@@ -11,7 +13,7 @@ bool Point::Contains(Vector2 point) const {
 }
 
 void Point::Draw(PrimitiveRenderer& renderer) const {
-    renderer.Paint(color_).Point({0.0f, 0.0f});
+    Brush(renderer).Point({0.0f, 0.0f});
 }
 
 } // namespace shapes

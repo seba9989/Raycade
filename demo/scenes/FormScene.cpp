@@ -12,10 +12,10 @@ SCENE("formularz") {
     // czcionka z polskimi literami dla całej sceny (pola i napisy biorą ją z kontekstu)
     scene.ProvideContext<DefaultTypeface>(engine.Assets().Font("font.ttf"));
 
-    scene.Spawn<shapes::Text>().Content("Zapisy na turniej").FontSize(28).Position({40, 30});
+    scene.Spawn<visual::Text>().Content("Zapisy na turniej").FontSize(28).Position({40, 30});
 
     // ---------------- etykiety i pola ----------------
-    scene.Spawn<shapes::Text>().Content("Imię").FontSize(16).Paint(GRAY).Position({40, 90});
+    scene.Spawn<visual::Text>().Content("Imię").FontSize(16).Paint(GRAY).Position({40, 90});
     auto& name = scene.Spawn<ui::TextField>()
                      .Placeholder("np. Zażółć")
                      .MaxLength(24)
@@ -23,7 +23,7 @@ SCENE("formularz") {
                      .FontSize(20)
                      .Position({40, 112});
 
-    scene.Spawn<shapes::Text>().Content("E-mail").FontSize(16).Paint(GRAY).Position({40, 170});
+    scene.Spawn<visual::Text>().Content("E-mail").FontSize(16).Paint(GRAY).Position({40, 170});
     auto& email = scene.Spawn<ui::TextField>()
                       .Placeholder("adres@example.com")
                       .MaxLength(40)
@@ -32,15 +32,15 @@ SCENE("formularz") {
                       .Position({40, 192});
 
     // komunikat pod polami i lista zapisanych osób
-    auto& status = scene.Spawn<shapes::Text>().FontSize(16).Position({40, 250});
-    auto& list = scene.Spawn<shapes::Text>()
+    auto& status = scene.Spawn<visual::Text>().FontSize(16).Position({40, 250});
+    auto& list = scene.Spawn<visual::Text>()
                      .Content("Zapisani:")
                      .FontSize(18)
                      .LineHeight(1.4f)
                      .Position({400, 90});
 
     // licznik znaków aktualizowany przy każdej zmianie treści
-    auto& counter = scene.Spawn<shapes::Text>()
+    auto& counter = scene.Spawn<visual::Text>()
                         .Content("0/24")
                         .FontSize(14)
                         .Paint(GRAY)
@@ -84,7 +84,7 @@ SCENE("formularz") {
                        .Fill()
                        .Position({40, 290})
                        .OnClick([submit](shapes::Rect&) { submit(); });
-    button.Spawn<shapes::Text>()
+    button.Spawn<visual::Text>()
         .Content("Zapisz")
         .FontSize(20)
         .Paint(WHITE)

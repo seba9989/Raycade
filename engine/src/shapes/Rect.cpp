@@ -12,7 +12,7 @@ bool Rect::Contains(Vector2 point) const {
 }
 
 void Rect::Draw(PrimitiveRenderer& renderer) const {
-    renderer.Paint(color_).Fill(filled_).Incremental(incremental_).Rect({0.0f, 0.0f}, size_);
+    Brush(renderer).Rect({0.0f, 0.0f}, size_);
 }
 
 } // namespace shapes
