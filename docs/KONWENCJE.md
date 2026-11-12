@@ -20,16 +20,20 @@ warstwy wcześniejsze na liście:
 | `ui/`        | elementy interfejsu z przestrzeni nazw `ui`                     | entity i jej zależności     |
 | `physics/`   | `Collider<S>`, StaticBody, CharacterBody, RigidBody, Area, PhysicsWorld (Box2D) | shapes, visual i ich zależności |
 | `scene/`     | Scene, SceneCamera, PointerSystem (trafienia myszą)             | physics i jej zależności (Scene ma PhysicsWorld) |
+| `audio/`     | obiekty sceny z przestrzeni nazw `audio`: Emitter, Listener     | scene i jej zależności      |
 | `engine/EngineTypes.hpp` | typy ustawień: LogLevel, Scaling                    | -                           |
 | `Engine.hpp` | pętla, okno, sceny, zasoby, dźwięk                              | wszystkie powyższe          |
 | `engine/SceneMacro.hpp` | makro SCENE (wymaga pełnej klasy Engine)             | `Engine.hpp`                |
 
 Nagłówek zbiorczy katalogu leży obok niego (`shapes.hpp` obok `shapes/`, `visual.hpp` obok
-`visual/`, `physics.hpp` obok `physics/`, `ui.hpp` obok `ui/`). `<raycade>` (w `engine/umbrella/`)
-dołącza `Engine.hpp`, `engine/SceneMacro.hpp`, `entity/Group.hpp`, `shapes.hpp`, `visual.hpp`,
-`physics.hpp` i `ui.hpp`. Źródła w `engine/src/` odwzorowują ten sam układ. Mikser dźwięku
-(`AudioMixer`) jest nagłówkiem prywatnym w `src/audio/mixer/` - gra korzysta z `Engine::Audio()`,
-`Engine::AudioBus()` i `Voice`. Implementacja
+`visual/`, `physics.hpp` obok `physics/`, `ui.hpp` obok `ui/`, `audio.hpp` obok `audio/`).
+`<raycade>` (w `engine/umbrella/`) dołącza `Engine.hpp`, `audio.hpp`, `engine/SceneMacro.hpp`,
+`entity/Group.hpp`, `shapes.hpp`, `visual.hpp`, `physics.hpp` i `ui.hpp`. Katalog `audio/` ma
+dwie warstwy: `audio/mixer/` (dźwięki i szyny, potrzebne w `Engine.hpp`) leży nisko, a obiekty
+sceny w samym `audio/` - wysoko, bo liczą odległość od kamery sceny. Źródła w `engine/src/`
+odwzorowują ten sam układ. Mikser dźwięku (`AudioMixer`) jest nagłówkiem prywatnym
+w `src/audio/mixer/` - gra korzysta z `Engine::Audio()`, `Engine::AudioBus()` i `Voice`.
+Implementacja
 `Engine` jest w `src/engine/`, podzielona tematycznie na pliki `Engine*.cpp` - który plik
 zawiera którą grupę metod, opisuje tabela w dokumentacji `Engine.hpp`. Nagłówki prywatne
 implementacji (np. `src/render/primitive_renderer/Pixel.hpp`) zostają w `src/`.
@@ -192,6 +196,11 @@ engine.AudioBus("efekty").Paused();              // stan całej grupy
   stereo albo pojedynczy głos. Setter dźwięku nazywa się krótko `Bus()`.
 - **Polecenia odtwarzania to czasowniki** (`Play()`, `Stop()`), jak w `visual::Sprite`, a trwały
   stan grupy to flagi szyny (`Paused()`, `Muted()`).
+- **Dźwięk w miejscu świata gra przez `audio::Emitter`** - głos nie ma położenia, żeby nie
+  dublować `Transformable`. Słuchacz to `audio::Listener` (bez niego - środek kamery sceny).
+- **Głos należy do sceny**, w której aktualizacji albo konfiguracji go zagrano - przy
+  `UnloadScene()`/`ReloadScene()` cichnie (bez `OnFinish()`). Wyjątek: dźwięki na szynie
+  `Exclusive()` (muzyka) i z globalnego `Engine::OnUpdate()` grają dalej.
 - Nazwy szyn to identyfikatory - bez polskich znaków (`"muzyka"`, `"efekty"`).
 
 ## Obsługa błędów (Engine)

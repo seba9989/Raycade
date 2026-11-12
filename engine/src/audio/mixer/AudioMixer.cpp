@@ -115,6 +115,8 @@ Voice AudioMixer::Play(::Audio& audio) {
     slot.path = PickFile(audio);
     slot.variation = 1.0f + audio.PitchVariation() * RandomUnit();
     slot.order = ++order_;
+    // muzyka (szyna Exclusive()) gra dalej po przeładowaniu sceny, która ją włączyła
+    slot.owner = Bus(bus).IsExclusive() ? nullptr : owner_;
     return Handle(static_cast<std::size_t>(free - slots_.begin()));
 }
 
@@ -150,6 +152,28 @@ void AudioMixer::MakeRoom(const ::Audio& audio) {
     }
     if (std::ranges::none_of(slots_, [](const Slot& s) { return !s.used; }))
         StealOldest([](const Slot&) { return true; });
+}
+
+void AudioMixer::StopOwner(const void* scene) {
+    if (!scene) return;
+    for (Slot& slot : slots_)
+        if (slot.used && slot.owner == scene) Release(slot, false);
+    if (listenerScene_ == scene) listener_ = listenerScene_ = nullptr;
+}
+
+void AudioMixer::Listen(const void* listener, const void* scene, Vector2 position) {
+    listener_ = listener;
+    listenerScene_ = scene;
+    listenerPosition_ = position;
+}
+
+void AudioMixer::Unlisten(const void* listener) {
+    if (listener_ == listener) listener_ = listenerScene_ = nullptr;
+}
+
+std::optional<Vector2> AudioMixer::ListenerIn(const void* scene) const {
+    if (!listener_ || listenerScene_ != scene) return std::nullopt;
+    return listenerPosition_;
 }
 
 int AudioMixer::ClampVoices(const ::AudioBus& bus, int count) const {
@@ -387,9 +411,12 @@ void AudioMixer::Release(Slot& slot, bool notify) {
 
 void AudioMixer::Apply(Slot& slot, const BusState& bus) {
     const ::Audio& audio = *slot.audio;
-    const float volume = std::max(0.0f, audio.Volume() * slot.volume * slot.fade * bus.gain);
+    const float volume = std::max(
+        0.0f, audio.Volume() * slot.volume * slot.fade * bus.gain * slot.spatialGain
+    );
     const float pitch = std::max(0.01f, audio.Pitch() * slot.variation * slot.pitch);
-    const float pan = RaylibPan(std::clamp(audio.Pan() + slot.pan, -1.0f, 1.0f));
+    const float pan =
+        RaylibPan(std::clamp(audio.Pan() + slot.pan + slot.spatialPan, -1.0f, 1.0f));
     if (slot.stream) {
         ::SetMusicVolume(slot.music, volume);
         ::SetMusicPitch(slot.music, pitch);

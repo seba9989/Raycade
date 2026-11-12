@@ -4,7 +4,8 @@
  * @brief Nagłówek zbiorczy Raycade - jedyny, który musi dołączyć gra.
  * @details Udostępnia Engine (z makrem SCENE), Scene, Entity, Group, figury z przestrzeni nazw
  * @ref shapes, obrazy i tekst z @ref visual, kolizje (Collider, ciała, Area), elementy
- * interfejsu z @ref ui, PrimitiveRenderer,
+ * interfejsu z @ref ui, dźwięk (Engine::Audio(), AudioBus, Voice i obiekty z @ref audio),
+ * PrimitiveRenderer,
  * Bitmap i Point2D/LineSegment.
  *
  * Plik nie ma rozszerzenia, jak nagłówki biblioteki standardowej (`<vector>`). Leży w osobnym
@@ -25,6 +26,7 @@
 
 // IWYU pragma: begin_exports
 #include <raycade/Engine.hpp>
+#include <raycade/audio.hpp>
 #include <raycade/engine/SceneMacro.hpp>
 #include <raycade/entity/Group.hpp>
 #include <raycade/physics.hpp>

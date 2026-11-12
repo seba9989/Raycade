@@ -21,7 +21,8 @@ int main() { return Engine::Get().StartScene("menu").Run(); }
 Projekt na zajęcia z Podstaw Grafiki Komputerowej. Program `demo/` pokazuje funkcje
 z laboratoriów: własne algorytmy odcinka, okręgu i elipsy, wypełnianie scanline, flood fill
 i boundary fill, przekształcenia, hierarchię obiektów, kamerę, obsługę wejścia, animację
-bitmap, przycinanie, shadery, krok stały i fizykę (Box2D).
+bitmap, przycinanie, shadery, krok stały, fizykę (Box2D) i dźwięk (szyny miksera, muzyka,
+dźwięk przestrzenny).
 
 ## Wymagania
 
@@ -42,7 +43,7 @@ cmake --build build
 
 Z [devenv](https://devenv.sh/): `build`, `run`, `fmt`, `docs`, `clean`.
 
-Klawisze 0-9 i minus przełączają sceny demo, F11 - pełny ekran. Opis każdej sceny jest na stronie
+Klawisze 0-9, minus i znak równości przełączają sceny demo, F11 - pełny ekran. Opis każdej sceny jest na stronie
 głównej dokumentacji.
 
 ## Użycie we własnym projekcie
@@ -64,14 +65,16 @@ engine/
     math/                   macierz przekształceń, Point2D, geometria
     render/                 Bitmap, RenderTarget, PrimitiveRenderer
     input/                  klawiatura, mysz, pad, akcje i osie
+    audio/mixer/            dźwięk: Audio, AudioBus (szyny), Voice (odtworzenie)
     entity/                 Entity, Group i klasy bazowe
     shapes/  shapes.hpp     figury geometryczne (namespace shapes)
     visual/  visual.hpp     obrazy, tekst, płótno, RenderGroup (namespace visual)
     physics/ physics.hpp    kolizje: Collider<S>, StaticBody, CharacterBody, RigidBody, Area
     ui/      ui.hpp         interfejs (namespace ui)
     scene/                  Scene, SceneCamera, PointerSystem (trafienia myszą)
+    audio/   audio.hpp      dźwięk w scenie: Emitter, Listener (namespace audio)
     engine/                 typy ustawień silnika, makro SCENE
-    Engine.hpp              okno, pętla, sceny
+    Engine.hpp              okno, pętla, sceny, dźwięk
   src/                    implementacja w tym samym układzie
     engine/                 Engine podzielony na pliki: okno, sceny, wejście, pliki...
 demo/                     program demonstracyjny i sceny laboratoriów

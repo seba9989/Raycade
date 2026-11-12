@@ -112,7 +112,12 @@
  * efektów, N ją wycisza, a strzałki zmieniają głośność główną. Muzyka gra ze strumienia w pętli;
  * M przełącza ścieżkę z przenikaniem (szyna Exclusive()), a S ją wycisza i zatrzymuje.
  * Enter wstrzymuje samą ścieżkę (Voice::Pause()), a Backspace ucina ostatnią monetę; napis
- * pokazuje czas jej odtwarzania i liczbę skończonych monet (Voice::OnFinish()). Próbki WAV w `demo/assets/`
+ * pokazuje czas jej odtwarzania i liczbę skończonych monet (Voice::OnFinish()). Na dole sceny
+ * postać (strzałki w lewo/prawo) nosi słuchacza (audio::Listener) i stawia kroki ze zdarzeń
+ * klatek; ognisko to emiter (audio::Emitter) - słychać je głośniej i z właściwej strony, gdy
+ * postać podejdzie. C zrzuca skrzynię z dźwiękiem uderzenia zależnym od prędkości, X wywołuje
+ * wybuch (emiter usuwający się po dźwięku), a R wczytuje scenę od nowa - ognisko cichnie,
+ * a muzyka gra dalej. Próbki WAV w `demo/assets/`
  * są syntezowane skryptem `demo/tools/generate_sounds.py`.
  *
  * @section dokumentacja Dokumentacja
@@ -166,6 +171,7 @@ int main() {
         .Bus("kroki");
     engine.Audio("uderzenie").Files({"hit.wav"}).MaxVoices(6).Bus("efekty");
     engine.Audio("klik").Files({"click.wav"}).Volume(0.5f).Bus("interfejs");
+    engine.Audio("ogien").Files({"fire.wav"}).Looped().FadeInTime(0.5f).FadeOutTime(0.3f).Bus("efekty");
 
     return engine
         .OnUpdate([&](float) {

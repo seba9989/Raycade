@@ -47,7 +47,9 @@ Scene* Engine::Load(const std::string& name) {
 
     ::Scene& scene = scenes_.try_emplace(name).first->second;
     const double start = ::GetTime();
+    mixer_->Owner(&scene); // dźwięki z konfiguracji (np. emitery z Play()) należą do sceny
     setup->second(scene);
+    mixer_->Owner(nullptr);
     const double elapsed = ::GetTime() - start;
     loadSeconds_ += elapsed;
     Log("Wczytano scene \"" + name + "\" (" + std::to_string(static_cast<int>(elapsed * 1000.0)) +
@@ -127,7 +129,8 @@ Engine& Engine::ReloadScene(const std::string& name) {
 /**
  * @details Kolejność:
  * 1. przełączenie na scenę z SwitchScene() (wczytanie, jeśli trzeba),
- * 2. zwolnienie scen z UnloadScene() i ReloadScene(),
+ * 2. zwolnienie scen z UnloadScene() i ReloadScene() razem z ich głosami (poza muzyką na
+ *    szynie AudioBus::Exclusive()),
  * 3. ponowne wczytanie scen z ReloadScene(),
  * 4. jeśli aktywna scena została zwolniona - wczytanie jej od nowa (restart),
  * 5. zwolnienie zasobów (Assets::Purge()) i danych dźwięków, których nie używa już żadna
@@ -152,8 +155,14 @@ void Engine::ApplySceneChanges() {
     const auto reload = std::exchange(reload_, {});
 
     for (const auto& names : {std::cref(unload), std::cref(reload)})
-        for (const std::string& name : names.get())
-            if (scenes_.erase(name) > 0) Log("Zwolniono scene \"" + name + "\"");
+        for (const std::string& name : names.get()) {
+            const auto it = scenes_.find(name);
+            if (it == scenes_.end()) continue;
+            // głosy sceny cichną od razu (bez OnFinish - zdarzenia mogłyby sięgać do sceny)
+            mixer_->StopOwner(&it->second);
+            scenes_.erase(it);
+            Log("Zwolniono scene \"" + name + "\"");
+        }
 
     for (const std::string& name : reload)
         Load(name);

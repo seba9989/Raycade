@@ -166,7 +166,9 @@ int Engine::Run() {
             int steps = 0;
             while (fixedAccumulator_ >= fixedStep_ && steps < maxFixedSteps_) {
                 if (fixedUpdate_) fixedUpdate_(fixedStep_);
+                mixer_->Owner(scene); // dźwięki z logiki sceny należą do sceny
                 if (scene) scene->FixedUpdate(fixedStep_, input_);
+                mixer_->Owner(nullptr);
                 fixedAccumulator_ -= fixedStep_;
                 ++steps;
             }
@@ -175,7 +177,9 @@ int Engine::Run() {
                 fixedAccumulator_ = std::min(fixedAccumulator_, fixedStep_);
         }
         if (update_) update_(dt);
+        mixer_->Owner(scene);
         if (scene) scene->Update(dt, input_);
+        mixer_->Owner(nullptr);
 
         // dopiero teraz: OnUpdate albo scena mogły w tej klatce włączyć lub wyłączyć skalowanie
         const bool scaled = target_.IsValid();
