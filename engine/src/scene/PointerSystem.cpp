@@ -55,7 +55,7 @@ void PointerSystem::CollectHits(
     Vector2 point,
     std::vector<const Entity*>& hits
 ) {
-    if (entity.destroyed_) return;
+    if (entity.destroyed_ || !entity.IsVisible()) return; // ukryty obiekt i jego dzieci
     // poza przycięciem nie widać ani obiektu, ani dzieci - nie da się ich kliknąć
     if (const auto& clip = entity.ClipRect()) {
         const auto local = entity.TryToLocal(point);

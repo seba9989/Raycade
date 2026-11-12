@@ -37,6 +37,22 @@ class Drawable {
     int Layer() const { return layer_; }
 
     /**
+     * @brief Pokazuje albo ukrywa obiekt razem z dziećmi.
+     * @details Ukryty obiekt nie jest rysowany i nie reaguje na mysz, ale dalej się aktualizuje
+     * (Tick(), OnUpdate()) i bierze udział w fizyce. Domyślnie obiekty są widoczne - wyjątkiem są
+     * collidery (Collider), które bez Visible() są tylko kształtem kolizji.
+     * @param value Czy obiekt ma być widoczny.
+     * @return Ten sam obiekt.
+     */
+    template <typename Self> Self& Visible(this Self& self, bool value = true) {
+        self.visible_ = value;
+        return self;
+    }
+
+    /** @brief Sprawdza, czy obiekt jest widoczny (Visible()). */
+    bool IsVisible() const { return visible_; }
+
+    /**
      * @brief Przycina rysunek obiektu i jego dzieci do prostokąta (scissor).
      * @details Prostokąt jest w układzie lokalnym obiektu (jak współrzędne w Draw()), więc
      * przesuwa się razem z obiektem, rodzicami i kamerą. Kliknięcia poza nim nie trafiają ani
@@ -150,6 +166,7 @@ class Drawable {
     virtual void Draw(PrimitiveRenderer& renderer) const = 0;
 
     Color color_ = BLACK;                   /**< Kolor obiektu. */
+    bool visible_ = true;                   /**< Czy obiekt i dzieci są rysowane. */
     int layer_ = 0;                         /**< Warstwa wśród rodzeństwa. */
     int blend_ = BLEND_ALPHA;               /**< Tryb mieszania kolorów. */
     std::optional<Rectangle> clip_;         /**< Przycięcie rysunku (układ lokalny). */

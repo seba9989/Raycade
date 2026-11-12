@@ -36,6 +36,7 @@ void Entity::FixedUpdate(float step, const Input& input) {
 }
 
 void Entity::Render(PrimitiveRenderer& renderer) const {
+    if (!visible_) return; // ukryty obiekt nie rysuje też dzieci
     const auto matrix = DrawTransform().RlglMatrix();
     rlPushMatrix();
     rlMultMatrixf(matrix.data());
@@ -88,7 +89,8 @@ std::vector<Vector2> Entity::WorldVertices(std::span<const Point2D> local) const
 
 bool Entity::AnyChildContains(Vector2 point) const {
     for (const auto& child : children_)
-        if (child->Contains(point) || child->AnyChildContains(point)) return true;
+        if (child->visible_ && (child->Contains(point) || child->AnyChildContains(point)))
+            return true;
     return false;
 }
 

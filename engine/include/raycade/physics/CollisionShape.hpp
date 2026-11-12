@@ -14,8 +14,9 @@ class CollisionObject;
 /**
  * @brief Wspólna, nieszablonowa część colliderów - patrz Collider.
  * @details Świat fizyki widzi każdy collider przez tę klasę: pyta o jego geometrię w układzie
- * sceny (WorldParts()) i o obiekt, do którego należy (Object()). Ustawienia Disabled() i
- * Visible() są wspólne dla colliderów o dowolnym kształcie.
+ * sceny (WorldParts()) i o obiekt, do którego należy (Object()). Ustawienia Disabled()
+ * i OneWay() są wspólne dla colliderów o dowolnym kształcie; widoczność (Visible()) mają
+ * wszystkie obiekty sceny.
  */
 class CollisionShape {
   public:
@@ -33,21 +34,6 @@ class CollisionShape {
 
     /** @brief Sprawdza, czy collider jest wyłączony (Disabled()). */
     bool IsDisabled() const { return disabled_; }
-
-    /**
-     * @brief Rysuje collider jak zwykłą figurę i pozwala go klikać.
-     * @details Domyślnie collider jest niewidoczny i nie reaguje na mysz - jest tylko kształtem
-     * kolizji. Widoczny collider to grafika i kolizja w jednym obiekcie, np. platforma.
-     * @param value Czy rysować.
-     * @return Ten sam collider.
-     */
-    template <typename Self> Self& Visible(this Self& self, bool value = true) {
-        self.visible_ = value;
-        return self;
-    }
-
-    /** @brief Sprawdza, czy collider jest rysowany (Visible()). */
-    bool IsVisible() const { return visible_; }
 
     /**
      * @brief Zamienia collider w platformę jednostronną (one-way collision z Godota).
@@ -96,6 +82,5 @@ class CollisionShape {
 
   protected:
     bool disabled_ = false; /**< Czy collider jest wyłączony. */
-    bool visible_ = false;  /**< Czy collider jest rysowany. */
     bool oneWay_ = false;   /**< Czy collider jest platformą jednostronną. */
 };

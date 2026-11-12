@@ -21,8 +21,8 @@
  *
  * Collider sam nic nie robi - należy do najbliższego przodka, który jest obiektem kolizji
  * (StaticBody, CharacterBody albo Area). Ciało może mieć kilka colliderów, które razem tworzą
- * kształt złożony. Domyślnie collider jest niewidoczny i nie reaguje na mysz; Visible() rysuje
- * go jak zwykłą figurę.
+ * kształt złożony. W odróżnieniu od innych obiektów collider jest domyślnie niewidoczny
+ * i nie reaguje na mysz; Visible() (Drawable::Visible()) rysuje go jak zwykłą figurę.
  *
  * Krótsze nazwy są w przestrzeni nazw @ref collider (`collider::Rect` to
  * `Collider<shapes::Rect>`).
@@ -30,8 +30,10 @@
  * class Player : public CharacterBody {
  *   public:
  *     Player() {
- *         Spawn<shapes::Rect>().Position({-12, -32}).Size({24, 32}).Paint(BLUE).Filled(); //
- * grafika Spawn<collider::Rect>().Position({-12, -32}).Size({24, 32});                  // kolizja
+ *         // grafika
+ *         Spawn<shapes::Rect>().Position({-12, -32}).Size({24, 32}).Paint(BLUE).Filled();
+ *         // kolizja
+ *         Spawn<collider::Rect>().Position({-12, -32}).Size({24, 32});
  *     }
  * };
  *
@@ -46,8 +48,11 @@ template <typename S>
     requires std::derived_from<S, shapes::Shape>
 class Collider : public S, public CollisionShape {
   public:
+    /** @brief Tworzy niewidoczny collider (sam kształt kolizji). */
+    Collider() { this->visible_ = false; }
+
     /** @brief Niewidoczny collider nie zasłania kliknięć - trafia tylko widoczny. */
-    bool Contains(Vector2 point) const override { return visible_ && S::Contains(point); }
+    bool Contains(Vector2 point) const override { return this->visible_ && S::Contains(point); }
 
     /** @copydoc CollisionShape::Node */
     const Entity& Node() const override { return *this; }
@@ -93,12 +98,6 @@ class Collider : public S, public CollisionShape {
         const AffineMatrix2D world = this->WorldTransform();
         for (std::size_t i = first; i < parts.size(); ++i)
             parts[i] = parts[i].Transformed(world);
-    }
-
-  protected:
-    /** @brief Rysuje figurę tylko wtedy, gdy collider jest widoczny (Visible()). */
-    void Draw(PrimitiveRenderer& renderer) const override {
-        if (visible_) S::Draw(renderer);
     }
 };
 
