@@ -99,8 +99,11 @@
  * Scena `fizyka` pokazuje kolizje: postać (CharacterBody) chodzi A/D albo strzałkami i skacze
  * spacją, a MoveAndSlide() zatrzymuje ją na colliderach różnych kształtów (Collider\<S\>:
  * prostokąty, trójkątna pochylnia, koło, obrócona platforma). Ruchoma platforma to StaticBody
- * przesuwany w kodzie, szary blok zmienia kolor przy zderzeniu, monety i lawa to obszary
- * (Area). F1 pokazuje obrysy colliderów, R wczytuje scenę od nowa.
+ * przesuwany w kodzie, który wiezie stojącą na nim postać, szary blok zmienia kolor przy
+ * zderzeniu, a monety i lawa to obszary (Area). Na brązową półkę (OneWay()) wskakuje się od
+ * dołu, a S zeskakuje przez nią. Fioletowe oko rzuca promień do gracza (Scene::Raycast()) -
+ * linia jest zielona, gdy nic go nie zasłania. F1 pokazuje obrysy colliderów, R wczytuje scenę
+ * od nowa.
  *
  * @section dokumentacja Dokumentacja
  * Dokumentację HTML generuje polecenie `docs` (devenv) albo, w katalogu głównym projektu:

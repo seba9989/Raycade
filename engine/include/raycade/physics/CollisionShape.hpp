@@ -50,6 +50,35 @@ class CollisionShape {
     bool IsVisible() const { return visible_; }
 
     /**
+     * @brief Zamienia collider w platformę jednostronną (one-way collision z Godota).
+     * @details Postać przechodzi przez nią od dołu i z boków, a zatrzymuje się tylko, gdy opada
+     * na nią od góry. „Góra” to lokalna oś -y collidera, więc obrócona platforma przepuszcza
+     * w obróconym kierunku (OneWayDirection()). Obszary (Area) wykrywają ją normalnie, a promień
+     * (Scene::Raycast()) trafia ją tylko od strony „góry”. Żeby postać zeskoczyła w dół przez
+     * platformę, wystarczy na chwilę wyłączyć collider (Disabled()) albo zmienić maskę postaci.
+     * @code{.cpp}
+     * scene.Spawn<StaticBody>().Position({300, 400}).Children([](StaticBody& ledge) {
+     *     ledge.Spawn<collider::Rect>().Size({120, 10}).OneWay().Paint(BROWN).Fill().Visible();
+     * });
+     * @endcode
+     * @param value Czy collider jest jednostronny.
+     * @return Ten sam collider.
+     */
+    template <typename Self> Self& OneWay(this Self& self, bool value = true) {
+        self.oneWay_ = value;
+        return self;
+    }
+
+    /** @brief Sprawdza, czy collider jest platformą jednostronną (OneWay()). */
+    bool IsOneWay() const { return oneWay_; }
+
+    /**
+     * @brief Kierunek „w górę” platformy jednostronnej w układzie sceny (wektor jednostkowy).
+     * @details Lokalna oś -y collidera po obrocie collidera i jego przodków.
+     */
+    virtual Vector2 OneWayDirection() const = 0;
+
+    /**
      * @brief Obiekt kolizji (ciało albo Area), do którego należy collider.
      * @return Najbliższy przodek typu CollisionObject albo nullptr - collider bez takiego
      * przodka nie bierze udziału w kolizjach.
@@ -68,4 +97,5 @@ class CollisionShape {
   protected:
     bool disabled_ = false; /**< Czy collider jest wyłączony. */
     bool visible_ = false;  /**< Czy collider jest rysowany. */
+    bool oneWay_ = false;   /**< Czy collider jest platformą jednostronną. */
 };

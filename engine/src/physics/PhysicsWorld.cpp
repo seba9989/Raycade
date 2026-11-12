@@ -19,6 +19,10 @@ constexpr float kMaxSubstepDistance = 8.0f;
 constexpr int kMaxSubsteps = 16;
 constexpr int kMaxPushes = 4;
 constexpr float kMinDepth = 1e-4f;
+/** @brief Zapas wnikania w platformę jednostronną, przy którym nadal zatrzymuje postać. */
+constexpr float kOneWayMargin = 1.0f;
+/** @brief Najmniejszy cosinus kąta między wypchnięciem a „górą” platformy jednostronnej. */
+constexpr float kOneWayCos = 0.7f;
 
 /** @brief Zdarzenie do wysłania po zakończeniu analizy kroku (bez zmian list w trakcie). */
 using Event = std::function<void()>;
@@ -80,7 +84,7 @@ const PhysicsWorld::Entry* PhysicsWorld::Find(const CollisionObject* object) con
     return nullptr;
 }
 
-std::optional<Collision> PhysicsWorld::Deepest(const Entry& self) const {
+std::optional<Collision> PhysicsWorld::Deepest(const Entry& self, Vector2 motion) const {
     std::optional<Collision> deepest;
     std::vector<ConvexPart> mine;
     std::vector<ConvexPart> theirs;
@@ -99,6 +103,15 @@ std::optional<Collision> PhysicsWorld::Deepest(const Entry& self) const {
                     for (const ConvexPart& b : theirs) {
                         const auto hit = ConvexPenetration(a, b);
                         if (!hit || hit->depth < kMinDepth) continue;
+                        if (otherShape->IsOneWay()) {
+                            // tylko opadanie na platformę od góry: wypchnięcie w jej „górę”,
+                            // ruch nie w górę i wnikanie nie głębsze niż ten ruch
+                            const Vector2 up = otherShape->OneWayDirection();
+                            const float down = -Dot(motion, up);
+                            if (Dot(hit->normal, up) < kOneWayCos || down < 0.0f ||
+                                hit->depth > down + kOneWayMargin)
+                                continue;
+                        }
                         if (deepest && deepest->depth >= hit->depth) continue;
                         deepest = Collision{other.body, shape, otherShape, hit->normal, hit->depth};
                     }
@@ -205,9 +218,10 @@ bool PhysicsWorld::MoveAndSlide(CharacterBody& body) {
     };
 
     for (int substep = 0; substep < substeps; ++substep) {
-        body.MoveInScene({body.velocity_.x * substepTime, body.velocity_.y * substepTime});
+        const Vector2 step{body.velocity_.x * substepTime, body.velocity_.y * substepTime};
+        body.MoveInScene(step);
         for (int push = 0; push < kMaxPushes; ++push) {
-            const std::optional<Collision> hit = Deepest(*self);
+            const std::optional<Collision> hit = Deepest(*self, step);
             if (!hit) break;
             resolve(*hit);
         }
@@ -222,7 +236,7 @@ bool PhysicsWorld::MoveAndSlide(CharacterBody& body) {
         body.MoveInScene({-up.x * snap, -up.y * snap});
         bool floor = false;
         for (int push = 0; push < kMaxPushes; ++push) {
-            const std::optional<Collision> hit = Deepest(*self);
+            const std::optional<Collision> hit = Deepest(*self, {-up.x * snap, -up.y * snap});
             if (!hit) break;
             if (Dot(hit->normal, up) < floorCos) { // pod spodem nie ma podłogi - np. ściana
                 floor = false;
@@ -270,6 +284,66 @@ std::vector<Area*> PhysicsWorld::OverlappingAreas(const Area& area) {
     return areas;
 }
 
+std::optional<RayHit> PhysicsWorld::Raycast(
+    Vector2 from,
+    Vector2 to,
+    std::uint32_t mask,
+    const CollisionObject* exclude
+) const {
+    std::optional<RayHit> nearest;
+    float nearestFraction = INFINITY;
+    const Vector2 direction{to.x - from.x, to.y - from.y};
+    const float length = std::sqrt(Dot(direction, direction));
+    std::vector<ConvexPart> parts;
+    for (const Entry& entry : Entries()) {
+        if (!entry.body || entry.object == exclude || entry.object->IsDestroyed()) continue;
+        if ((mask & entry.object->CollisionLayer()) == 0) continue;
+        for (const CollisionShape* shape : entry.shapes) {
+            if (shape->IsDisabled()) continue;
+            // platforma jednostronna zatrzymuje tylko promień lecący z jej „góry”
+            if (shape->IsOneWay() && Dot(direction, shape->OneWayDirection()) >= 0.0f) continue;
+            parts.clear();
+            shape->WorldParts(parts);
+            for (const ConvexPart& part : parts) {
+                const auto hit = ConvexRaycast(part, from, to);
+                if (!hit || hit->fraction >= nearestFraction) continue;
+                nearestFraction = hit->fraction;
+                nearest = RayHit{
+                    entry.body,
+                    shape,
+                    {from.x + direction.x * hit->fraction, from.y + direction.y * hit->fraction},
+                    hit->normal,
+                    length * hit->fraction
+                };
+            }
+        }
+    }
+    return nearest;
+}
+
+std::vector<PhysicsBody*> PhysicsWorld::Overlap(
+    const ConvexPart& part,
+    std::uint32_t mask,
+    const CollisionObject* exclude
+) const {
+    std::vector<PhysicsBody*> bodies;
+    std::vector<ConvexPart> parts;
+    for (const Entry& entry : Entries()) {
+        if (!entry.body || entry.object == exclude || entry.object->IsDestroyed()) continue;
+        if ((mask & entry.object->CollisionLayer()) == 0) continue;
+        bool hit = false;
+        for (const CollisionShape* shape : entry.shapes) {
+            if (shape->IsDisabled() || hit) continue;
+            parts.clear();
+            shape->WorldParts(parts);
+            for (const ConvexPart& other : parts)
+                if (ConvexOverlap(part, other)) hit = true;
+        }
+        if (hit) bodies.push_back(entry.body);
+    }
+    return bodies;
+}
+
 void PhysicsWorld::EndStep() {
     const std::vector<Entry>& entries = Entries();
     // obiekty usunięte ze sceny przed tym krokiem nie istnieją - nie wolno ich dotykać
@@ -311,17 +385,47 @@ void PhysicsWorld::EndStep() {
     lastContacts_ = std::move(contacts_);
     contacts_.clear();
 
-    // obszary: pary (obszar, wykryty obiekt)
+    // obszary: pary (obszar, wykryty obiekt) i pary colliderów (do OnBodyShapeEnter/Exit)
     std::set<Pair> overlaps;
+    std::set<ShapePair> shapeOverlaps;
+    std::vector<ConvexPart> areaParts;
+    std::vector<ConvexPart> otherParts;
+    const auto touching = [&](const CollisionShape& a, const CollisionShape& b) {
+        areaParts.clear();
+        otherParts.clear();
+        a.WorldParts(areaParts);
+        b.WorldParts(otherParts);
+        for (const ConvexPart& partA : areaParts)
+            for (const ConvexPart& partB : otherParts)
+                if (ConvexOverlap(partA, partB)) return true;
+        return false;
+    };
     for (const Entry& area : entries) {
         if (!area.area || area.object->IsDestroyed()) continue;
+        Area* self = area.area;
         for (const Entry& other : entries) {
             if (other.object == area.object || other.object->IsDestroyed()) continue;
-            if (!area.object->CollidesWith(*other.object) || !Overlap(area, other)) continue;
+            if (!area.object->CollidesWith(*other.object)) continue;
+            bool any = false;
+            for (const CollisionShape* areaShape : area.shapes) {
+                if (areaShape->IsDisabled()) continue;
+                for (const CollisionShape* otherShape : other.shapes) {
+                    if (otherShape->IsDisabled() || !touching(*areaShape, *otherShape)) continue;
+                    any = true;
+                    if (!other.body) continue;
+                    const ShapePair shapeKey{area.object, areaShape, other.object, otherShape};
+                    shapeOverlaps.insert(shapeKey);
+                    if (lastShapeOverlaps_.contains(shapeKey)) continue;
+                    const AreaShapeContact contact{other.body, otherShape, areaShape};
+                    events.emplace_back([self, contact] {
+                        if (self->shapeEnter_) self->shapeEnter_(contact);
+                    });
+                }
+            }
+            if (!any) continue;
             const Pair key{area.object, other.object};
             overlaps.insert(key);
             if (lastOverlaps_.contains(key)) continue;
-            Area* self = area.area;
             if (other.body) {
                 PhysicsBody* body = other.body;
                 events.emplace_back([self, body] {
@@ -335,15 +439,34 @@ void PhysicsWorld::EndStep() {
             }
         }
     }
+    // obiekt usunięty w tym kroku jeszcze istnieje (Destroy() usuwa go na końcu klatki), ale ten
+    // usunięty przed krokiem - już nie: zdarzenie wyjścia tylko dla obiektów z bieżącej listy
+    const auto entryOf = [&](const CollisionObject* object) -> const Entry* {
+        for (const Entry& entry : entries)
+            if (entry.object == object) return &entry;
+        return nullptr;
+    };
+    const auto ownsShape = [](const Entry* entry, const CollisionShape* shape) {
+        return entry &&
+               std::find(entry->shapes.begin(), entry->shapes.end(), shape) != entry->shapes.end();
+    };
+    for (const ShapePair& key : lastShapeOverlaps_) {
+        if (shapeOverlaps.contains(key)) continue;
+        const auto& [areaObject, areaShape, bodyObject, bodyShape] = key;
+        const Entry* area = entryOf(areaObject);
+        const Entry* other = entryOf(bodyObject);
+        if (!ownsShape(area, areaShape) || !ownsShape(other, bodyShape)) continue;
+        if (!area->area || !other->body) continue;
+        Area* self = area->area;
+        const AreaShapeContact contact{other->body, bodyShape, areaShape};
+        events.emplace_back([self, contact] {
+            if (self->shapeExit_) self->shapeExit_(contact);
+        });
+    }
     for (const Pair& key : lastOverlaps_) {
         if (overlaps.contains(key)) continue;
-        // obiekt usunięty w tym kroku jeszcze istnieje (Destroy() usuwa go na końcu klatki)
-        const Entry* area = nullptr;
-        const Entry* other = nullptr;
-        for (const Entry& entry : entries) {
-            if (entry.object == key.first) area = &entry;
-            if (entry.object == key.second) other = &entry;
-        }
+        const Entry* area = entryOf(key.first);
+        const Entry* other = entryOf(key.second);
         if (!area || !other || !area->area) continue;
         Area* self = area->area;
         if (other->body) {
@@ -359,6 +482,7 @@ void PhysicsWorld::EndStep() {
         }
     }
     lastOverlaps_ = std::move(overlaps);
+    lastShapeOverlaps_ = std::move(shapeOverlaps);
 
     for (const Event& event : events)
         event();

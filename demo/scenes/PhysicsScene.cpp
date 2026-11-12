@@ -9,6 +9,10 @@
  * - ruchoma platforma to StaticBody przesuwany w OnFixedUpdate(),
  * - szary blok zmienia kolor w OnCollisionEnter() / OnCollisionExit(),
  * - monety i lawa to obszary (Area) z OnBodyEnter(),
+ * - brązowa półka to platforma jednostronna (OneWay()): wskakuje się na nią od dołu, a S albo
+ *   strzałka w dół na chwilę wyłącza jej collider (Disabled()) - postać spada przez nią,
+ * - fioletowe oko w rogu co klatkę rzuca promień do gracza (Scene::Raycast()): zielona linia -
+ *   widzi go, czerwona - kończy się na przeszkodzie,
  * - F1 pokazuje obrysy wszystkich colliderów (Scene::DebugColliders()), R wczytuje scenę od nowa.
  */
 
@@ -135,6 +139,10 @@ SCENE("fizyka") {
             self.Position({420 + 140 * std::sin(time), 330});
         });
 
+    // platforma jednostronna nad blokiem - wskakuje się na nią od dołu
+    auto& ledge = scene.Spawn<StaticBody>().Position({580, 410}).Spawn<collider::Rect>();
+    ledge.Size({140, 8}).OneWay().Paint(BROWN).Fill().Visible();
+
     // blok reagujący na zderzenia (OnCollisionEnter / OnCollisionExit)
     StaticBody& touch = scene.Spawn<StaticBody>().Position({140, 330});
     auto& tile = touch.Spawn<collider::Rect>().Size({90, 20}).Paint(GRAY).Fill().Visible();
@@ -159,17 +167,31 @@ SCENE("fizyka") {
     Player& player = scene.Spawn<Player>();
     player.Respawn();
 
-    scene.OnUpdate([&scene](float) {
+    // oko: promień do gracza - czy nic nie zasłania widoku
+    constexpr Vector2 kEye{960, 90};
+    scene.Spawn<shapes::Circle>().Position(kEye).Radius(10).Paint(DARKPURPLE).Fill();
+    scene.OnDrawWorld([&scene, &player, kEye](PrimitiveRenderer& renderer) {
+        const Vector2 target{player.WorldPosition().x, player.WorldPosition().y - 16};
+        const auto hit = scene.Raycast(kEye, target);
+        const bool sees = hit && hit->body == &player;
+        renderer.Paint(sees ? GREEN : RED).Line(kEye, hit ? hit->point : target);
+        if (hit && !sees) renderer.Circle(hit->point, 3);
+    });
+
+    scene.OnUpdate([&scene, &ledge](float) {
         Engine& engine = Engine::Get();
         if (engine.KeyPressed(KEY_F1)) scene.DebugColliders(!scene.IsDebugColliders());
         if (engine.KeyPressed(KEY_R)) engine.ReloadScene("fizyka");
+        // zeskok przez platformę jednostronną: collider wyłączony, póki trzymany jest klawisz
+        ledge.Disabled(engine.KeyDown(KEY_S) || engine.KeyDown(KEY_DOWN));
     });
 
     scene.OnDraw([&player](PrimitiveRenderer&) {
         const auto yes = [](bool value) { return value ? "tak" : "nie"; };
         ::DrawText(
-            "A/D lub strzalki - ruch   spacja/W - skok   F1 - collidery   R - od nowa", 20, 20, 18,
-            DARKGRAY
+            "A/D lub strzalki - ruch   spacja/W - skok   S - zeskok z polki   F1 - collidery   "
+            "R - od nowa",
+            20, 20, 18, DARKGRAY
         );
         const std::string state =
             "monety: " + std::to_string(coins) + "/" + std::to_string(kCoins) +

@@ -11,6 +11,16 @@
 #include <raycade/physics/PhysicsBody.hpp>
 
 /**
+ * @brief Styk jednego collidera ciała z jednym colliderem obszaru.
+ * @details Wskaźniki są ważne w trakcie zdarzenia - nie należy ich przechowywać.
+ */
+struct AreaShapeContact {
+    PhysicsBody* body = nullptr;               /**< Ciało. */
+    const CollisionShape* bodyShape = nullptr; /**< Collider ciała. */
+    const CollisionShape* areaShape = nullptr; /**< Collider obszaru. */
+};
+
+/**
  * @brief Obszar, który wykrywa wejście i wyjście ciał, ale ich nie zatrzymuje (Area2D z Godota).
  * @details Przydaje się do monet, kolców, stref śmierci, drzwi i wyzwalaczy. Zdarzenia są
  * wysyłane na końcu kroku stałego. Area wykrywa obiekty, których warstwy pasują do jej
@@ -51,6 +61,39 @@ class Area : public CollisionObject {
     }
 
     /**
+     * @brief Ustawia reakcję na styk konkretnego collidera ciała z konkretnym colliderem obszaru.
+     * @details Dokładniejsza wersja OnBodyEnter(): ciało z kilkoma colliderami (np. osobno stopy
+     * i głowa) wywołuje ją raz dla każdej pary colliderów, które zaczęły na siebie nachodzić.
+     * @code{.cpp}
+     * spikes.OnBodyShapeEnter([&feet](Area&, const AreaShapeContact& contact) {
+     *     if (contact.bodyShape == &feet) ... // nadepnięcie, a nie dotknięcie głową
+     * });
+     * @endcode
+     * @param callback Funkcja otrzymująca obszar i opis styku.
+     * @return Ten sam obiekt.
+     */
+    template <typename Self>
+    Self& OnBodyShapeEnter(this Self& self, Callback<Self, const AreaShapeContact&> callback) {
+        self.shapeEnter_ = [&self, fn = std::move(callback)](const AreaShapeContact& contact) {
+            fn(self, contact);
+        };
+        return self;
+    }
+
+    /**
+     * @brief Ustawia reakcję na koniec styku pary colliderów (patrz OnBodyShapeEnter()).
+     * @param callback Funkcja otrzymująca obszar i opis styku.
+     * @return Ten sam obiekt.
+     */
+    template <typename Self>
+    Self& OnBodyShapeExit(this Self& self, Callback<Self, const AreaShapeContact&> callback) {
+        self.shapeExit_ = [&self, fn = std::move(callback)](const AreaShapeContact& contact) {
+            fn(self, contact);
+        };
+        return self;
+    }
+
+    /**
      * @brief Ustawia reakcję na wejście innego obszaru.
      * @param callback Funkcja otrzymująca ten obszar i drugi.
      * @return Ten sam obiekt.
@@ -79,8 +122,10 @@ class Area : public CollisionObject {
   private:
     friend class PhysicsWorld;
 
-    std::function<void(PhysicsBody&)> bodyEnter_; /**< Wejście ciała. */
-    std::function<void(PhysicsBody&)> bodyExit_;  /**< Wyjście ciała. */
-    std::function<void(Area&)> areaEnter_;        /**< Wejście obszaru. */
-    std::function<void(Area&)> areaExit_;         /**< Wyjście obszaru. */
+    std::function<void(PhysicsBody&)> bodyEnter_;             /**< Wejście ciała. */
+    std::function<void(PhysicsBody&)> bodyExit_;              /**< Wyjście ciała. */
+    std::function<void(Area&)> areaEnter_;                    /**< Wejście obszaru. */
+    std::function<void(Area&)> areaExit_;                     /**< Wyjście obszaru. */
+    std::function<void(const AreaShapeContact&)> shapeEnter_; /**< Styk pary colliderów. */
+    std::function<void(const AreaShapeContact&)> shapeExit_;  /**< Koniec styku pary. */
 };

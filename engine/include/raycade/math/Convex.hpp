@@ -104,6 +104,26 @@ bool ConvexOverlap(const ConvexPart& a, const ConvexPart& b);
 std::optional<Penetration> ConvexPenetration(const ConvexPart& a, const ConvexPart& b);
 
 /**
+ * @brief Trafienie promieniem w figurę wypukłą.
+ */
+struct ConvexRayHit {
+    float fraction = 0; /**< Miejsce trafienia jako ułamek odcinka from-to (0 - from, 1 - to). */
+    Vector2 normal{};   /**< Normalna powierzchni w punkcie trafienia (na zewnątrz figury). */
+};
+
+/**
+ * @brief Pierwsze trafienie odcinkiem from-to w figurę wypukłą.
+ * @details Wielokąt - obcinanie Cyrusa-Becka (półpłaszczyzny krawędzi), odcinek - przecięcie
+ * dwóch odcinków, elipsa - równanie kwadratowe w układzie, w którym elipsa jest okręgiem
+ * jednostkowym. Punkty są pomijane (promień trafiłby je tylko przypadkiem).
+ * @param part Figura.
+ * @param from Początek promienia.
+ * @param to Koniec promienia.
+ * @return Trafienie albo std::nullopt - także gdy promień zaczyna się wewnątrz figury.
+ */
+std::optional<ConvexRayHit> ConvexRaycast(const ConvexPart& part, Vector2 from, Vector2 to);
+
+/**
  * @brief Sprawdza, czy wielokąt (łamana zwyczajna zamknięta) jest wypukły.
  * @param vertices Wierzchołki w kolejności obwodu.
  */

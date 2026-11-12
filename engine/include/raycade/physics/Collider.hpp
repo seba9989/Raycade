@@ -4,11 +4,14 @@
  */
 #pragma once
 
+#include <algorithm>
+#include <cmath>
 #include <concepts>
 #include <vector>
 
 #include <raycade/physics/CollisionShape.hpp>
 #include <raycade/shapes.hpp>
+#include <raycade/visual/Sprite.hpp>
 
 /**
  * @brief Kształt kolizji o kształcie figury S (odpowiednik CollisionShape2D z Godota).
@@ -48,6 +51,40 @@ class Collider : public S, public CollisionShape {
 
     /** @copydoc CollisionShape::Node */
     const Entity& Node() const override { return *this; }
+
+    /** @copydoc CollisionShape::OneWayDirection */
+    Vector2 OneWayDirection() const override {
+        // oś -y po części liniowej przekształcenia (bez przesunięcia)
+        const AffineMatrix2D world = this->WorldTransform();
+        const Vector2 up{-world.c, -world.d};
+        const float length = std::sqrt(up.x * up.x + up.y * up.y);
+        return length > 0.0f ? Vector2{up.x / length, up.y / length} : Vector2{0.0f, -1.0f};
+    }
+
+    /**
+     * @brief Dopasowuje prostokątny collider do bieżącej klatki sprite'a.
+     * @details Ustawia Position() i Size() tak, żeby collider pokrywał prostokąt klatki
+     * (FrameSize()) z uwzględnieniem Origin() sprite'a. Sprite musi mieć tego samego rodzica co
+     * collider (zwykle oba są dziećmi ciała). Wymiary są kopiowane raz - collider nie śledzi
+     * późniejszych zmian klatki ani obrotu i skali samego sprite'a.
+     * @code{.cpp}
+     * auto& hero = Spawn<visual::Sprite>().Sheet(sheet).Origin({16, 32});
+     * Spawn<collider::Rect>().Fit(hero, 4); // o 4 px mniejszy z każdej strony niż klatka
+     * @endcode
+     * @param sprite Sprite-rodzeństwo.
+     * @param inset Ile pikseli odjąć z każdej strony (ujemne - powiększenie).
+     * @return Ten sam collider.
+     */
+    template <typename Self>
+        requires std::same_as<S, shapes::Rect>
+    Self& Fit(this Self& self, const visual::Sprite& sprite, float inset = 0.0f) {
+        const Vector2 frame = sprite.FrameSize();
+        const Vector2 origin = sprite.Origin();
+        const Vector2 position = sprite.Position();
+        self.Position({position.x - origin.x + inset, position.y - origin.y + inset});
+        self.Size({std::max(0.0f, frame.x - 2.0f * inset), std::max(0.0f, frame.y - 2.0f * inset)});
+        return self;
+    }
 
     /** @copydoc CollisionShape::WorldParts */
     void WorldParts(std::vector<ConvexPart>& parts) const override {

@@ -177,6 +177,66 @@ class Scene : public Contextable {
     /** @brief Sprawdza, czy obrysy colliderów są rysowane. */
     bool IsDebugColliders() const { return physics_.IsDebug(); }
 
+    /**
+     * @brief Szuka pierwszego ciała na odcinku from-to (RayCast2D z Godota).
+     * @details Trafia ciała (StaticBody, CharacterBody), nie obszary. Promień zaczynający się
+     * wewnątrz collidera go nie trafia; platformę jednostronną trafia tylko od jej „góry”.
+     * Współrzędne są w układzie sceny (świata).
+     * @code{.cpp}
+     * // czy przeciwnik widzi gracza - nic z warstwy World nie stoi między nimi
+     * const bool sees = !scene.Raycast(enemy.WorldPosition(), player.WorldPosition(), World);
+     * @endcode
+     * @param from Początek promienia.
+     * @param to Koniec promienia.
+     * @param mask Warstwy, które promień trafia (domyślnie wszystkie).
+     * @param exclude Obiekt pomijany (np. ten, który strzela).
+     * @return Najbliższe trafienie albo std::nullopt.
+     */
+    std::optional<RayHit> Raycast(
+        Vector2 from,
+        Vector2 to,
+        std::uint32_t mask = kAllLayers,
+        const CollisionObject* exclude = nullptr
+    ) const {
+        return physics_.Raycast(from, to, mask, exclude);
+    }
+
+    /**
+     * @brief Ciała nachodzące na prostokąt (np. „czy jest tu miejsce”, zaznaczenie obszarem).
+     * @param area Prostokąt w układzie sceny.
+     * @param mask Warstwy, które są sprawdzane (domyślnie wszystkie).
+     * @param exclude Obiekt pomijany.
+     */
+    std::vector<PhysicsBody*> Overlap(
+        Rectangle area,
+        std::uint32_t mask = kAllLayers,
+        const CollisionObject* exclude = nullptr
+    ) const {
+        const ConvexPart part = ConvexPart::Polygon(
+            {{area.x, area.y},
+             {area.x + area.width, area.y},
+             {area.x + area.width, area.y + area.height},
+             {area.x, area.y + area.height}}
+        );
+        return physics_.Overlap(part, mask, exclude);
+    }
+
+    /**
+     * @brief Ciała nachodzące na koło (np. zasięg wybuchu).
+     * @param center Środek w układzie sceny.
+     * @param radius Promień.
+     * @param mask Warstwy, które są sprawdzane (domyślnie wszystkie).
+     * @param exclude Obiekt pomijany.
+     */
+    std::vector<PhysicsBody*> Overlap(
+        Vector2 center,
+        float radius,
+        std::uint32_t mask = kAllLayers,
+        const CollisionObject* exclude = nullptr
+    ) const {
+        return physics_.Overlap(ConvexPart::Ellipse(center, {radius, radius}), mask, exclude);
+    }
+
     /** @} */
 
     /**

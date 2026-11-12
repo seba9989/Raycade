@@ -4,9 +4,12 @@
  */
 #pragma once
 
+#include <cstdint>
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -14,6 +17,20 @@
 #include <raycade/physics/Area.hpp>
 #include <raycade/physics/CharacterBody.hpp>
 #include <raycade/physics/PhysicsBody.hpp>
+
+/**
+ * @brief Trafienie promieniem (Scene::Raycast()).
+ */
+struct RayHit {
+    PhysicsBody* body = nullptr;           /**< Trafione ciało. */
+    const CollisionShape* shape = nullptr; /**< Trafiony collider. */
+    Vector2 point{};                       /**< Punkt trafienia w układzie sceny. */
+    Vector2 normal{};                      /**< Normalna powierzchni w punkcie trafienia. */
+    float distance = 0;                    /**< Odległość od początku promienia. */
+};
+
+/** @brief Maska bitowa wszystkich warstw kolizji. */
+inline constexpr std::uint32_t kAllLayers = 0xFFFFFFFFu;
 
 /**
  * @brief Świat fizyki jednej sceny (system sceny, obok PointerSystem).
@@ -78,6 +95,21 @@ class PhysicsWorld {
     /** @brief Obszary nachodzące teraz na obszar. */
     std::vector<Area*> OverlappingAreas(const Area& area);
 
+    /** @brief Pierwsze ciało na odcinku from-to (patrz Scene::Raycast()). */
+    std::optional<RayHit> Raycast(
+        Vector2 from,
+        Vector2 to,
+        std::uint32_t mask,
+        const CollisionObject* exclude
+    ) const;
+
+    /** @brief Ciała nachodzące na figurę w układzie sceny (patrz Scene::Overlap()). */
+    std::vector<PhysicsBody*> Overlap(
+        const ConvexPart& part,
+        std::uint32_t mask,
+        const CollisionObject* exclude
+    ) const;
+
     /**
      * @brief Rysuje collidery wszystkich obiektów (w układzie świata, przez kamerę).
      * @details Kolory: StaticBody - niebieski, CharacterBody - zielony, Area - pomarańczowy,
@@ -119,8 +151,12 @@ class PhysicsWorld {
     /** @brief Zbiera obiekty kolizji z poddrzewa (owner - indeks obiektu, do którego należą). */
     void Collect(const Entity& entity, int owner) const;
 
-    /** @brief Najgłębsze wnikanie postaci w ciała, z którymi się zderza. */
-    std::optional<Collision> Deepest(const Entry& self) const;
+    /**
+     * @brief Najgłębsze wnikanie postaci w ciała, z którymi się zderza.
+     * @param self Postać.
+     * @param motion Ostatni ruch postaci - platforma jednostronna zatrzymuje tylko ruch w dół.
+     */
+    std::optional<Collision> Deepest(const Entry& self, Vector2 motion) const;
 
     /** @brief Sprawdza, czy dwa obiekty kolizji nachodzą na siebie którymkolwiek colliderem. */
     static bool Overlap(const Entry& a, const Entry& b);
@@ -142,4 +178,12 @@ class PhysicsWorld {
     std::map<Pair, Contact> contacts_;     /**< Zderzenia z bieżącego kroku. */
     std::map<Pair, Contact> lastContacts_; /**< Zderzenia z poprzedniego kroku. */
     std::set<Pair> lastOverlaps_;          /**< Pary (obszar, obiekt) z poprzedniego kroku. */
+
+    /** @brief Styk pary colliderów: (obszar, jego collider, ciało, collider ciała). */
+    using ShapePair = std::tuple<
+        const CollisionObject*,
+        const CollisionShape*,
+        const CollisionObject*,
+        const CollisionShape*>;
+    std::set<ShapePair> lastShapeOverlaps_; /**< Styki colliderów z poprzedniego kroku. */
 };

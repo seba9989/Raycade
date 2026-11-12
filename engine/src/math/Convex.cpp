@@ -293,6 +293,93 @@ std::optional<Penetration> ConvexPenetration(const ConvexPart& a, const ConvexPa
     return Penetration{Negate(normal), distance};
 }
 
+std::optional<ConvexRayHit> ConvexRaycast(const ConvexPart& part, Vector2 from, Vector2 to) {
+    const Vector2 d = Sub(to, from);
+    if (LengthSqr(d) < kEpsilon * kEpsilon) return std::nullopt;
+    const auto unit = [](Vector2 v) {
+        const float length = std::sqrt(LengthSqr(v));
+        return length < kEpsilon ? Vector2{} : Scale(v, 1.0f / length);
+    };
+
+    if (part.kind == ConvexPart::Kind::Ellipse) {
+        // układ, w którym elipsa center + axisX*cos + axisY*sin jest okręgiem jednostkowym
+        const float det = Cross(part.axisX, part.axisY);
+        if (std::fabs(det) < kEpsilon) return std::nullopt;
+        const auto inverse = [&](Vector2 v) {
+            return Vector2{
+                (part.axisY.y * v.x - part.axisY.x * v.y) / det,
+                (-part.axisX.y * v.x + part.axisX.x * v.y) / det
+            };
+        };
+        const Vector2 q0 = inverse(Sub(from, part.center));
+        const Vector2 qd = inverse(d);
+        const float a = Dot(qd, qd);
+        const float b = 2.0f * Dot(q0, qd);
+        const float c = Dot(q0, q0) - 1.0f;
+        if (c <= 0.0f) return std::nullopt; // początek wewnątrz
+        const float discriminant = b * b - 4.0f * a * c;
+        if (discriminant < 0.0f) return std::nullopt;
+        const float t = (-b - std::sqrt(discriminant)) / (2.0f * a);
+        if (t < 0.0f || t > 1.0f) return std::nullopt;
+        // normalna: gradient |A^-1 (p - c)|^2, czyli A^-T q
+        const Vector2 q = Add(q0, Scale(qd, t));
+        const Vector2 normal{
+            (part.axisY.y * q.x - part.axisX.y * q.y) / det,
+            (-part.axisY.x * q.x + part.axisX.x * q.y) / det
+        };
+        return ConvexRayHit{t, unit(normal)};
+    }
+
+    const std::vector<Vector2>& points = part.points;
+    if (points.size() == 2) {
+        const Vector2 s = Sub(points[1], points[0]);
+        const float denominator = Cross(d, s);
+        if (std::fabs(denominator) < kEpsilon) return std::nullopt; // równoległe
+        const Vector2 offset = Sub(points[0], from);
+        const float t = Cross(offset, s) / denominator;
+        const float u = Cross(offset, d) / denominator;
+        if (t < 0.0f || t > 1.0f || u < 0.0f || u > 1.0f) return std::nullopt;
+        Vector2 normal = unit({-s.y, s.x});
+        if (Dot(normal, d) > 0.0f) normal = Negate(normal); // ku początkowi promienia
+        return ConvexRayHit{t, normal};
+    }
+    if (points.size() < 3) return std::nullopt;
+
+    // Cyrus-Beck: promień wewnątrz wszystkich półpłaszczyzn krawędzi
+    float area = 0.0f;
+    for (std::size_t i = 0; i < points.size(); ++i)
+        area += Cross(points[i], points[(i + 1) % points.size()]);
+    const float orientation = area >= 0.0f ? 1.0f : -1.0f;
+    float enter = 0.0f;
+    float exit = 1.0f;
+    bool entered = false;
+    Vector2 enterNormal{};
+    for (std::size_t i = 0; i < points.size(); ++i) {
+        const Vector2 a = points[i];
+        const Vector2 edge = Sub(points[(i + 1) % points.size()], a);
+        const Vector2 outward = Scale(Vector2{edge.y, -edge.x}, orientation);
+        const float distance = Dot(outward, Sub(a, from)); // > 0: początek po wewnętrznej stronie
+        const float speed = Dot(outward, d);
+        if (std::fabs(speed) < kEpsilon) {
+            if (distance < 0.0f) return std::nullopt; // równolegle, na zewnątrz krawędzi
+            continue;
+        }
+        const float t = distance / speed;
+        if (speed < 0.0f) {
+            if (t > enter) {
+                enter = t;
+                enterNormal = outward;
+                entered = true;
+            }
+        } else {
+            exit = std::min(exit, t);
+        }
+        if (enter > exit) return std::nullopt;
+    }
+    if (!entered) return std::nullopt; // początek wewnątrz wielokąta
+    return ConvexRayHit{enter, unit(enterNormal)};
+}
+
 bool IsConvexPolygon(std::span<const Point2D> vertices) {
     const std::size_t count = vertices.size();
     if (count < 3) return false;
