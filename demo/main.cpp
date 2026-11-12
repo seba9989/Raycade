@@ -53,11 +53,11 @@
  *
  * @section obsluga Sceny demonstracyjne
  * Klawisze 1-9 wybierają `menu`, `prymitywy`, `figury`, `transformacje`, `kontekst`,
- * `trafienia`, `kamera`, `efekty` i `formularz`, a 0 - `sprite` (lista jest też na scenie
- * `menu`). F11 przełącza pełny ekran. Okno ma zmienny rozmiar: gra rysuje zawsze w 1000x700,
- * a obraz jest skalowany do okna z zachowaniem proporcji (Engine::ScaleMode(Scaling::Fit)), więc
- * układ scen i kliknięcia działają przy każdym rozmiarze okna i na pełnym ekranie.
- * Na scenie `prymitywy` strzałki przesuwają prostokąt, L zmienia warstwę,
+ * `trafienia`, `kamera`, `efekty` i `formularz`, 0 - `sprite`, a minus - `fizyka` (lista jest
+ * też na scenie `menu`). F11 przełącza pełny ekran. Okno ma zmienny rozmiar: gra rysuje zawsze w
+ * 1000x700, a obraz jest skalowany do okna z zachowaniem proporcji
+ * (Engine::ScaleMode(Scaling::Fit)), więc układ scen i kliknięcia działają przy każdym rozmiarze
+ * okna i na pełnym ekranie. Na scenie `prymitywy` strzałki przesuwają prostokąt, L zmienia warstwę,
  * PPM przesuwa koniec odcinka, a spacja przełącza jego algorytm.
  * Na scenie `figury` LPM uruchamia flood fill na płótnie, Shift+LPM
  * uruchamia boundary fill, a R przywraca kontury.
@@ -96,6 +96,11 @@
  * dziennik zdarzeń klatek, 16 sprite'ów z jednym arkuszem oraz przypadki brzegowe: prywatna
  * kopia opisu, Sheet() z nazwą obrazu i z nazwą JSON (te same obiekty z Assets), brakujący
  * plik i obrót wokół Origin().
+ * Scena `fizyka` pokazuje kolizje: postać (CharacterBody) chodzi A/D albo strzałkami i skacze
+ * spacją, a MoveAndSlide() zatrzymuje ją na colliderach różnych kształtów (Collider\<S\>:
+ * prostokąty, trójkątna pochylnia, koło, obrócona platforma). Ruchoma platforma to StaticBody
+ * przesuwany w kodzie, szary blok zmienia kolor przy zderzeniu, monety i lawa to obszary
+ * (Area). F1 pokazuje obrysy colliderów, R wczytuje scenę od nowa.
  *
  * @section dokumentacja Dokumentacja
  * Dokumentację HTML generuje polecenie `docs` (devenv) albo, w katalogu głównym projektu:
@@ -140,13 +145,14 @@ int main() {
             if (engine.KeyPressed(KEY_EIGHT)) engine.SwitchScene("efekty");
             if (engine.KeyPressed(KEY_NINE)) engine.SwitchScene("formularz");
             if (engine.KeyPressed(KEY_ZERO)) engine.SwitchScene("sprite");
+            if (engine.KeyPressed(KEY_MINUS)) engine.SwitchScene("fizyka");
             // szarość całego obrazu (G) jest częścią sceny efektów - poza nią ją wyłączamy
             if (engine.ActiveScene() != "efekty" && engine.PostShader()) engine.PostShader(nullptr);
             if (engine.KeyPressed(KEY_F11)) engine.Fullscreen(!engine.IsFullscreen());
         })
         .OnDraw([&](PrimitiveRenderer&) {
             const std::string hud = "Scena: " + engine.ActiveScene() +
-                                    "   [0-9] zmiana sceny (lista w menu)   [F11] pelny ekran";
+                                    "   [0-9, -] zmiana sceny (lista w menu)   [F11] pelny ekran";
             const int bottom = static_cast<int>(engine.ViewSize().y);
             ::DrawText(hud.c_str(), 20, bottom - 32, 18, DARKGRAY);
         })

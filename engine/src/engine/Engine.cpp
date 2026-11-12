@@ -150,7 +150,7 @@ int Engine::Run() {
             int steps = 0;
             while (fixedAccumulator_ >= fixedStep_ && steps < maxFixedSteps_) {
                 if (fixedUpdate_) fixedUpdate_(fixedStep_);
-                if (scene) scene->FixedUpdate(fixedStep_);
+                if (scene) scene->FixedUpdate(fixedStep_, input_);
                 fixedAccumulator_ -= fixedStep_;
                 ++steps;
             }

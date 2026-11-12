@@ -18,4 +18,9 @@ void Points::Draw(PrimitiveRenderer& renderer) const {
     Brush(renderer).Points(positions_);
 }
 
+void Points::ConvexParts(std::vector<ConvexPart>& parts) const {
+    for (const Point2D position : positions_)
+        parts.push_back(ConvexPart::Point(position));
+}
+
 } // namespace shapes

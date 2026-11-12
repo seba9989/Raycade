@@ -10,22 +10,23 @@ warstwy wcześniejsze na liście:
 
 | Katalog      | Zawartość                                                       | Może dołączać               |
 |--------------|-----------------------------------------------------------------|-----------------------------|
-| `math/`      | AffineMatrix2D, Point2D, LineSegment, algorytmy geometrii       | -                           |
+| `math/`      | AffineMatrix2D, Point2D, LineSegment, geometria, ConvexPart (GJK/EPA) | -                     |
 | `render/`    | Bitmap, Assets, RenderTarget, ClipStack, ShaderProgram, Typeface, PrimitiveRenderer | math    |
 | `input/`     | Input, akcje i osie                                             | -                           |
 | `entity/`    | Entity, Group i klasy bazowe (Transformable, Drawable, Updatable...) | math, render, input    |
 | `shapes/`    | figury geometryczne z przestrzeni nazw `shapes` (baza `shapes::Shape`) | entity i jej zależności |
 | `visual/`    | obrazy, tekst i grupy rysowane do tekstury z przestrzeni nazw `visual` | entity i jej zależności |
 | `ui/`        | elementy interfejsu z przestrzeni nazw `ui`                     | entity i jej zależności     |
+| `physics/`   | `Collider<S>`, StaticBody, CharacterBody, Area, PhysicsWorld    | shapes i ich zależności     |
 | `scene/`     | Scene, SceneCamera, PointerSystem (trafienia myszą)             | entity i jej zależności     |
 | `engine/EngineTypes.hpp` | typy ustawień: LogLevel, Scaling                    | -                           |
 | `Engine.hpp` | pętla, okno, sceny, zasoby                                      | wszystkie powyższe          |
 | `engine/SceneMacro.hpp` | makro SCENE (wymaga pełnej klasy Engine)             | `Engine.hpp`                |
 
 Nagłówek zbiorczy katalogu leży obok niego (`shapes.hpp` obok `shapes/`, `visual.hpp` obok
-`visual/`, `ui.hpp` obok `ui/`). `<raycade>` (w `engine/umbrella/`) dołącza `Engine.hpp`,
-`engine/SceneMacro.hpp`, `entity/Group.hpp`, `shapes.hpp`, `visual.hpp` i `ui.hpp`. Źródła
-w `engine/src/` odwzorowują ten sam układ. Implementacja
+`visual/`, `physics.hpp` obok `physics/`, `ui.hpp` obok `ui/`). `<raycade>` (w `engine/umbrella/`)
+dołącza `Engine.hpp`, `engine/SceneMacro.hpp`, `entity/Group.hpp`, `shapes.hpp`, `visual.hpp`,
+`physics.hpp` i `ui.hpp`. Źródła w `engine/src/` odwzorowują ten sam układ. Implementacja
 `Engine` jest w `src/engine/`, podzielona tematycznie na pliki `Engine*.cpp` - który plik
 zawiera którą grupę metod, opisuje tabela w dokumentacji `Engine.hpp`. Nagłówki prywatne
 implementacji (np. `src/render/primitive_renderer/Pixel.hpp`) zostają w `src/`.

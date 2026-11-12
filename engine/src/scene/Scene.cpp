@@ -4,7 +4,17 @@
  */
 #include <raycade/scene/Scene.hpp>
 
+void Scene::FixedUpdate(float step, const Input& input) {
+    physics_.BeginStep(step);
+    if (fixedUpdate_) fixedUpdate_(step);
+    // po indeksie: krok obiektu może dodać obiekt do sceny
+    for (std::size_t i = 0; i < entities_.size(); ++i)
+        entities_[i]->FixedUpdate(step, input);
+    physics_.EndStep();
+}
+
 void Scene::Update(float dt, const Input& input) {
+    physics_.BeginFrame(dt); // MoveAndSlide() wywołane w Tick() użyje czasu klatki
     if (update_) update_(dt);
     // pętla po indeksie: zdarzenie obiektu może wywołać Spawn() i powiększyć wektor
     // Tab działa także przy przejętej klawiaturze - inaczej z pola tekstowego nie dałoby
@@ -27,6 +37,7 @@ void Scene::Update(float dt, const Input& input) {
         entities_[i]->Update(dt, input, frame);
     // po pętli po obiektach: Destroy() w zdarzeniu nie może usunąć obiektu w trakcie iteracji
     RemoveDestroyed(entities_);
+    physics_.Invalidate(); // usunięte obiekty nie mogą zostać na liście ciał
     // po ruchu obiektów, żeby kamera w tej samej klatce pokazała ich nowe położenie
     camera_.Update(dt);
 }
@@ -50,6 +61,7 @@ void Scene::Draw(PrimitiveRenderer& renderer) const {
     ::BeginMode2D(camera_.Raw());
     if (drawWorld_) drawWorld_(renderer.Reset().TargetScreen());
     DrawRoots(renderer, false);
+    if (physics_.IsDebug()) physics_.Draw(renderer);
     ::EndMode2D();
     DrawRoots(renderer, true);
     if (draw_) draw_(renderer.Reset().TargetScreen());

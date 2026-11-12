@@ -7,6 +7,7 @@ add_library(raycade STATIC
     src/engine/EngineScenes.cpp
     src/engine/EngineSystem.cpp
     src/engine/EngineWindow.cpp
+    src/math/Convex.cpp
     src/math/Geometry.cpp
     src/render/Assets.cpp
     src/render/Bitmap.cpp
@@ -39,6 +40,11 @@ add_library(raycade STATIC
     src/visual/Sprite.cpp
     src/visual/Text.cpp
     src/ui/TextField.cpp
+    src/physics/Area.cpp
+    src/physics/CharacterBody.cpp
+    src/physics/CollisionObject.cpp
+    src/physics/CollisionShape.cpp
+    src/physics/PhysicsWorld.cpp
     src/scene/PointerSystem.cpp
     src/scene/Scene.cpp
     src/scene/SceneCamera.cpp

@@ -27,6 +27,14 @@ void Entity::Update(float dt, const Input& input, const PointerFrame& pointer) {
         children_[i]->Update(dt, input, pointer);
 }
 
+void Entity::FixedUpdate(float step, const Input& input) {
+    if (destroyed_) return;
+    HandleFixed(step, input);
+    // po indeksie: callback może dodać dziecko
+    for (std::size_t i = 0; i < children_.size(); ++i)
+        children_[i]->FixedUpdate(step, input);
+}
+
 void Entity::Render(PrimitiveRenderer& renderer) const {
     const auto matrix = transform_.RlglMatrix();
     rlPushMatrix();

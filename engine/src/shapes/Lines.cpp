@@ -21,4 +21,9 @@ void Lines::Draw(PrimitiveRenderer& renderer) const {
     Brush(renderer).Lines(vertices_);
 }
 
+void Lines::ConvexParts(std::vector<ConvexPart>& parts) const {
+    for (std::size_t i = 0; i + 1 < vertices_.size(); i += 2)
+        parts.push_back(ConvexPart::Segment(vertices_[i], vertices_[i + 1]));
+}
+
 } // namespace shapes

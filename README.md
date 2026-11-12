@@ -21,7 +21,7 @@ int main() { return Engine::Get().StartScene("menu").Run(); }
 Projekt na zajęcia z Podstaw Grafiki Komputerowej. Program `demo/` pokazuje funkcje
 z laboratoriów: własne algorytmy odcinka, okręgu i elipsy, wypełnianie scanline, flood fill
 i boundary fill, przekształcenia, hierarchię obiektów, kamerę, obsługę wejścia, animację
-bitmap, przycinanie, shadery i krok stały.
+bitmap, przycinanie, shadery, krok stały i kolizje (GJK/EPA).
 
 ## Wymagania
 
@@ -41,7 +41,7 @@ cmake --build build
 
 Z [devenv](https://devenv.sh/): `build`, `run`, `fmt`, `docs`, `clean`.
 
-Klawisze 0-9 przełączają sceny demo, F11 - pełny ekran. Opis każdej sceny jest na stronie
+Klawisze 0-9 i minus przełączają sceny demo, F11 - pełny ekran. Opis każdej sceny jest na stronie
 głównej dokumentacji.
 
 ## Użycie we własnym projekcie
@@ -66,6 +66,7 @@ engine/
     entity/                 Entity, Group i klasy bazowe
     shapes/  shapes.hpp     figury geometryczne (namespace shapes)
     visual/  visual.hpp     obrazy, tekst, płótno, RenderGroup (namespace visual)
+    physics/ physics.hpp    kolizje: Collider<S>, StaticBody, CharacterBody, Area
     ui/      ui.hpp         interfejs (namespace ui)
     scene/                  Scene, SceneCamera, PointerSystem (trafienia myszą)
     engine/                 typy ustawień silnika, makro SCENE

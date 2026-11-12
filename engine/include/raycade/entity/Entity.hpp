@@ -23,6 +23,7 @@
 
 class Scene;
 class SceneCamera;
+class PhysicsWorld;
 class Entity;
 
 /**
@@ -35,6 +36,7 @@ struct SceneLinks {
     const Contextable* context = nullptr; /**< Scena jako poziom kontekstu. */
     const SceneCamera* camera = nullptr;  /**< Kamera sceny. */
     FocusState* focus = nullptr;          /**< Fokus klawiatury sceny. */
+    PhysicsWorld* physics = nullptr;      /**< Świat fizyki sceny (kolizje). */
 };
 
 /**
@@ -323,6 +325,12 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
     Vector2 DragDelta(Vector2 screenFrom, Vector2 screenTo) const override;
 
     /**
+     * @brief Świat fizyki sceny, do której należy obiekt.
+     * @return Wskaźnik albo nullptr, gdy obiekt nie jest jeszcze podpięty do sceny.
+     */
+    PhysicsWorld* Physics() const { return links_ ? links_->physics : nullptr; }
+
+    /**
      * @brief Wywoływana raz, gdy obiekt zostaje podpięty do sceny.
      * @details W tym momencie znani są już rodzic, przodkowie i scena, więc to miejsce na
      * odczyt kontekstu przy starcie (odpowiednik getContext przy inicjalizacji komponentu
@@ -390,6 +398,7 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
   private:
     friend class Scene;         // aktualizuje, podpina (Attach()) i usuwa zniszczone obiekty
     friend class PointerSystem; // czyta drzewo (dzieci, rodzic, ScreenSpace) przy trafieniach
+    friend class PhysicsWorld;  // zbiera ciała i collidery z drzewa
 
     /**
      * @brief Obsługuje własne zdarzenia, a następnie aktualizuje dzieci.
@@ -400,6 +409,13 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
      * @param pointer Trafienia myszą z tej klatki (PointerSystem::Pick()).
      */
     void Update(float dt, const Input& input, const PointerFrame& pointer);
+
+    /**
+     * @brief Wykonuje krok stały obiektu (FixedTick(), OnFixedUpdate()), a następnie dzieci.
+     * @param step Stały krok w sekundach.
+     * @param input Stan klawiatury i myszy.
+     */
+    void FixedUpdate(float step, const Input& input);
 
     /** @brief Sprawdza, czy obiekt to podany obiekt albo jego przodek. */
     bool IsSelfOrAncestorOf(const Entity* entity) const;

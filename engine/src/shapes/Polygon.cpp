@@ -16,4 +16,10 @@ void Polygon::Draw(PrimitiveRenderer& renderer) const {
     Brush(renderer).Polygon(vertices_);
 }
 
+void Polygon::ConvexParts(std::vector<ConvexPart>& parts) const {
+    if (!simple_) return;
+    for (const std::vector<Point2D>& piece : ConvexPieces(vertices_))
+        parts.push_back(ConvexPart::Polygon({piece.begin(), piece.end()}));
+}
+
 } // namespace shapes

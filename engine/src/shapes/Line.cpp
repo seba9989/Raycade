@@ -16,4 +16,8 @@ void Line::Draw(PrimitiveRenderer& renderer) const {
     Brush(renderer).Line(from_, to_);
 }
 
+void Line::ConvexParts(std::vector<ConvexPart>& parts) const {
+    parts.push_back(ConvexPart::Segment(from_, to_));
+}
+
 } // namespace shapes

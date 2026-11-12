@@ -16,4 +16,8 @@ void Point::Draw(PrimitiveRenderer& renderer) const {
     Brush(renderer).Point({0.0f, 0.0f});
 }
 
+void Point::ConvexParts(std::vector<ConvexPart>& parts) const {
+    parts.push_back(ConvexPart::Point({0.0f, 0.0f}));
+}
+
 } // namespace shapes

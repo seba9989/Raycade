@@ -15,4 +15,8 @@ void Circle::Draw(PrimitiveRenderer& renderer) const {
     Brush(renderer).Circle({0.0f, 0.0f}, radius_);
 }
 
+void Circle::ConvexParts(std::vector<ConvexPart>& parts) const {
+    parts.push_back(ConvexPart::Ellipse({0.0f, 0.0f}, {radius_, radius_}));
+}
+
 } // namespace shapes

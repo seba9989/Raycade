@@ -21,4 +21,13 @@ void Polyline::Draw(PrimitiveRenderer& renderer) const {
     Brush(renderer).Polyline(vertices_, closed_);
 }
 
+void Polyline::ConvexParts(std::vector<ConvexPart>& parts) const {
+    const std::size_t count = vertices_.size();
+    if (count == 1) parts.push_back(ConvexPart::Point(vertices_[0]));
+    for (std::size_t i = 0; i + 1 < count; ++i)
+        parts.push_back(ConvexPart::Segment(vertices_[i], vertices_[i + 1]));
+    if (closed_ && count >= 3)
+        parts.push_back(ConvexPart::Segment(vertices_.back(), vertices_.front()));
+}
+
 } // namespace shapes

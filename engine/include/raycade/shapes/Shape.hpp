@@ -4,7 +4,10 @@
  */
 #pragma once
 
+#include <vector>
+
 #include <raycade/entity/Entity.hpp>
+#include <raycade/math/Convex.hpp>
 #include <raycade/render/PrimitiveRenderer.hpp>
 
 namespace shapes {
@@ -58,6 +61,21 @@ class Shape : public Entity {
 
     /** @brief Podaje wybrany algorytm rasteryzacji. */
     Rasterizer Raster() const { return raster_; }
+
+    /**
+     * @brief Dopisuje figurę jako części wypukłe w układzie lokalnym (do kolizji).
+     * @details Z tej geometrii korzysta Collider - kolizja ma zawsze ten sam kształt co figura.
+     * | Figura                | Części                                              |
+     * |-----------------------|-----------------------------------------------------|
+     * | Point, Points         | punkty                                              |
+     * | Line, Lines, Polyline | odcinki (także zamknięta łamana - tylko obrys)      |
+     * | Rect, Triangle        | jeden wielokąt wypukły                              |
+     * | Polygon               | jeden wielokąt albo trójkąty (wielokąt wklęsły)     |
+     * | Circle, Ellipse       | elipsa                                              |
+     * Wielokąt wiązany (IsSimple() == false) nie ma części, tak jak nie jest rysowany.
+     * @param parts Lista, do której figura dopisuje swoje części.
+     */
+    virtual void ConvexParts([[maybe_unused]] std::vector<ConvexPart>& parts) const {}
 
   protected:
     /**

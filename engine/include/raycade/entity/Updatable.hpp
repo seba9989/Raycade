@@ -75,6 +75,20 @@ class Updatable {
     }
 
     /**
+     * @brief Ustawia funkcję wywoływaną w każdym kroku stałym (fizyka, ruch postaci).
+     * @details Działa jak Scene::OnFixedUpdate(), ale dla jednego obiektu: zero, raz albo kilka
+     * razy na klatkę, ze stałym krokiem Engine::FixedStep(). Tu wywołuje się
+     * CharacterBody::MoveAndSlide(). Jednorazowe naciśnięcia klawiszy (KeyPressed()) należą do
+     * OnUpdate(), bo w klatce bez kroku stałego zostałyby zgubione.
+     * @param callback Funkcja otrzymująca obiekt i krok w sekundach.
+     * @return Ten sam obiekt.
+     */
+    template <typename Self> Self& OnFixedUpdate(this Self& self, Callback<Self, float> callback) {
+        self.fixedUpdate_ = [&self, fn = std::move(callback)](float step) { fn(self, step); };
+        return self;
+    }
+
+    /**
      * @brief Ustawia reakcję na kliknięcie lewym przyciskiem wewnątrz obiektu.
      * @param callback Funkcja otrzymująca obiekt.
      * @return Ten sam obiekt.
@@ -199,10 +213,20 @@ class Updatable {
      */
     virtual void Tick([[maybe_unused]] float dt, [[maybe_unused]] const Input& input) {}
 
-    std::function<void(float)> update_; /**< Callback wykonywany co klatkę. */
-    std::function<void()> click_;       /**< Reakcja na kliknięcie. */
-    std::function<void()> mouseEnter_;  /**< Reakcja na wejście kursora. */
-    std::function<void()> mouseLeave_;  /**< Reakcja na wyjście kursora. */
+    /**
+     * @brief Własna logika klasy pochodnej wywoływana w każdym kroku stałym.
+     * @details Odpowiednik _physics_process z Godota: miejsce na ruch postaci
+     * (CharacterBody::MoveAndSlide()). Wywoływana przed callbackiem OnFixedUpdate().
+     * @param step Stały krok w sekundach (Engine::FixedStep()).
+     * @param input Stan klawiatury i myszy.
+     */
+    virtual void FixedTick([[maybe_unused]] float step, [[maybe_unused]] const Input& input) {}
+
+    std::function<void(float)> update_;      /**< Callback wykonywany co klatkę. */
+    std::function<void(float)> fixedUpdate_; /**< Callback wykonywany w kroku stałym. */
+    std::function<void()> click_;            /**< Reakcja na kliknięcie. */
+    std::function<void()> mouseEnter_;       /**< Reakcja na wejście kursora. */
+    std::function<void()> mouseLeave_;       /**< Reakcja na wyjście kursora. */
     /** Reakcje na naciśnięcie klawiszy (kod klawisza, funkcja). */
     std::vector<std::pair<int, std::function<void()>>> keys_;
     /** Reakcje na puszczenie klawiszy (kod klawisza, funkcja). */
@@ -225,7 +249,7 @@ class Updatable {
     }
 
   private:
-    friend class Entity;        // wywołuje HandleEvents() w Update()
+    friend class Entity;        // wywołuje HandleEvents() i HandleFixed()
     friend class PointerSystem; // pyta Handles*(), żeby wybrać odbiorcę zdarzenia myszy
 
     /**
@@ -258,6 +282,16 @@ class Updatable {
      * @param pointer Zdarzenia myszy przydzielone temu obiektowi w tej klatce.
      */
     void HandleEvents(float dt, const Input& input, const PointerEvents& pointer);
+
+    /**
+     * @brief Wywołuje FixedTick() i callback kroku stałego.
+     * @param step Stały krok w sekundach.
+     * @param input Stan wejścia.
+     */
+    void HandleFixed(float step, const Input& input) {
+        FixedTick(step, input);
+        if (fixedUpdate_) fixedUpdate_(step);
+    }
 
     /** @brief Prowadzi trwające przeciąganie: OnDrag() przy ruchu, OnDragEnd() po puszczeniu. */
     void HandleDrag(const Input& input);

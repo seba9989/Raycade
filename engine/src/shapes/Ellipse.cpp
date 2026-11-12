@@ -18,4 +18,8 @@ void Ellipse::Draw(PrimitiveRenderer& renderer) const {
     Brush(renderer).Ellipse({0.0f, 0.0f}, radius_);
 }
 
+void Ellipse::ConvexParts(std::vector<ConvexPart>& parts) const {
+    parts.push_back(ConvexPart::Ellipse({0.0f, 0.0f}, radius_));
+}
+
 } // namespace shapes

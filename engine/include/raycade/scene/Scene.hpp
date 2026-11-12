@@ -14,6 +14,7 @@
 #include <raycade/entity/Contextable.hpp>
 #include <raycade/entity/Entity.hpp>
 #include <raycade/input/Input.hpp>
+#include <raycade/physics/PhysicsWorld.hpp>
 #include <raycade/render/PrimitiveRenderer.hpp>
 #include <raycade/scene/PointerSystem.hpp>
 #include <raycade/scene/SceneCamera.hpp>
@@ -144,14 +145,47 @@ class Scene : public Contextable {
 
     /** @} */
 
+    /** @name Fizyka */
+    /** @{ */
+
     /**
-     * @brief Wykonuje jeden krok stały sceny (OnFixedUpdate()).
+     * @brief Ustawia grawitację sceny w pikselach/s² (domyślnie {0, 980}).
+     * @details Czyta ją CollisionObject::Gravity(); postać dodaje ją sama do swojej prędkości.
+     * @param gravity Wektor grawitacji (oś y w dół).
+     * @return Ta sama scena.
+     */
+    Scene& Gravity(Vector2 gravity) {
+        physics_.Gravity(gravity);
+        return *this;
+    }
+
+    /** @brief Podaje grawitację sceny. */
+    Vector2 Gravity() const { return physics_.Gravity(); }
+
+    /**
+     * @brief Rysuje obrysy wszystkich colliderów (jak „Visible Collision Shapes” w Godocie).
+     * @details StaticBody - niebieskie, CharacterBody - zielone, Area - pomarańczowe,
+     * wyłączone collidery - szare.
+     * @param value Czy rysować.
+     * @return Ta sama scena.
+     */
+    Scene& DebugColliders(bool value = true) {
+        physics_.Debug(value);
+        return *this;
+    }
+
+    /** @brief Sprawdza, czy obrysy colliderów są rysowane. */
+    bool IsDebugColliders() const { return physics_.IsDebug(); }
+
+    /** @} */
+
+    /**
+     * @brief Wykonuje jeden krok stały sceny: OnFixedUpdate(), krok obiektów i zdarzenia fizyki.
      * @details Wywoływana przez silnik w pętli kroku stałego.
      * @param step Stały krok w sekundach.
+     * @param input Stan wejścia.
      */
-    void FixedUpdate(float step) {
-        if (fixedUpdate_) fixedUpdate_(step);
-    }
+    void FixedUpdate(float step, const Input& input);
 
     /**
      * @brief Aktualizuje logikę sceny i jej obiekty.
@@ -200,7 +234,9 @@ class Scene : public Contextable {
     FocusState
         focus_; /**< Fokus klawiatury (niszczony po obiektach, które się z niego wypisują). */
     /** Powiązania ze sceną wspólne dla wszystkich jej obiektów (patrz SceneLinks). */
-    SceneLinks links_{this, this, &camera_, &focus_};
+    /** Świat fizyki; zna listę obiektów sceny (entities_), ale używa jej dopiero w klatce. */
+    PhysicsWorld physics_{entities_};
+    SceneLinks links_{this, this, &camera_, &focus_, &physics_};
     PointerSystem pointer_;     /**< Wybór obiektów pod kursorem i odbiorców zdarzeń myszy. */
     bool tabNavigation_ = true; /**< Czy Tab przenosi fokus. */
     /** Obiekty najwyższego poziomu. Pole jest niszczone przed klasą bazową Contextable,
