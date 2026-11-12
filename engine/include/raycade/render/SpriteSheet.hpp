@@ -224,9 +224,9 @@ class SpriteSheet {
     /**
      * @brief Szuka klatki po nazwie z pliku.
      * @param name Nazwa, np. "coin.png".
-     * @return Numer klatki albo -1.
+     * @return Numer klatki albo std::nullopt (jak FindAnimation(), które zwraca nullptr).
      */
-    int FindFrame(const std::string& name) const;
+    std::optional<int> FindFrame(const std::string& name) const;
 
     /** @brief Podaje liczbę klatek. */
     int FrameCount() const { return static_cast<int>(frames_.size()); }

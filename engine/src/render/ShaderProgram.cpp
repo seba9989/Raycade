@@ -20,7 +20,7 @@ const char* OrNull(const std::string& text) {
 
 /** @brief Zwraca shader, gdy się skompilował; nieudany zwalnia od razu (destruktor). */
 std::optional<ShaderProgram> Checked(ShaderProgram shader) {
-    if (!shader.IsValid()) return std::nullopt;
+    if (!shader.IsLoaded()) return std::nullopt;
     return shader;
 }
 
@@ -61,7 +61,7 @@ ShaderProgram& ShaderProgram::operator=(ShaderProgram&& other) noexcept {
  * @details Przy błędzie kompilacji raylib zwraca domyślny shader (o id domyślnego programu).
  * Taki "shader" działa, ale nie jest tym, o który proszono - dlatego nie liczy się jako poprawny.
  */
-bool ShaderProgram::IsValid() const {
+bool ShaderProgram::IsLoaded() const {
     return shader_.id != 0 && shader_.id != ::rlGetShaderIdDefault() && ::IsShaderValid(shader_);
 }
 

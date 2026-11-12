@@ -93,12 +93,14 @@ class PhysicsBody : public CollisionObject {
 
     /**
      * @brief Ustawia reakcję na koniec zderzenia z innym ciałem.
-     * @param callback Funkcja otrzymująca ciało i drugie ciało.
+     * @details Callback dostaje ten sam typ co OnCollisionEnter() i OnCollisionStay(): opis
+     * ostatniego kroku, w którym ciała się stykały (drugie ciało, oba collidery, normalna).
+     * @param callback Funkcja otrzymująca ciało i opis zakończonego zderzenia.
      * @return Ten sam obiekt.
      */
     template <typename Self>
-    Self& OnCollisionExit(this Self& self, Callback<Self, PhysicsBody&> callback) {
-        self.exit_ = [&self, fn = std::move(callback)](PhysicsBody& other) { fn(self, other); };
+    Self& OnCollisionExit(this Self& self, Callback<Self, const Collision&> callback) {
+        self.exit_ = [&self, fn = std::move(callback)](const Collision& hit) { fn(self, hit); };
         return self;
     }
 
@@ -107,7 +109,7 @@ class PhysicsBody : public CollisionObject {
 
     std::function<void(const Collision&)> enter_; /**< Początek zderzenia. */
     std::function<void(const Collision&)> stay_;  /**< Trwające zderzenie. */
-    std::function<void(PhysicsBody&)> exit_;      /**< Koniec zderzenia. */
+    std::function<void(const Collision&)> exit_;  /**< Koniec zderzenia. */
     float friction_ = 0.6f;                       /**< Tarcie powierzchni. */
     float bounce_ = 0.0f;                         /**< Sprężystość odbicia. */
 };

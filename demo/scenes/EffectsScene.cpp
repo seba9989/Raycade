@@ -114,7 +114,7 @@ void SpawnBall(Scene& scene, Vector2 position) {
     Engine& engine = Engine::Get();
     const Color colors[] = {RED, BLUE, DARKGREEN, PURPLE, ORANGE, MAROON};
 
-    scene.Spawn<Ball>().Position(position).Paint(colors[engine.RandomValue(0, 5)]).velocity = {
+    scene.Spawn<Ball>().Position(position).Paint(colors[engine.RandomInt(0, 5)]).velocity = {
         engine.RandomFloat(-250, 250), engine.RandomFloat(-300, -50)
     };
 }

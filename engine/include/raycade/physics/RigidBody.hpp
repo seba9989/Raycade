@@ -64,13 +64,13 @@ class RigidBody : public PhysicsBody {
      * @param velocity Prędkość.
      * @return Ten sam obiekt.
      */
-    template <typename Self> Self& LinearVelocity(this Self& self, Vector2 velocity) {
-        self.linearVelocity_ = velocity;
+    template <typename Self> Self& Velocity(this Self& self, Vector2 velocity) {
+        self.velocity_ = velocity;
         return self;
     }
 
     /** @brief Podaje prędkość środka masy. */
-    Vector2 LinearVelocity() const { return linearVelocity_; }
+    Vector2 Velocity() const { return velocity_; }
 
     /**
      * @brief Ustawia prędkość obrotu w radianach na sekundę (dodatnia - zgodnie z Rotate()).
@@ -205,7 +205,7 @@ class RigidBody : public PhysicsBody {
 
     float mass_ = 1.0f;            /**< Masa. */
     float gravityScale_ = 1.0f;    /**< Mnożnik grawitacji. */
-    Vector2 linearVelocity_{};     /**< Prędkość środka masy. */
+    Vector2 velocity_{};           /**< Prędkość środka masy. */
     float angularVelocity_ = 0;    /**< Prędkość kątowa. */
     float linearDamp_ = 0;         /**< Tłumienie ruchu. */
     float angularDamp_ = 0;        /**< Tłumienie obrotu. */

@@ -181,7 +181,7 @@ int Engine::Run() {
             target_.End();
             ::BeginDrawing();
             ::ClearBackground(letterbox_);
-            const bool post = postShader_ && postShader_->IsValid();
+            const bool post = postShader_ && postShader_->IsLoaded();
             if (post) ::BeginShaderMode(postShader_->Raw());
             target_.Draw(destination_);
             if (post) ::EndShaderMode();

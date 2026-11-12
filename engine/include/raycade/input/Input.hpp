@@ -204,28 +204,34 @@ class Input {
 
     /** @name Pady */
     /** @{ */
+    /*
+     * Numer pada jest zawsze ostatnim parametrem i domyślnie wynosi 0 - tak jak w bind::Pad()
+     * i bind::PadAxis() oraz indeks w TouchPosition().
+     */
 
     /**
      * @brief Sprawdza, czy pad o podanym numerze jest podłączony.
      * @param gamepad Numer pada (od 0).
      * @return Dostępność pada.
      */
-    bool GamepadAvailable(int gamepad) const { return gamepad_ && ::IsGamepadAvailable(gamepad); }
+    bool GamepadAvailable(int gamepad = 0) const {
+        return gamepad_ && ::IsGamepadAvailable(gamepad);
+    }
 
     /**
      * @brief Pobiera nazwę pada.
      * @param gamepad Numer pada.
      * @return Nazwa albo pusty napis, gdy pad jest niedostępny.
      */
-    std::string GamepadName(int gamepad) const;
+    std::string GamepadName(int gamepad = 0) const;
 
     /**
      * @brief Sprawdza, czy przycisk pada jest wciśnięty.
-     * @param gamepad Numer pada.
      * @param button Kod przycisku raylib (GAMEPAD_BUTTON_*).
+     * @param gamepad Numer pada (domyślnie 0).
      * @return Stan przycisku.
      */
-    bool GamepadDown(int gamepad, int button) const {
+    bool GamepadDown(int button, int gamepad = 0) const {
         return gamepad_ && ::IsGamepadButtonDown(gamepad, button);
     }
 
@@ -233,7 +239,7 @@ class Input {
      * @brief Sprawdza, czy przycisk pada nie jest wciśnięty.
      * @return true także przy wyłączonych padach.
      */
-    bool GamepadUp(int gamepad, int button) const {
+    bool GamepadUp(int button, int gamepad = 0) const {
         return !gamepad_ || ::IsGamepadButtonUp(gamepad, button);
     }
 
@@ -241,7 +247,7 @@ class Input {
      * @brief Sprawdza naciśnięcie przycisku pada w bieżącej klatce.
      * @return Stan naciśnięcia.
      */
-    bool GamepadPressed(int gamepad, int button) const {
+    bool GamepadPressed(int button, int gamepad = 0) const {
         return gamepad_ && ::IsGamepadButtonPressed(gamepad, button);
     }
 
@@ -249,7 +255,7 @@ class Input {
      * @brief Sprawdza puszczenie przycisku pada w bieżącej klatce.
      * @return Stan puszczenia.
      */
-    bool GamepadReleased(int gamepad, int button) const {
+    bool GamepadReleased(int button, int gamepad = 0) const {
         return gamepad_ && ::IsGamepadButtonReleased(gamepad, button);
     }
 
@@ -264,17 +270,17 @@ class Input {
      * @param gamepad Numer pada.
      * @return Liczba osi albo 0.
      */
-    int GamepadAxisCount(int gamepad) const {
+    int GamepadAxisCount(int gamepad = 0) const {
         return gamepad_ ? ::GetGamepadAxisCount(gamepad) : 0;
     }
 
     /**
      * @brief Pobiera wychylenie osi pada.
-     * @param gamepad Numer pada.
      * @param axis Kod osi raylib (GAMEPAD_AXIS_*).
+     * @param gamepad Numer pada (domyślnie 0).
      * @return Wartość od -1 do 1 (spusty: od -1 do 1, zwolniony = -1).
      */
-    float GamepadAxis(int gamepad, int axis) const {
+    float GamepadAxis(int axis, int gamepad = 0) const {
         return gamepad_ ? ::GetGamepadAxisMovement(gamepad, axis) : 0.0f;
     }
 

@@ -52,7 +52,7 @@ bool Engine::IsCursorOnScreen() const {
     return initialized_ && ::IsCursorOnScreen();
 }
 
-Engine& Engine::GamepadVibration(int gamepad, float left, float right, float seconds) {
+Engine& Engine::GamepadVibration(float left, float right, float seconds, int gamepad) {
     if (RequireWindow("GamepadVibration")) ::SetGamepadVibration(gamepad, left, right, seconds);
     return *this;
 }

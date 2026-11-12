@@ -45,7 +45,7 @@ Engine& Engine::RandomSeed(unsigned int seed) {
     return *this;
 }
 
-int Engine::RandomValue(int min, int max) const {
+int Engine::RandomInt(int min, int max) const {
     return ::GetRandomValue(min, max);
 }
 

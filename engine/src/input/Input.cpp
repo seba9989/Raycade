@@ -70,7 +70,7 @@ float Input::Axis(const std::string& axis) const {
     for (const InputBinding& b : definition->positive)
         if (BindingDown(b)) value += 1.0f;
     for (const InputBinding& b : definition->analog) {
-        const float v = GamepadAxis(b.gamepad, b.code) * b.direction;
+        const float v = GamepadAxis(b.code, b.gamepad) * b.direction;
         if (std::fabs(v) > definition->deadzone) value += v;
     }
     return std::clamp(value, -1.0f, 1.0f);
@@ -90,9 +90,9 @@ bool Input::BindingDown(const InputBinding& b) const {
     case InputBinding::Kind::Mouse:
         return MouseDown(b.code);
     case InputBinding::Kind::PadButton:
-        return GamepadDown(b.gamepad, b.code);
+        return GamepadDown(b.code, b.gamepad);
     case InputBinding::Kind::PadAxis:
-        return GamepadAxis(b.gamepad, b.code) * b.direction > b.threshold;
+        return GamepadAxis(b.code, b.gamepad) * b.direction > b.threshold;
     case InputBinding::Kind::TouchGesture:
         return GestureDetected(b.code);
     }
@@ -106,7 +106,7 @@ bool Input::BindingPressed(const InputBinding& b) const {
     case InputBinding::Kind::Mouse:
         return MousePressed(b.code);
     case InputBinding::Kind::PadButton:
-        return GamepadPressed(b.gamepad, b.code);
+        return GamepadPressed(b.code, b.gamepad);
     case InputBinding::Kind::PadAxis:
     case InputBinding::Kind::TouchGesture:
         return false;
@@ -121,7 +121,7 @@ bool Input::BindingReleased(const InputBinding& b) const {
     case InputBinding::Kind::Mouse:
         return MouseReleased(b.code);
     case InputBinding::Kind::PadButton:
-        return GamepadReleased(b.gamepad, b.code);
+        return GamepadReleased(b.code, b.gamepad);
     case InputBinding::Kind::PadAxis:
     case InputBinding::Kind::TouchGesture:
         return false;

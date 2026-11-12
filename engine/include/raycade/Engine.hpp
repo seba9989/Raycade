@@ -836,13 +836,13 @@ class Engine : public Contextable {
 
     /**
      * @brief Włącza wibrację pada.
-     * @param gamepad Numer pada.
      * @param left Siła lewego silnika (0-1).
      * @param right Siła prawego silnika (0-1).
      * @param seconds Czas trwania w sekundach.
+     * @param gamepad Numer pada (domyślnie 0, jak w Input).
      * @return Ten sam silnik.
      */
-    Engine& GamepadVibration(int gamepad, float left, float right, float seconds);
+    Engine& GamepadVibration(float left, float right, float seconds, int gamepad = 0);
 
     /**
      * @brief Wczytuje mapowania padów w formacie SDL_GameControllerDB.
@@ -1060,11 +1060,11 @@ class Engine : public Contextable {
      * @param max Górna granica.
      * @return Wylosowana liczba.
      */
-    int RandomValue(int min, int max) const;
+    int RandomInt(int min, int max) const;
 
     /**
      * @brief Losuje liczbę zmiennoprzecinkową z przedziału [min, max].
-     * @details Korzysta z tego samego generatora co RandomValue(), więc RandomSeed() działa
+     * @details Korzysta z tego samego generatora co RandomInt(), więc RandomSeed() działa
      * dla obu. Rozdzielczość: milionowa część przedziału.
      * @param min Dolna granica.
      * @param max Górna granica.
@@ -1075,7 +1075,7 @@ class Engine : public Contextable {
     /**
      * @brief Losuje ciąg różnych liczb całkowitych z przedziału [min, max] (bez powtórzeń).
      * @details Przydaje się do tasowania: kolejność kart, pozycje przeszkód bez nakładania.
-     * Korzysta z generatora RandomValue(), więc RandomSeed() działa i tutaj.
+     * Korzysta z generatora RandomInt(), więc RandomSeed() działa i tutaj.
      * @param count Liczba elementów (najwyżej max - min + 1).
      * @param min Dolna granica.
      * @param max Górna granica.

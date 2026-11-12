@@ -5,6 +5,7 @@
 #pragma once
 
 #include <functional>
+#include <map>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -120,26 +121,28 @@ class Updatable {
 
     /**
      * @brief Ustawia reakcję na naciśnięcie wybranego klawisza.
-     * @details Można podpiąć kilka różnych klawiszy.
+     * @details Można podpiąć kilka różnych klawiszy. Jak każde On*(), ponowne wywołanie dla
+     * tego samego klawisza zastępuje poprzednią reakcję.
      * @param key Kod klawisza raylib.
      * @param callback Funkcja otrzymująca obiekt.
      * @return Ten sam obiekt.
      */
     template <typename Self> Self& OnKeyPressed(this Self& self, int key, Callback<Self> callback) {
-        self.keys_.emplace_back(key, Bind(self, std::move(callback)));
+        self.keys_[key] = Bind(self, std::move(callback));
         return self;
     }
 
     /**
      * @brief Ustawia reakcję na puszczenie wybranego klawisza.
-     * @details Można podpiąć kilka różnych klawiszy.
+     * @details Można podpiąć kilka różnych klawiszy. Jak każde On*(), ponowne wywołanie dla
+     * tego samego klawisza zastępuje poprzednią reakcję.
      * @param key Kod klawisza raylib.
      * @param callback Funkcja otrzymująca obiekt.
      * @return Ten sam obiekt.
      */
     template <typename Self>
     Self& OnKeyReleased(this Self& self, int key, Callback<Self> callback) {
-        self.keysReleased_.emplace_back(key, Bind(self, std::move(callback)));
+        self.keysReleased_[key] = Bind(self, std::move(callback));
         return self;
     }
 
@@ -228,9 +231,9 @@ class Updatable {
     std::function<void()> mouseEnter_;       /**< Reakcja na wejście kursora. */
     std::function<void()> mouseLeave_;       /**< Reakcja na wyjście kursora. */
     /** Reakcje na naciśnięcie klawiszy (kod klawisza, funkcja). */
-    std::vector<std::pair<int, std::function<void()>>> keys_;
+    std::map<int, std::function<void()>> keys_;
     /** Reakcje na puszczenie klawiszy (kod klawisza, funkcja). */
-    std::vector<std::pair<int, std::function<void()>>> keysReleased_;
+    std::map<int, std::function<void()>> keysReleased_;
     std::function<void()> mouseReleased_; /**< Reakcja na puszczenie przycisku nad obiektem. */
     std::function<void(float)> scroll_;   /**< Reakcja na kółko myszy nad obiektem. */
     std::function<void()> dragStart_;     /**< Początek przeciągania. */

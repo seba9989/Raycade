@@ -150,7 +150,7 @@ class Sprite : public Entity {
     Vector2 FrameSize() const;
 
     /** @brief Podaje liczbę klatek w arkuszu. */
-    int SheetFrames() const { return sheet_ ? sheet_->FrameCount() : 0; }
+    int SheetFrameCount() const { return sheet_ ? sheet_->FrameCount() : 0; }
 
     /**
      * @brief Definiuje nazwaną animację z kolejnych klatek (albo zmienia istniejącą).

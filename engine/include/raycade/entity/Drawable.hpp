@@ -73,7 +73,7 @@ class Drawable {
      * @brief Rysuje obiekt przez shader GPU.
      * @details Jak Blend() - dotyczy tylko własnego rysunku obiektu, bez dzieci. Żeby nałożyć
      * efekt na całą grupę, shader ustawia się na visual::RenderGroup (działa na teksturze z
-     * rysunkiem dzieci). Shader niepoprawnie wczytany (ShaderProgram::IsValid() == false) jest
+     * rysunkiem dzieci). Shader niepoprawnie wczytany (ShaderProgram::IsLoaded() == false) jest
      * pomijany.
      * @code{.cpp}
      * auto glow = Shared(ShaderProgram::Load("", "assets/glow.fs"));

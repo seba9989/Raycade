@@ -174,7 +174,7 @@ SCENE("fizyka") {
     auto& tile = touch.Spawn<collider::Rect>().Size({90, 20}).Paint(GRAY).Filled().Visible();
     touch.OnCollisionEnter(
              [&tile](StaticBody&, const Collision&) { tile.Paint(ORANGE); }
-    ).OnCollisionExit([&tile](StaticBody&, PhysicsBody&) { tile.Paint(GRAY); });
+    ).OnCollisionExit([&tile](StaticBody&, const Collision&) { tile.Paint(GRAY); });
 
     // obszary: monety i lawa
     for (const Vector2 position :

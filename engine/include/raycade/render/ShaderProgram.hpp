@@ -35,7 +35,7 @@ class Bitmap;
  */
 class ShaderProgram {
   public:
-    /** @brief Pusty shader (IsValid() zwraca false); obiekt z nim rysuje się zwyczajnie. */
+    /** @brief Pusty shader (IsLoaded() zwraca false); obiekt z nim rysuje się zwyczajnie. */
     ShaderProgram() = default;
 
     /**
@@ -80,7 +80,7 @@ class ShaderProgram {
     ShaderProgram& operator=(ShaderProgram&& other) noexcept;
 
     /** @brief Sprawdza, czy shader został poprawnie skompilowany i wczytany. */
-    bool IsValid() const;
+    bool IsLoaded() const;
 
     /**
      * @brief Sprawdza, czy shader ma uniform o podanej nazwie.

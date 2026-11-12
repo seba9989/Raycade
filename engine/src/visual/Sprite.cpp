@@ -26,7 +26,7 @@ const SpriteAnimation& Sprite::ActiveAnimation() const {
     if (clip_) return *clip_;
     // animacja domyślna: cały arkusz z Fps() (pola aktualne przy każdym użyciu)
     defaultClip_.first = 0;
-    defaultClip_.count = std::max(1, SheetFrames());
+    defaultClip_.count = std::max(1, SheetFrameCount());
     defaultClip_.fps = fps_;
     return defaultClip_;
 }
@@ -111,7 +111,7 @@ void Sprite::Rewind(int frame) {
 }
 
 int Sprite::SheetFrame() const {
-    return std::clamp(ActiveAnimation().SheetFrame(frame_), 0, std::max(0, SheetFrames() - 1));
+    return std::clamp(ActiveAnimation().SheetFrame(frame_), 0, std::max(0, SheetFrameCount() - 1));
 }
 
 Vector2 Sprite::FrameSize() const {

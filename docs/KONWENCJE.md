@@ -69,7 +69,20 @@ w `src/`. Katalogi mają nazwy małymi literami, pliki z klasami - PascalCase.
   `Input::MouseReleased()`, a nie stan `Input::MouseUp()`.
 - **Punkt zaczepienia** obiektów z rozmiarem (`visual::Sprite`, `visual::Text`) to
   `Origin()` w pikselach plus `Anchor()` jako część rozmiaru; wynik podaje `Pivot()`.
-- **Zdarzenia zaczynają się od `On`:** `OnClick()`, `OnUpdate()`, `OnDraw()`.
+- **Zdarzenia zaczynają się od `On`:** `OnClick()`, `OnUpdate()`, `OnDraw()`. Ponowne
+  wywołanie zastępuje poprzednią reakcję (w `OnKeyPressed(key, ...)` - reakcję na ten sam
+  klawisz). Pary zdarzeń dostają ten sam typ argumentu: `OnCollisionEnter/Stay/Exit()`
+  dostają `const Collision&`.
+- **Jedno pojęcie - jedna nazwa:** prędkość ciała to `Velocity()` (w `CharacterBody`
+  i `RigidBody`), liczba elementów to `...Count()` (`FrameCount()`, `SheetFrameCount()`),
+  zasób z `Load()` sprawdza się przez `IsLoaded()`, a obiekt GPU bez pliku
+  (`RenderTarget`) przez `IsValid()`.
+- **Numer urządzenia jest ostatnim parametrem z domyślnym 0:** `GamepadDown(button, gamepad)`,
+  `GamepadAxis(axis, gamepad)`, `bind::Pad(button, gamepad)`, `TouchPosition(index)`.
+- **Wyszukiwanie (`Find...`) zwraca brak wartości zamiast liczby magicznej:** wskaźnik
+  (`FindAnimation()`, `Context<T>()`) albo `std::optional` (`FindFrame()`).
+- **Obiekty, które przyjmują zasób, przyjmują też nazwę pliku:** `Sprite::Sheet("hero.png")`,
+  `Text::Font("font.ttf")` - z `Assets` w kontekście, jeśli jest.
 
 ## Łańcuchowanie
 

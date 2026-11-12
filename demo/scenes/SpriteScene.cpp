@@ -196,7 +196,7 @@ SCENE("sprite") {
                                                  : self.CurrentAnimation()) +
                 " [" + ModeName(*self.Sheet(), self.CurrentAnimation()) + "]\n" +
                 "Klatka: " + std::to_string(self.Frame()) + "   w arkuszu: " +
-                std::to_string(self.SheetFrame()) + " / " + std::to_string(self.SheetFrames()) +
+                std::to_string(self.SheetFrame()) + " / " + std::to_string(self.SheetFrameCount()) +
                 "\n" + "Gra: " + (self.IsPlaying() ? "tak" : "nie") +
                 "   Speed: " + ::TextFormat("%.3g", self.Speed()) + "\n" +
                 "FlippedX: " + (self.IsFlippedX() ? "tak" : "nie") +

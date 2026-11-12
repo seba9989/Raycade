@@ -15,11 +15,11 @@ void Drawable::BeginEffects() const {
     // raylib nie ma stosu trybów mieszania ani shaderów, więc oba dotyczą tylko własnego
     // rysunku obiektu - dzieci rysują się już ze swoimi ustawieniami
     if (blend_ != BLEND_ALPHA) ::BeginBlendMode(blend_);
-    if (shader_ && shader_->IsValid()) ::BeginShaderMode(shader_->Raw());
+    if (shader_ && shader_->IsLoaded()) ::BeginShaderMode(shader_->Raw());
 }
 
 void Drawable::EndEffects() const {
-    if (shader_ && shader_->IsValid()) ::EndShaderMode();
+    if (shader_ && shader_->IsLoaded()) ::EndShaderMode();
     if (blend_ != BLEND_ALPHA) ::EndBlendMode();
 }
 

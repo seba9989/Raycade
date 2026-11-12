@@ -93,10 +93,10 @@ const SpriteFrame& SpriteSheet::FrameInfo(int index) const {
     return frames_[static_cast<std::size_t>(std::clamp(index, 0, FrameCount() - 1))];
 }
 
-int SpriteSheet::FindFrame(const std::string& name) const {
+std::optional<int> SpriteSheet::FindFrame(const std::string& name) const {
     for (std::size_t i = 0; i < frames_.size(); ++i)
         if (frames_[i].name == name) return static_cast<int>(i);
-    return -1;
+    return std::nullopt;
 }
 
 SpriteSheet& SpriteSheet::Animation(

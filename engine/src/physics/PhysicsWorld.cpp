@@ -365,7 +365,7 @@ void PhysicsWorld::SyncStructure() const {
             def.rotation = frame.q;
             def.userData = record.object;
             if (record.rigid) {
-                def.linearVelocity = ToB2(record.rigid->linearVelocity_);
+                def.linearVelocity = ToB2(record.rigid->velocity_);
                 def.angularVelocity = record.rigid->angularVelocity_;
             }
             record.id = b2CreateBody(impl.world, &def);
@@ -671,9 +671,8 @@ void PhysicsWorld::PrepareStep() {
         if (b2Body_IsFixedRotation(record.id) != rigid.lockRotation_)
             b2Body_SetFixedRotation(record.id, rigid.lockRotation_);
         // prędkość zmieniona w kodzie od ostatniego kroku
-        if (rigid.linearVelocity_.x != record.velocity.x ||
-            rigid.linearVelocity_.y != record.velocity.y)
-            b2Body_SetLinearVelocity(record.id, ToB2(rigid.linearVelocity_));
+        if (rigid.velocity_.x != record.velocity.x || rigid.velocity_.y != record.velocity.y)
+            b2Body_SetLinearVelocity(record.id, ToB2(rigid.velocity_));
         if (rigid.angularVelocity_ != record.angular)
             b2Body_SetAngularVelocity(record.id, rigid.angularVelocity_);
         for (const RigidBody::Pending& pending : rigid.pending_) {
@@ -719,10 +718,10 @@ void PhysicsWorld::ReadBack() {
         record.written = rigid.WorldTransform();
         record.hasWritten = true;
 
-        rigid.linearVelocity_ = FromB2(b2Body_GetLinearVelocity(record.id));
+        rigid.velocity_ = FromB2(b2Body_GetLinearVelocity(record.id));
         rigid.angularVelocity_ = b2Body_GetAngularVelocity(record.id);
         rigid.centerOfMass_ = FromB2(b2Body_GetWorldCenterOfMass(record.id));
-        record.velocity = rigid.linearVelocity_;
+        record.velocity = rigid.velocity_;
         record.angular = rigid.angularVelocity_;
     }
 }
@@ -827,9 +826,11 @@ void PhysicsWorld::EndStep() {
         if (contacts_.contains(key) || !present(key.first) || !present(key.second)) continue;
         PhysicsBody* first = contact.first;
         PhysicsBody* second = contact.second;
+        const Collision forFirst = contact.forFirst;
+        const Collision forSecond = contact.forSecond;
         events.emplace_back([=] {
-            if (first->exit_) first->exit_(*second);
-            if (second->exit_) second->exit_(*first);
+            if (first->exit_) first->exit_(forFirst);
+            if (second->exit_) second->exit_(forSecond);
         });
     }
     lastContacts_ = std::move(contacts_);
