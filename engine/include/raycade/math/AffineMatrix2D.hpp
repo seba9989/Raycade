@@ -61,6 +61,20 @@ struct AffineMatrix2D {
     }
 
     /** @brief Łączy macierze: najpierw działa other, potem bieżąca macierz. */
+    /**
+     * @brief Macierz odwrotna (przekształcenie z powrotem).
+     * @return Odwrotność albo std::nullopt dla macierzy osobliwej (np. skala 0).
+     */
+    std::optional<AffineMatrix2D> Inverse() const {
+        const float determinant = a * d - b * c;
+        if (!std::isfinite(determinant) || std::fabs(determinant) <= 1e-8f) return std::nullopt;
+        const float ia = d / determinant;
+        const float ib = -b / determinant;
+        const float ic = -c / determinant;
+        const float id = a / determinant;
+        return AffineMatrix2D{ia, ib, ic, id, -(ia * tx + ic * ty), -(ib * tx + id * ty)};
+    }
+
     AffineMatrix2D operator*(const AffineMatrix2D& other) const {
         // każde pole wyniku w osobnym wierszu
         // clang-format off

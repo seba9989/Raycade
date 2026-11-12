@@ -34,28 +34,43 @@ struct RayHit {
 inline constexpr std::uint32_t kAllLayers = 0xFFFFFFFFu;
 
 /**
- * @brief Świat fizyki jednej sceny (system sceny, obok PointerSystem).
+ * @brief Świat fizyki jednej sceny (system sceny, obok PointerSystem) - liczony przez Box2D.
  * @details Scena ma jeden świat i sama go prowadzi - gra używa go pośrednio, przez ciała
  * (CharacterBody::MoveAndSlide(), Area::OverlappingBodies()) i ustawienia sceny
  * (Scene::Gravity(), Scene::DebugColliders()).
  *
- * Przebieg kroku stałego sceny:
- * 1. BeginStep() - zapamiętuje krok i oznacza listę ciał do zebrania od nowa,
- * 2. FixedTick() / OnFixedUpdate() obiektów - postacie ruszają się przez MoveAndSlide(),
- *    a świat zapisuje ich zderzenia,
- * 3. EndStep() - sprawdza obszary (Area) i wysyła zdarzenia wejścia, trwania i wyjścia.
+ * Obiekty sceny są odwzorowane w świecie Box2D (v3, jednostki: piksele):
+ * | Raycade         | Box2D                                                                |
+ * |-----------------|----------------------------------------------------------------------|
+ * | RigidBody       | ciało dynamiczne (masa = Mass(), rozłożona na pole colliderów)       |
+ * | StaticBody      | ciało statyczne; przesunięte w kodzie - kinematyczne (ma prędkość)   |
+ * | CharacterBody   | ciało kinematyczne; ruch: mover (kapsuła z obrysu colliderów)        |
+ * | Area            | czujniki (sensor) - nachodzenie z b2Shape_GetSensorOverlaps()        |
+ * | Collider\<S\>   | wielokąty (do 8 wierzchołków, większe dzielone), koła, odcinki;      |
+ * |                 | elipsa i nierówno przeskalowane koło - przybliżenie ośmiokątem      |
  *
- * Lista ciał i colliderów jest zbierana z drzewa sceny na żądanie (raz na krok), a ich
- * geometria - liczona przy każdym teście, więc zmiany pozycji w trakcie kroku są widoczne od
- * razu. Obiekty ekranu (ScreenSpace()) nie biorą udziału w kolizjach.
+ * Przebieg kroku stałego sceny:
+ * 1. BeginStep() - zapamiętuje krok, uzgadnia ciała i kształty Box2D z drzewem sceny,
+ * 2. FixedTick() / OnFixedUpdate() obiektów - postacie ruszają się przez MoveAndSlide(),
+ * 3. EndStep() - pozycje obiektów kinematycznych jako cele kroku, krok Box2D, przepisanie
+ *    pozycji brył do obiektów, zdarzenia zderzeń i obszarów.
+ *
+ * Box2D nie jest widoczny w nagłówkach API - jego stan jest w strukturze Impl w pliku .cpp.
+ * Obiekty ekranu (ScreenSpace()) nie biorą udziału w kolizjach.
  */
 class PhysicsWorld {
   public:
     /** @param roots Obiekty najwyższego poziomu sceny (lista należy do sceny). */
-    explicit PhysicsWorld(const std::vector<std::unique_ptr<Entity>>& roots) : roots_(roots) {}
+    explicit PhysicsWorld(const std::vector<std::unique_ptr<Entity>>& roots);
+
+    /** @brief Usuwa świat Box2D. */
+    ~PhysicsWorld();
+
+    PhysicsWorld(const PhysicsWorld&) = delete;
+    PhysicsWorld& operator=(const PhysicsWorld&) = delete;
 
     /** @brief Ustawia grawitację w pikselach/s² (czyta ją CollisionObject::Gravity()). */
-    void Gravity(Vector2 gravity) { gravity_ = gravity; }
+    void Gravity(Vector2 gravity);
 
     /** @brief Podaje grawitację. */
     Vector2 Gravity() const { return gravity_; }
@@ -87,12 +102,12 @@ class PhysicsWorld {
     /** @brief Początek kroku stałego. */
     void BeginStep(float step);
 
-    /** @brief Koniec kroku stałego: obszary i zdarzenia zderzeń. */
+    /** @brief Koniec kroku stałego: krok Box2D i zdarzenia. */
     void EndStep();
 
     /**
-     * @brief Oznacza listę ciał jako nieaktualną (np. po usunięciu obiektów ze sceny).
-     * @details Następne zapytanie zbierze ją z drzewa od nowa.
+     * @brief Oznacza ciała jako nieaktualne (np. po usunięciu obiektów ze sceny).
+     * @details Następne użycie świata uzgodni ciała Box2D z drzewem sceny.
      */
     void Invalidate() { dirty_ = true; }
 
@@ -102,10 +117,10 @@ class PhysicsWorld {
      */
     bool MoveAndSlide(CharacterBody& body);
 
-    /** @brief Ciała nachodzące teraz na obszar. */
+    /** @brief Ciała nachodzące na obszar (stan z ostatniego kroku). */
     std::vector<PhysicsBody*> OverlappingBodies(const Area& area);
 
-    /** @brief Obszary nachodzące teraz na obszar. */
+    /** @brief Obszary nachodzące na obszar (stan z ostatniego kroku). */
     std::vector<Area*> OverlappingAreas(const Area& area);
 
     /** @brief Pierwsze ciało na odcinku from-to (patrz Scene::Raycast()). */
@@ -125,8 +140,9 @@ class PhysicsWorld {
 
     /**
      * @brief Rysuje collidery wszystkich obiektów (w układzie świata, przez kamerę).
-     * @details Kolory: StaticBody - niebieski, CharacterBody - zielony, Area - pomarańczowy,
-     * collider wyłączony - szary.
+     * @details Kolory: StaticBody - niebieski, CharacterBody - zielony, RigidBody - fioletowy,
+     * Area - pomarańczowy, collider wyłączony - szary. Rysowany jest kształt figury, a nie jego
+     * przybliżenie w Box2D (np. ośmiokąt zamiast elipsy).
      * @param renderer Renderer prymitywów.
      */
     void Draw(PrimitiveRenderer& renderer) const;
@@ -139,14 +155,7 @@ class PhysicsWorld {
     static void CollectShapes(const Entity& object, std::vector<const CollisionShape*>& shapes);
 
   private:
-    /** @brief Obiekt kolizji z jego colliderami, zebrany z drzewa sceny. */
-    struct Entry {
-        CollisionObject* object = nullptr;
-        PhysicsBody* body = nullptr; /**< Ten sam obiekt, jeśli jest ciałem. */
-        Area* area = nullptr;        /**< Ten sam obiekt, jeśli jest obszarem. */
-        RigidBody* rigid = nullptr;  /**< Ten sam obiekt, jeśli jest bryłą sztywną. */
-        std::vector<const CollisionShape*> shapes;
-    };
+    struct Impl; /**< Stan Box2D (świat, ciała, kształty) - zdefiniowany w PhysicsWorld.cpp. */
 
     /** @brief Para obiektów (zawsze w tej samej kolejności) - klucz zderzeń i nakładania. */
     using Pair = std::pair<const CollisionObject*, const CollisionObject*>;
@@ -159,70 +168,52 @@ class PhysicsWorld {
         Collision forSecond;
     };
 
-    /** @brief Aktualna lista obiektów kolizji (zbierana od nowa, gdy jest nieaktualna). */
-    const std::vector<Entry>& Entries() const;
-
-    /** @brief Zbiera obiekty kolizji z poddrzewa (owner - indeks obiektu, do którego należą). */
-    void Collect(const Entity& entity, int owner) const;
-
-    /**
-     * @brief Najgłębsze wnikanie postaci w ciała, z którymi się zderza.
-     * @param self Postać.
-     * @param motion Ostatni ruch postaci - platforma jednostronna zatrzymuje tylko ruch w dół.
-     */
-    std::optional<Collision> Deepest(const Entry& self, Vector2 motion) const;
-
-    /** @brief Sprawdza, czy dwa obiekty kolizji nachodzą na siebie którymkolwiek colliderem. */
-    static bool Overlap(const Entry& a, const Entry& b);
-
-    /** @brief Wpis obiektu albo nullptr. */
-    const Entry* Find(const CollisionObject* object) const;
-
-    /** @brief Zapisuje zderzenie postaci z ciałem do zdarzeń na końcu kroku. */
-    void Record(PhysicsBody& body, const Collision& hit);
-
-    /**
-     * @brief Krok brył sztywnych (solver impulsowy w stylu Box2D).
-     * @details 1. siły, impulsy, grawitacja i tłumienie zmieniają prędkości, 2. punkty styku
-     * (ConvexContacts()) z impulsami z poprzedniego kroku (warm starting), 3. kilka iteracji
-     * impulsów normalnych (z odbiciem i korektą wnikania) i tarcia, 4. przesunięcie i obrót.
-     * @param dt Krok w sekundach.
-     */
-    void Simulate(float dt);
-
-    /** @brief Impulsy styku z poprzedniego kroku - start solvera (warm starting). */
-    struct CachedContact {
-        Vector2 point{};
-        float normalImpulse = 0;
-        float tangentImpulse = 0;
-    };
-    /** @brief Para colliderów brył: (bryła, jej collider, drugie ciało, jego collider). */
-    using ManifoldKey = std::tuple<
-        const CollisionObject*,
-        const CollisionShape*,
-        const CollisionObject*,
-        const CollisionShape*>;
-    std::map<ManifoldKey, std::vector<CachedContact>> warmStart_; /**< Impulsy styków. */
-
-    const std::vector<std::unique_ptr<Entity>>& roots_; /**< Obiekty sceny. */
-    Vector2 gravity_{0.0f, 980.0f};                     /**< Grawitacja sceny. */
-    float delta_ = 0.0f;                                /**< Krok dla MoveAndSlide(). */
-    bool debug_ = false;                                /**< Rysowanie colliderów. */
-    bool interpolation_ = true;                         /**< Interpolacja rysowania. */
-    float alpha_ = 1.0f;                                /**< Ułamek do następnego kroku. */
-
-    mutable std::vector<Entry> entries_; /**< Obiekty kolizji (zbierane na żądanie). */
-    mutable bool dirty_ = true;          /**< Czy entries_ trzeba zebrać od nowa. */
-
-    std::map<Pair, Contact> contacts_;     /**< Zderzenia z bieżącego kroku. */
-    std::map<Pair, Contact> lastContacts_; /**< Zderzenia z poprzedniego kroku. */
-    std::set<Pair> lastOverlaps_;          /**< Pary (obszar, obiekt) z poprzedniego kroku. */
-
     /** @brief Styk pary colliderów: (obszar, jego collider, ciało, collider ciała). */
     using ShapePair = std::tuple<
         const CollisionObject*,
         const CollisionShape*,
         const CollisionObject*,
         const CollisionShape*>;
+
+    /**
+     * @brief Uzgadnia ciała i kształty Box2D z drzewem sceny (gdy dirty_).
+     * @details Tworzy ciała dla nowych obiektów, usuwa je dla obiektów usuniętych ze sceny,
+     * przebudowuje kształty, których geometria się zmieniła, i ustawia filtry oraz materiały.
+     */
+    void SyncStructure() const;
+
+    /** @brief Przenosi do Box2D pozycje obiektów przesuniętych w kodzie (przed zapytaniami). */
+    void SyncTransforms() const;
+
+    /** @brief Zbiera obiekty kolizji z poddrzewa (owner - indeks obiektu, do którego należą). */
+    void Collect(const Entity& entity, int owner) const;
+
+    /** @brief Tworzy albo przebudowuje kształty Box2D obiektu o podanym indeksie. */
+    void SyncShapes(std::size_t index) const;
+
+    /** @brief Ustawia gęstość kształtów bryły tak, żeby jej masa była równa Mass(). */
+    void ApplyMass(std::size_t index) const;
+
+    /** @brief Przed krokiem: cele obiektów kinematycznych, parametry, siły i impulsy brył. */
+    void PrepareStep();
+
+    /** @brief Po kroku: pozycje i prędkości brył z Box2D do obiektów sceny. */
+    void ReadBack();
+
+    /** @brief Zapisuje zderzenie ciała z ciałem do zdarzeń na końcu kroku. */
+    void Record(PhysicsBody& body, const Collision& hit);
+
+    const std::vector<std::unique_ptr<Entity>>& roots_; /**< Obiekty sceny. */
+    std::unique_ptr<Impl> impl_;                        /**< Świat Box2D. */
+    Vector2 gravity_{0.0f, 980.0f};                     /**< Grawitacja sceny. */
+    float delta_ = 0.0f;                                /**< Krok dla MoveAndSlide(). */
+    bool debug_ = false;                                /**< Rysowanie colliderów. */
+    bool interpolation_ = true;                         /**< Interpolacja rysowania. */
+    float alpha_ = 1.0f;                                /**< Ułamek do następnego kroku. */
+    mutable bool dirty_ = true;                         /**< Czy uzgodnić ciała z drzewem. */
+
+    std::map<Pair, Contact> contacts_;      /**< Zderzenia z bieżącego kroku. */
+    std::map<Pair, Contact> lastContacts_;  /**< Zderzenia z poprzedniego kroku. */
+    std::set<Pair> lastOverlaps_;           /**< Pary (obszar, obiekt) z poprzedniego kroku. */
     std::set<ShapePair> lastShapeOverlaps_; /**< Styki colliderów z poprzedniego kroku. */
 };

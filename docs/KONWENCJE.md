@@ -17,7 +17,7 @@ warstwy wcześniejsze na liście:
 | `shapes/`    | figury geometryczne z przestrzeni nazw `shapes` (baza `shapes::Shape`) | entity i jej zależności |
 | `visual/`    | obrazy, tekst i grupy rysowane do tekstury z przestrzeni nazw `visual` | entity i jej zależności |
 | `ui/`        | elementy interfejsu z przestrzeni nazw `ui`                     | entity i jej zależności     |
-| `physics/`   | `Collider<S>`, StaticBody, CharacterBody, RigidBody, Area, PhysicsWorld | shapes, visual i ich zależności |
+| `physics/`   | `Collider<S>`, StaticBody, CharacterBody, RigidBody, Area, PhysicsWorld (Box2D) | shapes, visual i ich zależności |
 | `scene/`     | Scene, SceneCamera, PointerSystem (trafienia myszą)             | entity i jej zależności     |
 | `engine/EngineTypes.hpp` | typy ustawień: LogLevel, Scaling                    | -                           |
 | `Engine.hpp` | pętla, okno, sceny, zasoby                                      | wszystkie powyższe          |

@@ -20,10 +20,10 @@
  * Collider jest dzieckiem ciała albo obszaru (także dalszym potomkiem). Fizyka działa w kroku
  * stałym (Engine::FixedStep(), domyślnie 1/60 s): FixedTick() i OnFixedUpdate() obiektów,
  * a na końcu kroku - zdarzenia zderzeń i obszarów. Ustawienia sceny: Scene::Gravity()
- * i Scene::DebugColliders(). Kolizje wykrywa algorytm GJK, a głębokość wnikania - EPA
- * (patrz ConvexPart). Bryły sztywne liczy solver impulsowy (jak w Box2D): punkty styku
- * z obcinania krawędzi, iteracje impulsów nacisku i tarcia z warm startingiem, a korekta
- * wnikania osobnymi pseudo-prędkościami (split impulse).
+ * i Scene::DebugColliders(). Fizykę liczy Box2D v3 (bryły, kontakty, czujniki, zapytania,
+ * mover postaci) - odwzorowanie obiektów sceny opisuje PhysicsWorld. Kształt kolizji pochodzi
+ * z figury (Shape::ConvexParts()); elipsa i nierówno przeskalowane koło są w Box2D
+ * przybliżane ośmiokątem, a postać porusza się kapsułą wpisaną w obrys jej colliderów.
  */
 // clang-format on
 

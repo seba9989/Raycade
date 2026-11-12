@@ -1,67 +1,209 @@
 /**
  * @file PhysicsWorld.cpp
- * @brief Zbieranie ciał, MoveAndSlide(), obszary, zdarzenia zderzeń i podgląd colliderów.
+ * @brief Świat fizyki na Box2D: odwzorowanie obiektów sceny, MoveAndSlide() na moverze Box2D,
+ * zapytania, zdarzenia i podgląd colliderów.
  */
 #include <raycade/physics/PhysicsWorld.hpp>
 
+#include <box2d/box2d.h>
+
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <functional>
+#include <unordered_map>
 
 namespace {
+
+/** @brief Ile pikseli to jeden „metr” Box2D - jego tolerancje są strojone pod metry. */
+constexpr float kPixelsPerMeter = 50.0f;
+/** @brief Podkroki solvera Box2D na jeden krok stały. */
+constexpr int kSubSteps = 4;
+
+// Bity filtrów Box2D. Warstwy gry zajmują bity 0-31 (kategoria i maska). Bity zapytań są tylko
+// w maskach kształtów: zapytanie (promień, mover, overlap) ma kategorię z tymi bitami, więc widzi
+// kształt tylko wtedy, gdy jego maska je zawiera. Czujniki ich nie mają - zapytania ich nie widzą.
+constexpr std::uint64_t kQueryBit = 1ull << 40; /**< Zwykły kształt widoczny dla zapytań. */
+constexpr std::uint64_t kOneWayBit = 1ull
+                                     << 41; /**< Platforma jednostronna widoczna dla zapytań. */
+
+/** @brief Najmniejszy cosinus kąta między normalną a „górą” platformy jednostronnej. */
+constexpr float kOneWayCos = 0.7f;
+/** @brief Zapas wnikania w platformę jednostronną, przy którym nadal zatrzymuje. */
+constexpr float kOneWayMargin = 1.0f;
+/** @brief Iteracje pętli movera (zderzenie, płaszczyzny, rzut). */
+constexpr int kMoverIterations = 5;
+/** @brief Najwięcej płaszczyzn styku movera w jednej iteracji. */
+constexpr int kMaxPlanes = 16;
+
+b2Vec2 ToB2(Vector2 v) {
+    return {v.x, v.y};
+}
+
+Vector2 FromB2(b2Vec2 v) {
+    return {v.x, v.y};
+}
 
 float Dot(Vector2 a, Vector2 b) {
     return a.x * b.x + a.y * b.y;
 }
 
-/** @brief Najkrótszy odcinek ruchu w jednym podkroku MoveAndSlide() (przeciw tunelowaniu). */
-constexpr float kMaxSubstepDistance = 8.0f;
-constexpr int kMaxSubsteps = 16;
-constexpr int kMaxPushes = 4;
-constexpr float kMinDepth = 1e-4f;
-/** @brief Zapas wnikania w platformę jednostronną, przy którym nadal zatrzymuje postać. */
-constexpr float kOneWayMargin = 1.0f;
-/** @brief Najmniejszy cosinus kąta między wypchnięciem a „górą” platformy jednostronnej. */
-constexpr float kOneWayCos = 0.7f;
-
-/** @brief Iteracje solvera brył - więcej to stabilniejsze stosy, ale wolniej. */
-constexpr int kSolverIterations = 12;
-/** @brief Ułamek wnikania usuwany w jednym kroku (korekta Baumgarte'a). */
-constexpr float kBaumgarte = 0.2f;
-/** @brief Dozwolone wnikanie bez korekty - zapobiega drganiom leżących brył. */
-constexpr float kSlop = 0.5f;
-/** @brief Prędkość zderzenia (px/s), poniżej której bryła się nie odbija. */
-constexpr float kBounceThreshold = 40.0f;
-/** @brief Odległość (px), w której punkt styku uznaje się za ten sam co w poprzednim kroku. */
-constexpr float kWarmStartDistance = 3.0f;
-
-float Cross(Vector2 a, Vector2 b) {
-    return a.x * b.y - a.y * b.x;
+float Length(Vector2 v) {
+    return std::sqrt(Dot(v, v));
 }
 
-/** @brief Prędkość punktu bryły: v + ω × r. */
-Vector2 PointVelocity(Vector2 velocity, float angular, Vector2 arm) {
-    return {velocity.x - angular * arm.y, velocity.y + angular * arm.x};
+Vector2 Add(Vector2 a, Vector2 b) {
+    return {a.x + b.x, a.y + b.y};
 }
 
-/** @brief Zdarzenie do wysłania po zakończeniu analizy kroku (bez zmian list w trakcie). */
-using Event = std::function<void()>;
+Vector2 Scale(Vector2 v, float s) {
+    return {v.x * s, v.y * s};
+}
+
+bool Same(const AffineMatrix2D& a, const AffineMatrix2D& b) {
+    constexpr float kEps = 1e-4f;
+    return std::fabs(a.a - b.a) < kEps && std::fabs(a.b - b.b) < kEps &&
+           std::fabs(a.c - b.c) < kEps && std::fabs(a.d - b.d) < kEps &&
+           std::fabs(a.tx - b.tx) < kEps && std::fabs(a.ty - b.ty) < kEps;
+}
+
+/** @brief Ciało Box2D nie ma skali - tylko położenie i obrót z macierzy obiektu. */
+b2Transform FrameOf(const AffineMatrix2D& world) {
+    return {{world.tx, world.ty}, b2MakeRot(std::atan2(world.b, world.a))};
+}
+
+/** @brief Macierz bez skali: obrót i przesunięcie ciała Box2D. */
+AffineMatrix2D MatrixOf(b2Transform transform) {
+    return {transform.q.c, transform.q.s, -transform.q.s,
+            transform.q.c, transform.p.x, transform.p.y};
+}
+
+/** @brief Box2D wymaga ustawienia jednostek przed utworzeniem pierwszego świata. */
+void EnsureUnits() {
+    static const bool done = [] {
+        b2SetLengthUnitsPerMeter(kPixelsPerMeter);
+        return true;
+    }();
+    (void)done;
+}
+
+/** @brief Rodzaj ciała Box2D, którym jest obiekt sceny. */
+enum class Kind { Static, Character, Rigid };
+
+/** @brief Kształty Box2D jednego collidera. */
+struct ShapeRecord {
+    const CollisionShape* shape = nullptr;
+    std::vector<b2ShapeId> ids;
+    std::vector<float> signature; /**< Geometria i flagi z chwili utworzenia kształtów. */
+    b2Filter filter{};
+    float friction = -1;
+    float bounce = -1;
+};
+
+/** @brief Obiekt sceny odwzorowany w Box2D. */
+struct BodyRecord {
+    CollisionObject* object = nullptr;
+    PhysicsBody* body = nullptr;
+    Area* area = nullptr;
+    RigidBody* rigid = nullptr;
+    CharacterBody* character = nullptr;
+    Kind kind = Kind::Static;
+    b2BodyId id = b2_nullBodyId;
+    bool seen = false;
+    bool moved = false; /**< StaticBody przesunięty w kodzie - kinematyczny. */
+    std::vector<const CollisionShape*> current; /**< Collidery z bieżącego zebrania. */
+    std::vector<ShapeRecord> shapes;
+    b2Transform stepStart = b2Transform_identity; /**< Położenie Box2D na początku kroku. */
+    AffineMatrix2D written{};                     /**< Macierz bryły po ostatnim kroku. */
+    bool hasWritten = false;
+    float mass = -1;
+    Vector2 velocity{}; /**< Prędkość bryły zapisana do obiektu po ostatnim kroku. */
+    float angular = 0;
+};
+
+/** @brief Kontekst callbacku płaszczyzn movera. */
+struct MoverContext {
+    const b2Vec2* up = nullptr;
+    Vector2 motion{};
+    std::array<b2CollisionPlane, kMaxPlanes> planes{};
+    std::array<b2ShapeId, kMaxPlanes> shapes{};
+    int count = 0;
+    bool insideOneWay =
+        false; /**< Postać nachodzi na platformę jednostronną, która jej nie trzyma. */
+};
+
+/** @brief Czy platforma jednostronna zatrzymuje ruch: normalna w jej „górę” i ruch nie w górę. */
+bool OneWayBlocks(const CollisionShape& platform, Vector2 normal, Vector2 motion, float depth) {
+    const Vector2 up = platform.OneWayDirection();
+    const float down = -Dot(motion, up);
+    return Dot(normal, up) >= kOneWayCos && Dot(motion, up) <= 0.0f &&
+           depth <= std::max(down, 0.0f) + kOneWayMargin;
+}
+
+bool CollectPlane(b2ShapeId shapeId, const b2PlaneResult* result, void* context) {
+    auto& mover = *static_cast<MoverContext*>(context);
+    if (!result->hit || mover.count >= kMaxPlanes) return true;
+    const auto* shape = static_cast<const CollisionShape*>(b2Shape_GetUserData(shapeId));
+    if (shape && shape->IsOneWay() &&
+        !OneWayBlocks(*shape, FromB2(result->plane.normal), mover.motion, result->plane.offset)) {
+        mover.insideOneWay = true;
+        return true;
+    }
+    mover.planes[static_cast<std::size_t>(mover.count)] = {result->plane, FLT_MAX, 0.0f, true};
+    mover.shapes[static_cast<std::size_t>(mover.count)] = shapeId;
+    ++mover.count;
+    return true;
+}
+
+/** @brief Platforma jednostronna dla brył: wyłącza styk, który nie jest opadaniem od góry. */
+bool PreSolve(b2ShapeId shapeA, b2ShapeId shapeB, b2Manifold* manifold, void*) {
+    const auto* a = static_cast<const CollisionShape*>(b2Shape_GetUserData(shapeA));
+    const auto* b = static_cast<const CollisionShape*>(b2Shape_GetUserData(shapeB));
+    const CollisionShape* platform = a && a->IsOneWay() ? a : (b && b->IsOneWay() ? b : nullptr);
+    if (!platform) return true;
+    // normalna Box2D wskazuje od A do B - odwracamy, żeby wskazywała od platformy do drugiego
+    Vector2 normal = FromB2(manifold->normal);
+    if (platform == b) normal = {-normal.x, -normal.y};
+    if (Dot(normal, platform->OneWayDirection()) < kOneWayCos) return false;
+    for (int i = 0; i < manifold->pointCount; ++i)
+        if (manifold->points[i].separation < -kOneWayMargin) return false; // przechodzi przez nią
+    return true;
+}
 
 } // namespace
 
-void PhysicsWorld::BeginFrame(float dt) {
-    delta_ = dt;
-    dirty_ = true;
+struct PhysicsWorld::Impl {
+    b2WorldId world = b2_nullWorldId;
+    std::vector<BodyRecord> records;
+    std::unordered_map<const CollisionObject*, std::size_t> index;
+
+    BodyRecord* Find(const CollisionObject* object) {
+        const auto it = index.find(object);
+        return it == index.end() ? nullptr : &records[it->second];
+    }
+
+    /** @brief Obiekt sceny, do którego należy kształt Box2D. */
+    static CollisionObject* ObjectOf(b2ShapeId shape) {
+        return static_cast<CollisionObject*>(b2Body_GetUserData(b2Shape_GetBody(shape)));
+    }
+};
+
+PhysicsWorld::PhysicsWorld(const std::vector<std::unique_ptr<Entity>>& roots)
+    : roots_(roots), impl_(std::make_unique<Impl>()) {
+    EnsureUnits();
+    b2WorldDef def = b2DefaultWorldDef();
+    def.gravity = ToB2(gravity_);
+    impl_->world = b2CreateWorld(&def);
+    b2World_SetPreSolveCallback(impl_->world, PreSolve, nullptr);
 }
 
-void PhysicsWorld::BeginStep(float step) {
-    delta_ = step;
-    dirty_ = true;
-    // stan przed krokiem - początek interpolacji rysowania
-    for (const Entry& entry : Entries()) {
-        entry.object->previous_ = entry.object->transform_;
-        entry.object->inStep_ = true;
-    }
+PhysicsWorld::~PhysicsWorld() {
+    if (b2World_IsValid(impl_->world)) b2DestroyWorld(impl_->world);
+}
+
+void PhysicsWorld::Gravity(Vector2 gravity) {
+    gravity_ = gravity;
+    b2World_SetGravity(impl_->world, ToB2(gravity));
 }
 
 void PhysicsWorld::CollectShapes(const Entity& object, std::vector<const CollisionShape*>& shapes) {
@@ -75,89 +217,402 @@ void PhysicsWorld::CollectShapes(const Entity& object, std::vector<const Collisi
     }
 }
 
-const std::vector<PhysicsWorld::Entry>& PhysicsWorld::Entries() const {
-    if (!dirty_) return entries_;
-    entries_.clear();
-    for (const auto& root : roots_)
-        if (!root->screenSpace_) Collect(*root, -1);
-    dirty_ = false;
-    return entries_;
-}
+// ---------------------------------------------------------------------------------------------
+// Uzgadnianie świata Box2D z drzewem sceny
+// ---------------------------------------------------------------------------------------------
 
 void PhysicsWorld::Collect(const Entity& entity, int owner) const {
-    if (entity.destroyed_) return;
-    // const_cast: świat dostaje drzewo sceny tylko do odczytu, ale wywołuje zdarzenia obiektów
+    Impl& impl = *impl_;
+    // obiekt oznaczony do usunięcia jeszcze istnieje (do końca klatki) - zostaje na liście, ale
+    // jego ciało jest wyłączone; dzięki temu obszary i ciała dostają zdarzenie wyjścia
     auto* object = dynamic_cast<CollisionObject*>(const_cast<Entity*>(&entity));
     if (object) {
-        Entry entry;
-        entry.object = object;
-        entry.body = dynamic_cast<PhysicsBody*>(object);
-        entry.area = dynamic_cast<Area*>(object);
-        entry.rigid = dynamic_cast<RigidBody*>(object);
-        entries_.push_back(std::move(entry));
-        owner = static_cast<int>(entries_.size()) - 1;
+        BodyRecord* record = impl.Find(object);
+        const Kind kind = dynamic_cast<RigidBody*>(object)       ? Kind::Rigid
+                          : dynamic_cast<CharacterBody*>(object) ? Kind::Character
+                                                                 : Kind::Static;
+        if (record && record->kind != kind) { // ten sam adres, inny obiekt
+            b2DestroyBody(record->id);
+            record->id = b2_nullBodyId;
+            record->shapes.clear();
+        }
+        if (!record) {
+            impl.index[object] = impl.records.size();
+            impl.records.emplace_back();
+            record = &impl.records.back();
+        }
+        record->object = object;
+        record->body = dynamic_cast<PhysicsBody*>(object);
+        record->area = dynamic_cast<Area*>(object);
+        record->rigid = dynamic_cast<RigidBody*>(object);
+        record->character = dynamic_cast<CharacterBody*>(object);
+        record->kind = kind;
+        record->seen = true;
+        record->current.clear();
+        owner = static_cast<int>(impl.index[object]);
     } else if (const auto* shape = dynamic_cast<const CollisionShape*>(&entity);
                shape && owner >= 0) {
-        entries_[static_cast<std::size_t>(owner)].shapes.push_back(shape);
+        if (!entity.destroyed_)
+            impl.records[static_cast<std::size_t>(owner)].current.push_back(shape);
     }
     for (const auto& child : entity.children_)
         Collect(*child, owner);
 }
 
-const PhysicsWorld::Entry* PhysicsWorld::Find(const CollisionObject* object) const {
-    for (const Entry& entry : Entries())
-        if (entry.object == object) return &entry;
-    return nullptr;
-}
+void PhysicsWorld::SyncStructure() const {
+    if (!dirty_) return;
+    Impl& impl = *impl_;
+    for (BodyRecord& record : impl.records)
+        record.seen = false;
+    for (const auto& root : roots_)
+        if (!root->screenSpace_) Collect(*root, -1);
 
-std::optional<Collision> PhysicsWorld::Deepest(const Entry& self, Vector2 motion) const {
-    std::optional<Collision> deepest;
-    std::vector<ConvexPart> mine;
-    std::vector<ConvexPart> theirs;
-    for (const Entry& other : Entries()) {
-        if (other.object == self.object || !other.body || other.object->IsDestroyed()) continue;
-        if (!self.object->CollidesWith(*other.object)) continue;
-        for (const CollisionShape* shape : self.shapes) {
-            if (shape->IsDisabled()) continue;
-            mine.clear();
-            shape->WorldParts(mine);
-            for (const CollisionShape* otherShape : other.shapes) {
-                if (otherShape->IsDisabled()) continue;
-                theirs.clear();
-                otherShape->WorldParts(theirs);
-                for (const ConvexPart& a : mine)
-                    for (const ConvexPart& b : theirs) {
-                        const auto hit = ConvexPenetration(a, b);
-                        if (!hit || hit->depth < kMinDepth) continue;
-                        if (otherShape->IsOneWay()) {
-                            // tylko opadanie na platformę od góry: wypchnięcie w jej „górę”,
-                            // ruch nie w górę i wnikanie nie głębsze niż ten ruch
-                            const Vector2 up = otherShape->OneWayDirection();
-                            const float down = -Dot(motion, up);
-                            if (Dot(hit->normal, up) < kOneWayCos || down < 0.0f ||
-                                hit->depth > down + kOneWayMargin)
-                                continue;
-                        }
-                        if (deepest && deepest->depth >= hit->depth) continue;
-                        deepest = Collision{other.body, shape, otherShape, hit->normal, hit->depth};
-                    }
-            }
+    // obiekty usunięte ze sceny - ich ciała znikają (wskaźników już nie wolno dotykać)
+    std::vector<BodyRecord> kept;
+    kept.reserve(impl.records.size());
+    for (BodyRecord& record : impl.records) {
+        if (record.seen) {
+            kept.push_back(std::move(record));
+        } else if (b2Body_IsValid(record.id)) {
+            b2DestroyBody(record.id);
         }
     }
-    return deepest;
+    impl.records = std::move(kept);
+    impl.index.clear();
+    for (std::size_t i = 0; i < impl.records.size(); ++i)
+        impl.index[impl.records[i].object] = i;
+
+    for (std::size_t i = 0; i < impl.records.size(); ++i) {
+        BodyRecord& record = impl.records[i];
+        const AffineMatrix2D world = record.object->WorldTransform();
+        if (!b2Body_IsValid(record.id)) {
+            b2BodyDef def = b2DefaultBodyDef();
+            def.type = record.kind == Kind::Rigid       ? b2_dynamicBody
+                       : record.kind == Kind::Character ? b2_kinematicBody
+                                                        : b2_staticBody;
+            const b2Transform frame = FrameOf(world);
+            def.position = frame.p;
+            def.rotation = frame.q;
+            def.userData = record.object;
+            if (record.rigid) {
+                def.linearVelocity = ToB2(record.rigid->linearVelocity_);
+                def.angularVelocity = record.rigid->angularVelocity_;
+            }
+            record.id = b2CreateBody(impl.world, &def);
+            record.stepStart = frame;
+            record.moved = false;
+            record.mass = -1;
+            record.hasWritten = false;
+            record.shapes.clear();
+        }
+        // obiekt oznaczony do usunięcia nie bierze udziału w kolizjach
+        const bool enabled = !record.object->IsDestroyed();
+        if (b2Body_IsEnabled(record.id) != enabled) {
+            if (enabled)
+                b2Body_Enable(record.id);
+            else
+                b2Body_Disable(record.id);
+        }
+        SyncShapes(i);
+        if (record.rigid) ApplyMass(i);
+    }
+    dirty_ = false;
 }
 
-bool PhysicsWorld::Overlap(const Entry& a, const Entry& b) {
-    std::vector<ConvexPart> partsA;
-    std::vector<ConvexPart> partsB;
-    for (const CollisionShape* shape : a.shapes)
-        if (!shape->IsDisabled()) shape->WorldParts(partsA);
-    for (const CollisionShape* shape : b.shapes)
-        if (!shape->IsDisabled()) shape->WorldParts(partsB);
-    for (const ConvexPart& partA : partsA)
-        for (const ConvexPart& partB : partsB)
-            if (ConvexOverlap(partA, partB)) return true;
-    return false;
+void PhysicsWorld::SyncShapes(std::size_t index) const {
+    BodyRecord& record = impl_->records[index];
+    const AffineMatrix2D world = record.object->WorldTransform();
+    // kształty Box2D są w układzie ciała bez skali - skala jest wliczona w ich geometrię
+    const auto toBody = MatrixOf(FrameOf(world)).Inverse().value_or(AffineMatrix2D{});
+
+    // collidery, które zniknęły
+    std::erase_if(record.shapes, [&](ShapeRecord& shapeRecord) {
+        if (std::find(record.current.begin(), record.current.end(), shapeRecord.shape) !=
+            record.current.end())
+            return false;
+        for (const b2ShapeId id : shapeRecord.ids)
+            if (b2Shape_IsValid(id)) b2DestroyShape(id, false);
+        return true;
+    });
+
+    std::vector<ConvexPart> parts;
+    for (const CollisionShape* shape : record.current) {
+        parts.clear();
+        if (!shape->IsDisabled()) shape->WorldParts(parts);
+        for (ConvexPart& part : parts)
+            part = part.Transformed(toBody);
+
+        std::vector<float> signature{
+            shape->IsDisabled() ? 1.0f : 0.0f, shape->IsOneWay() ? 1.0f : 0.0f
+        };
+        for (const ConvexPart& part : parts) {
+            signature.push_back(static_cast<float>(part.kind));
+            for (const Vector2 point : part.points)
+                signature.insert(signature.end(), {point.x, point.y});
+            signature.insert(
+                signature.end(), {part.center.x, part.center.y, part.axisX.x, part.axisX.y,
+                                  part.axisY.x, part.axisY.y}
+            );
+        }
+
+        auto it = std::find_if(record.shapes.begin(), record.shapes.end(), [&](const auto& s) {
+            return s.shape == shape;
+        });
+        if (it == record.shapes.end()) {
+            record.shapes.push_back({shape, {}, {}, {}, -1, -1});
+            it = std::prev(record.shapes.end());
+        }
+        ShapeRecord& shapeRecord = *it;
+
+        // filtr: warstwy gry + bity zapytań (czujniki są dla zapytań niewidoczne)
+        b2Filter filter = b2DefaultFilter();
+        filter.categoryBits = record.object->CollisionLayer();
+        filter.maskBits = record.object->CollisionMask();
+        if (!record.area) filter.maskBits |= shape->IsOneWay() ? kOneWayBit : kQueryBit;
+        const float friction = record.body ? record.body->friction_ : 0.0f;
+        const float bounce = record.body ? record.body->bounce_ : 0.0f;
+
+        // porównanie z tolerancją - przeliczenie do układu ciała daje co krok minimalnie inne
+        // liczby, a każda przebudowa kasuje styki Box2D (i stos brył zaczyna drgać)
+        const bool same = shapeRecord.signature.size() == signature.size() &&
+                          std::equal(
+                              signature.begin(), signature.end(), shapeRecord.signature.begin(),
+                              [](float a, float b) { return std::fabs(a - b) < 1e-3f; }
+                          );
+        if (!same) {
+            for (const b2ShapeId id : shapeRecord.ids)
+                if (b2Shape_IsValid(id)) b2DestroyShape(id, false);
+            shapeRecord.ids.clear();
+            shapeRecord.signature = std::move(signature);
+
+            b2ShapeDef def = b2DefaultShapeDef();
+            def.userData = const_cast<CollisionShape*>(shape);
+            def.filter = filter;
+            def.material.friction = friction;
+            def.material.restitution = bounce;
+            def.isSensor = record.area != nullptr;
+            def.enableSensorEvents = true;
+            def.enablePreSolveEvents = record.rigid != nullptr;
+            def.updateBodyMass = false;
+            def.density = 1.0f;
+            for (const ConvexPart& part : parts) {
+                if (part.kind == ConvexPart::Kind::Ellipse) {
+                    const float rx = Length(part.axisX);
+                    const float ry = Length(part.axisY);
+                    if (std::fabs(rx - ry) < 1e-3f &&
+                        std::fabs(Dot(part.axisX, part.axisY)) < 1e-3f) {
+                        const b2Circle circle{ToB2(part.center), rx};
+                        shapeRecord.ids.push_back(b2CreateCircleShape(record.id, &def, &circle));
+                        continue;
+                    }
+                    // elipsa: ośmiokąt wpisany (Box2D nie ma elipsy)
+                    std::array<b2Vec2, 8> octagon{};
+                    for (int k = 0; k < 8; ++k) {
+                        const float t = 2.0f * PI * static_cast<float>(k) / 8.0f;
+                        octagon[static_cast<std::size_t>(k)] = ToB2(
+                            Add(part.center,
+                                Add(Scale(part.axisX, std::cos(t)), Scale(part.axisY, std::sin(t))))
+                        );
+                    }
+                    const b2Hull hull = b2ComputeHull(octagon.data(), 8);
+                    if (hull.count < 3) continue;
+                    const b2Polygon polygon = b2MakePolygon(&hull, 0.0f);
+                    shapeRecord.ids.push_back(b2CreatePolygonShape(record.id, &def, &polygon));
+                    continue;
+                }
+                const std::vector<Vector2>& points = part.points;
+                if (points.size() == 1) {
+                    const b2Circle circle{ToB2(points[0]), 0.5f};
+                    shapeRecord.ids.push_back(b2CreateCircleShape(record.id, &def, &circle));
+                } else if (points.size() == 2) {
+                    const b2Segment segment{ToB2(points[0]), ToB2(points[1])};
+                    shapeRecord.ids.push_back(b2CreateSegmentShape(record.id, &def, &segment));
+                } else {
+                    // wielokąt wypukły: po B2_MAX_POLYGON_VERTICES wierzchołków (wachlarz z p0)
+                    for (std::size_t first = 1; first + 1 < points.size();
+                         first += B2_MAX_POLYGON_VERTICES - 2) {
+                        std::array<b2Vec2, B2_MAX_POLYGON_VERTICES> chunk{};
+                        int count = 0;
+                        chunk[static_cast<std::size_t>(count++)] = ToB2(points[0]);
+                        for (std::size_t k = first;
+                             k < points.size() && count < B2_MAX_POLYGON_VERTICES; ++k)
+                            chunk[static_cast<std::size_t>(count++)] = ToB2(points[k]);
+                        const b2Hull hull = b2ComputeHull(chunk.data(), count);
+                        if (hull.count < 3) continue;
+                        const b2Polygon polygon = b2MakePolygon(&hull, 0.0f);
+                        shapeRecord.ids.push_back(b2CreatePolygonShape(record.id, &def, &polygon));
+                    }
+                }
+            }
+            shapeRecord.filter = filter;
+            shapeRecord.friction = friction;
+            shapeRecord.bounce = bounce;
+            record.mass = -1; // masa do przeliczenia
+            continue;
+        }
+        // ta sama geometria - tylko filtr i materiał, jeśli się zmieniły
+        if (filter.categoryBits != shapeRecord.filter.categoryBits ||
+            filter.maskBits != shapeRecord.filter.maskBits) {
+            for (const b2ShapeId id : shapeRecord.ids)
+                b2Shape_SetFilter(id, filter);
+            shapeRecord.filter = filter;
+        }
+        if (friction != shapeRecord.friction || bounce != shapeRecord.bounce) {
+            for (const b2ShapeId id : shapeRecord.ids) {
+                b2Shape_SetFriction(id, friction);
+                b2Shape_SetRestitution(id, bounce);
+            }
+            shapeRecord.friction = friction;
+            shapeRecord.bounce = bounce;
+        }
+    }
+}
+
+void PhysicsWorld::ApplyMass(std::size_t index) const {
+    BodyRecord& record = impl_->records[index];
+    const float mass = record.rigid->mass_;
+    if (record.mass == mass) return;
+    // gęstość 1 -> masa = pole; potem gęstość = Mass() / pole
+    for (const ShapeRecord& shape : record.shapes)
+        for (const b2ShapeId id : shape.ids)
+            b2Shape_SetDensity(id, 1.0f, false);
+    b2Body_ApplyMassFromShapes(record.id);
+    const float area = b2Body_GetMassData(record.id).mass;
+    if (area > 1e-3f) {
+        for (const ShapeRecord& shape : record.shapes)
+            for (const b2ShapeId id : shape.ids)
+                b2Shape_SetDensity(id, mass / area, false);
+        b2Body_ApplyMassFromShapes(record.id);
+    } else {
+        // bez pola (punkty, odcinki): masa w środku, moment jak kulki o promieniu ~14 px
+        b2Body_SetMassData(record.id, {mass, {0.0f, 0.0f}, mass * 100.0f});
+    }
+    record.mass = mass;
+}
+
+void PhysicsWorld::SyncTransforms() const {
+    SyncStructure();
+    for (BodyRecord& record : impl_->records) {
+        if (!b2Body_IsValid(record.id)) continue;
+        const AffineMatrix2D world = record.object->WorldTransform();
+        const b2Transform frame = FrameOf(world);
+        const b2Transform now = b2Body_GetTransform(record.id);
+        const bool differs =
+            std::fabs(frame.p.x - now.p.x) > 1e-4f || std::fabs(frame.p.y - now.p.y) > 1e-4f ||
+            std::fabs(frame.q.c - now.q.c) > 1e-5f || std::fabs(frame.q.s - now.q.s) > 1e-5f;
+        if (!differs) continue;
+        if (record.kind == Kind::Rigid) {
+            // bryła przesunięta w kodzie (Position(), Rotate()) - teleport
+            if (record.hasWritten && Same(world, record.written)) continue;
+            b2Body_SetTransform(record.id, frame.p, frame.q);
+            b2Body_SetAwake(record.id, true);
+            record.written = world;
+            record.hasWritten = true;
+            continue;
+        }
+        if (record.kind == Kind::Static && !record.moved) {
+            // StaticBody przesuwany w kodzie staje się kinematyczny - ma prędkość i wiezie bryły
+            b2Body_SetType(record.id, b2_kinematicBody);
+            record.moved = true;
+        }
+        // obiekty kinematyczne: zapytania widzą bieżące położenie; prędkość dostaną w kroku
+        b2Body_SetTransform(record.id, frame.p, frame.q);
+    }
+}
+
+void PhysicsWorld::PrepareStep() {
+    SyncTransforms();
+    for (BodyRecord& record : impl_->records) {
+        if (!b2Body_IsValid(record.id)) continue;
+        if (record.kind != Kind::Rigid) {
+            if (record.kind == Kind::Static && !record.moved) continue;
+            // od położenia z początku kroku do bieżącego - Box2D liczy z tego prędkość, więc
+            // jadąca platforma wiezie bryły, a postać je popycha
+            const b2Transform target = FrameOf(record.object->WorldTransform());
+            b2Body_SetTransform(record.id, record.stepStart.p, record.stepStart.q);
+            b2Body_SetTargetTransform(record.id, target, delta_);
+            continue;
+        }
+        RigidBody& rigid = *record.rigid;
+        b2Body_SetGravityScale(record.id, rigid.gravityScale_);
+        b2Body_SetLinearDamping(record.id, rigid.linearDamp_);
+        b2Body_SetAngularDamping(record.id, rigid.angularDamp_);
+        if (b2Body_IsFixedRotation(record.id) != rigid.lockRotation_)
+            b2Body_SetFixedRotation(record.id, rigid.lockRotation_);
+        // prędkość zmieniona w kodzie od ostatniego kroku
+        if (rigid.linearVelocity_.x != record.velocity.x ||
+            rigid.linearVelocity_.y != record.velocity.y)
+            b2Body_SetLinearVelocity(record.id, ToB2(rigid.linearVelocity_));
+        if (rigid.angularVelocity_ != record.angular)
+            b2Body_SetAngularVelocity(record.id, rigid.angularVelocity_);
+        for (const RigidBody::Pending& pending : rigid.pending_) {
+            const b2Vec2 vector = ToB2(pending.vector);
+            if (pending.impulse) {
+                if (pending.central)
+                    b2Body_ApplyLinearImpulseToCenter(record.id, vector, true);
+                else
+                    b2Body_ApplyLinearImpulse(record.id, vector, ToB2(pending.point), true);
+            } else if (pending.central) {
+                b2Body_ApplyForceToCenter(record.id, vector, true);
+            } else {
+                b2Body_ApplyForce(record.id, vector, ToB2(pending.point), true);
+            }
+        }
+        if (rigid.torque_ != 0.0f) b2Body_ApplyTorque(record.id, rigid.torque_, true);
+        if (rigid.torqueImpulse_ != 0.0f)
+            b2Body_ApplyAngularImpulse(record.id, rigid.torqueImpulse_, true);
+        rigid.pending_.clear();
+        rigid.torque_ = 0.0f;
+        rigid.torqueImpulse_ = 0.0f;
+    }
+}
+
+void PhysicsWorld::ReadBack() {
+    for (BodyRecord& record : impl_->records) {
+        if (!b2Body_IsValid(record.id)) continue;
+        record.stepStart = b2Body_GetTransform(record.id);
+        if (record.kind != Kind::Rigid) continue;
+        RigidBody& rigid = *record.rigid;
+        // nowa macierz: położenie i obrót z Box2D, skala obiektu bez zmian
+        const AffineMatrix2D world = rigid.WorldTransform();
+        const b2Transform before = FrameOf(world);
+        const b2Transform after = record.stepStart;
+        const b2Rot turn = b2InvMulRot(before.q, after.q);
+        AffineMatrix2D next = AffineMatrix2D::Rotation(b2Rot_GetAngle(turn)) * world;
+        next.tx = after.p.x;
+        next.ty = after.p.y;
+        const Entity* parent = rigid.Parent();
+        const AffineMatrix2D local =
+            parent ? parent->WorldTransform().Inverse().value_or(AffineMatrix2D{}) * next : next;
+        rigid.transform_ = local;
+        record.written = rigid.WorldTransform();
+        record.hasWritten = true;
+
+        rigid.linearVelocity_ = FromB2(b2Body_GetLinearVelocity(record.id));
+        rigid.angularVelocity_ = b2Body_GetAngularVelocity(record.id);
+        rigid.centerOfMass_ = FromB2(b2Body_GetWorldCenterOfMass(record.id));
+        record.velocity = rigid.linearVelocity_;
+        record.angular = rigid.angularVelocity_;
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// Krok
+// ---------------------------------------------------------------------------------------------
+
+void PhysicsWorld::BeginFrame(float dt) {
+    delta_ = dt;
+}
+
+void PhysicsWorld::BeginStep(float step) {
+    delta_ = step;
+    dirty_ = true;
+    SyncStructure();
+    // stan przed krokiem - początek interpolacji rysowania
+    for (BodyRecord& record : impl_->records) {
+        record.object->previous_ = record.object->transform_;
+        record.object->inStep_ = true;
+    }
 }
 
 void PhysicsWorld::Record(PhysicsBody& body, const Collision& hit) {
@@ -175,555 +630,53 @@ void PhysicsWorld::Record(PhysicsBody& body, const Collision& hit) {
     contacts_.emplace(key, contact);
 }
 
-bool PhysicsWorld::MoveAndSlide(CharacterBody& body) {
-    const bool wasOnFloor = body.onFloor_;
-    body.collisions_.clear();
-    body.onFloor_ = body.onWall_ = body.onCeiling_ = false;
-
-    const Entry* self = Find(&body);
-    const Vector2 motion{body.velocity_.x * delta_, body.velocity_.y * delta_};
-    if (!self || self->shapes.empty()) {
-        body.MoveInScene(motion); // bez colliderów - zwykły ruch
-        return false;
-    }
-
-    // wożenie przez platformę: przesunięcie punktu pod postacią od jej ostatniego ruchu
-    body.platformVelocity_ = {};
-    const PhysicsBody* floorBody = wasOnFloor ? body.floorBody_ : nullptr;
-    // postać przeniesiona w kodzie (np. Position() przy odrodzeniu) nie stoi już na tej podłodze
-    const Vector2 position = body.WorldPosition();
-    const bool moved = std::fabs(position.x - body.floorWorld_.x) > 0.01f ||
-                       std::fabs(position.y - body.floorWorld_.y) > 0.01f;
-    if (floorBody && !moved && Find(floorBody)) {
-        const Vector2 now = floorBody->World(body.floorLocal_);
-        const Vector2 carry{now.x - body.floorWorld_.x, now.y - body.floorWorld_.y};
-        if (Dot(carry, carry) > 0.0f) {
-            body.MoveInScene(carry);
-            if (delta_ > 0.0f) body.platformVelocity_ = {carry.x / delta_, carry.y / delta_};
-        }
-    }
-    const PhysicsBody* standingOn = nullptr; // podłoga po tym ruchu
-
-    const float distance = std::sqrt(Dot(motion, motion));
-    const int substeps =
-        std::clamp(static_cast<int>(std::ceil(distance / kMaxSubstepDistance)), 1, kMaxSubsteps);
-    const float substepTime = delta_ / static_cast<float>(substeps);
-    const Vector2 up = body.up_;
-    const float floorCos = std::cos(body.floorMaxAngle_);
-
-    // rozsunięcie z jednym ciałem: podłoga - pionowo w górę, ściana i sufit - wzdłuż normalnej
-    const auto resolve = [&](const Collision& hit) {
-        const Vector2 n = hit.normal;
-        const float upness = Dot(n, up);
-        if (upness >= floorCos) {
-            // podłoga: wypchnięcie pionowo w górę (bez zsuwania się z pochylni)
-            body.onFloor_ = true;
-            body.floorNormal_ = n;
-            standingOn = hit.other;
-            const float lift = hit.depth / upness;
-            body.MoveInScene({up.x * lift, up.y * lift});
-            const float into = Dot(body.velocity_, up);
-            if (into < 0.0f)
-                body.velocity_ = {body.velocity_.x - up.x * into, body.velocity_.y - up.y * into};
-        } else {
-            if (upness <= -floorCos)
-                body.onCeiling_ = true;
-            else
-                body.onWall_ = true;
-            body.MoveInScene({n.x * hit.depth, n.y * hit.depth});
-            const float into = Dot(body.velocity_, n);
-            if (into < 0.0f)
-                body.velocity_ = {body.velocity_.x - n.x * into, body.velocity_.y - n.y * into};
-        }
-        const bool known =
-            std::any_of(body.collisions_.begin(), body.collisions_.end(), [&](const Collision& c) {
-                return c.other == hit.other && c.shape == hit.shape;
-            });
-        if (!known) body.collisions_.push_back(hit);
-        Record(body, hit);
-    };
-
-    for (int substep = 0; substep < substeps; ++substep) {
-        const Vector2 step{body.velocity_.x * substepTime, body.velocity_.y * substepTime};
-        body.MoveInScene(step);
-        for (int push = 0; push < kMaxPushes; ++push) {
-            const std::optional<Collision> hit = Deepest(*self, step);
-            if (!hit) break;
-            resolve(*hit);
-        }
-    }
-
-    // Przyklejenie do podłogi (floor snap): schodząc z pochylni, postać w każdym kroku przesuwa
-    // się w bok szybciej, niż grawitacja ściąga ją w dół, i odrywa się od powierzchni. Jeśli
-    // przed ruchem stała na podłodze i nie leci w górę (skok), sprawdzamy podłogę tuż pod nią.
-    const float snap = body.floorSnapLength_;
-    if (wasOnFloor && !body.onFloor_ && snap > 0.0f && Dot(body.velocity_, up) <= 0.0f) {
-        const Vector2 before = body.Position();
-        body.MoveInScene({-up.x * snap, -up.y * snap});
-        bool floor = false;
-        for (int push = 0; push < kMaxPushes; ++push) {
-            const std::optional<Collision> hit = Deepest(*self, {-up.x * snap, -up.y * snap});
-            if (!hit) break;
-            if (Dot(hit->normal, up) < floorCos) { // pod spodem nie ma podłogi - np. ściana
-                floor = false;
-                break;
-            }
-            resolve(*hit);
-            floor = true;
-        }
-        if (!floor) body.Position(before); // nic pod spodem - postać spada normalnie
-    }
-
-    // zapamiętanie podłogi do wożenia w następnym ruchu
-    body.floorBody_ = body.onFloor_ ? standingOn : nullptr;
-    if (body.floorBody_) {
-        body.floorWorld_ = body.WorldPosition();
-        body.floorLocal_ = body.floorBody_->ToLocal(body.floorWorld_);
-    }
-    // zejście z jadącej platformy (skok, krawędź) - postać zachowuje jej prędkość
-    if (wasOnFloor && !body.onFloor_)
-        body.velocity_ = {
-            body.velocity_.x + body.platformVelocity_.x, body.velocity_.y + body.platformVelocity_.y
-        };
-    return !body.collisions_.empty();
-}
-
-std::vector<PhysicsBody*> PhysicsWorld::OverlappingBodies(const Area& area) {
-    std::vector<PhysicsBody*> bodies;
-    const Entry* self = Find(&area);
-    if (!self) return bodies;
-    for (const Entry& other : Entries())
-        if (other.body && other.object != &area && !other.object->IsDestroyed() &&
-            area.CollidesWith(*other.object) && Overlap(*self, other))
-            bodies.push_back(other.body);
-    return bodies;
-}
-
-std::vector<Area*> PhysicsWorld::OverlappingAreas(const Area& area) {
-    std::vector<Area*> areas;
-    const Entry* self = Find(&area);
-    if (!self) return areas;
-    for (const Entry& other : Entries())
-        if (other.area && other.object != &area && !other.object->IsDestroyed() &&
-            area.CollidesWith(*other.object) && Overlap(*self, other))
-            areas.push_back(other.area);
-    return areas;
-}
-
-std::optional<RayHit> PhysicsWorld::Raycast(
-    Vector2 from,
-    Vector2 to,
-    std::uint32_t mask,
-    const CollisionObject* exclude
-) const {
-    std::optional<RayHit> nearest;
-    float nearestFraction = INFINITY;
-    const Vector2 direction{to.x - from.x, to.y - from.y};
-    const float length = std::sqrt(Dot(direction, direction));
-    std::vector<ConvexPart> parts;
-    for (const Entry& entry : Entries()) {
-        if (!entry.body || entry.object == exclude || entry.object->IsDestroyed()) continue;
-        if ((mask & entry.object->CollisionLayer()) == 0) continue;
-        for (const CollisionShape* shape : entry.shapes) {
-            if (shape->IsDisabled()) continue;
-            // platforma jednostronna zatrzymuje tylko promień lecący z jej „góry”
-            if (shape->IsOneWay() && Dot(direction, shape->OneWayDirection()) >= 0.0f) continue;
-            parts.clear();
-            shape->WorldParts(parts);
-            for (const ConvexPart& part : parts) {
-                const auto hit = ConvexRaycast(part, from, to);
-                if (!hit || hit->fraction >= nearestFraction) continue;
-                nearestFraction = hit->fraction;
-                nearest = RayHit{
-                    entry.body,
-                    shape,
-                    {from.x + direction.x * hit->fraction, from.y + direction.y * hit->fraction},
-                    hit->normal,
-                    length * hit->fraction
-                };
-            }
-        }
-    }
-    return nearest;
-}
-
-std::vector<PhysicsBody*> PhysicsWorld::Overlap(
-    const ConvexPart& part,
-    std::uint32_t mask,
-    const CollisionObject* exclude
-) const {
-    std::vector<PhysicsBody*> bodies;
-    std::vector<ConvexPart> parts;
-    for (const Entry& entry : Entries()) {
-        if (!entry.body || entry.object == exclude || entry.object->IsDestroyed()) continue;
-        if ((mask & entry.object->CollisionLayer()) == 0) continue;
-        bool hit = false;
-        for (const CollisionShape* shape : entry.shapes) {
-            if (shape->IsDisabled() || hit) continue;
-            parts.clear();
-            shape->WorldParts(parts);
-            for (const ConvexPart& other : parts)
-                if (ConvexOverlap(part, other)) hit = true;
-        }
-        if (hit) bodies.push_back(entry.body);
-    }
-    return bodies;
-}
-
-void PhysicsWorld::Simulate(float dt) {
-    if (dt <= 0.0f) return;
-    const std::vector<Entry>& entries = Entries();
-
-    // ---- 1. stan brył: masa, środek masy, siły, impulsy i całkowanie prędkości ----
-    struct Body {
-        RigidBody* body = nullptr;
-        const Entry* entry = nullptr;
-        Vector2 com{};
-        float invMass = 0;
-        float invInertia = 0;
-        Vector2 v{};
-        float w = 0;
-        Vector2 v0{}; /**< Prędkość przed grawitacją i siłami tego kroku (do odbić). */
-        float w0 = 0;
-        Vector2 pushV{}; /**< Pseudo-prędkość korekty wnikania (nie zostaje w prędkości). */
-        float pushW = 0;
-    };
-    std::vector<Body> bodies;
-    std::vector<ConvexPart> parts;
-    for (const Entry& entry : entries) {
-        if (!entry.rigid || entry.object->IsDestroyed()) continue;
-        RigidBody& rigid = *entry.rigid;
-        parts.clear();
-        for (const CollisionShape* shape : entry.shapes)
-            if (!shape->IsDisabled()) shape->WorldParts(parts);
-
-        // masa rozłożona równomiernie na pole: środek masy i moment z twierdzenia Steinera
-        float area = 0.0f;
-        Vector2 weighted{};
-        Vector2 centers{};
-        std::vector<ConvexMass> masses;
-        masses.reserve(parts.size());
-        for (const ConvexPart& part : parts) {
-            const ConvexMass mass = ConvexMassProperties(part);
-            masses.push_back(mass);
-            area += mass.area;
-            weighted = {
-                weighted.x + mass.centroid.x * mass.area, weighted.y + mass.centroid.y * mass.area
-            };
-            centers = {centers.x + mass.centroid.x, centers.y + mass.centroid.y};
-        }
-        Body body;
-        body.body = &rigid;
-        body.entry = &entry;
-        float inertia = rigid.mass_ * 100.0f; // bez pola (punkty, odcinki) - jak kulka o r = 14 px
-        if (area > 1e-3f) {
-            body.com = {weighted.x / area, weighted.y / area};
-            float moment = 0.0f;
-            for (const ConvexMass& mass : masses) {
-                const Vector2 arm{mass.centroid.x - body.com.x, mass.centroid.y - body.com.y};
-                moment += mass.inertia + mass.area * Dot(arm, arm);
-            }
-            inertia = rigid.mass_ * moment / area;
-        } else if (!parts.empty()) {
-            const float count = static_cast<float>(parts.size());
-            body.com = {centers.x / count, centers.y / count};
-        } else {
-            body.com = rigid.WorldPosition();
-        }
-        body.invMass = 1.0f / rigid.mass_;
-        body.invInertia = rigid.lockRotation_ || inertia <= 0.0f ? 0.0f : 1.0f / inertia;
-        body.v = rigid.linearVelocity_;
-        body.w = rigid.angularVelocity_;
-
-        Vector2 force{};
-        float torque = rigid.torque_;
-        for (const RigidBody::Pending& pending : rigid.pending_) {
-            const Vector2 arm =
-                pending.central
-                    ? Vector2{}
-                    : Vector2{pending.point.x - body.com.x, pending.point.y - body.com.y};
-            if (pending.impulse) {
-                body.v = {
-                    body.v.x + pending.vector.x * body.invMass,
-                    body.v.y + pending.vector.y * body.invMass
-                };
-                body.w += body.invInertia * Cross(arm, pending.vector);
-            } else {
-                force = {force.x + pending.vector.x, force.y + pending.vector.y};
-                torque += Cross(arm, pending.vector);
-            }
-        }
-        body.w += body.invInertia * rigid.torqueImpulse_;
-        body.v0 = body.v;
-        body.w0 = body.w;
-        rigid.pending_.clear();
-        rigid.torque_ = 0.0f;
-        rigid.torqueImpulse_ = 0.0f;
-
-        const Vector2 gravity{gravity_.x * rigid.gravityScale_, gravity_.y * rigid.gravityScale_};
-        body.v = {
-            body.v.x + (gravity.x + force.x * body.invMass) * dt,
-            body.v.y + (gravity.y + force.y * body.invMass) * dt
-        };
-        body.w += torque * body.invInertia * dt;
-        const float linearDamp = 1.0f / (1.0f + dt * rigid.linearDamp_);
-        body.v = {body.v.x * linearDamp, body.v.y * linearDamp};
-        body.w *= 1.0f / (1.0f + dt * rigid.angularDamp_);
-        if (rigid.lockRotation_) body.w = 0.0f;
-        rigid.centerOfMass_ = body.com;
-        bodies.push_back(body);
-    }
-    if (bodies.empty()) {
-        warmStart_.clear();
-        return;
-    }
-    const auto indexOf = [&](const RigidBody* rigid) {
-        for (std::size_t i = 0; i < bodies.size(); ++i)
-            if (bodies[i].body == rigid) return static_cast<int>(i);
-        return -1;
-    };
-
-    // ---- 2. punkty styku ----
-    struct SolverContact {
-        int a = 0;
-        int b = -1;   /**< Druga bryła albo -1 (ciało o nieskończonej masie). */
-        Vector2 vB{}; /**< Prędkość ciała o nieskończonej masie. */
-        Vector2 n{};  /**< Normalna od b do a. */
-        Vector2 point{};
-        Vector2 rA{};
-        Vector2 rB{};
-        float depth = 0;
-        float normalMass = 0;
-        float tangentMass = 0;
-        float target = 0;     /**< Docelowa prędkość normalna (odbicie). */
-        float pushTarget = 0; /**< Docelowa pseudo-prędkość rozsuwania (korekta wnikania). */
-        float pushImpulse = 0;
-        float friction = 0;
-        float pn = 0;
-        float pt = 0;
-        const PhysicsBody* other = nullptr; /**< Drugie ciało (materiał). */
-        ManifoldKey key;
-    };
-    std::vector<SolverContact> contacts;
-    std::vector<ConvexPart> partsA;
-    std::vector<ConvexPart> partsB;
-    std::array<ContactPoint, 2> manifold{};
-    for (std::size_t i = 0; i < bodies.size(); ++i) {
-        const Body& A = bodies[i];
-        const Entry& entryA = *A.entry;
-        for (const Entry& entryB : entries) {
-            if (!entryB.body || entryB.object == entryA.object || entryB.object->IsDestroyed())
-                continue;
-            if (!entryA.object->CollidesWith(*entryB.object) &&
-                !entryB.object->CollidesWith(*entryA.object))
-                continue;
-            int j = -1;
-            Vector2 vB{};
-            if (entryB.rigid) {
-                j = indexOf(entryB.rigid);
-                if (j <= static_cast<int>(i)) continue; // para brył - raz
-            } else if (const auto* character = dynamic_cast<const CharacterBody*>(entryB.object)) {
-                vB = character->velocity_;
-            }
-            const Vector2 velocityB = j >= 0 ? bodies[static_cast<std::size_t>(j)].v : vB;
-            bool recorded = false;
-            for (const CollisionShape* shapeA : entryA.shapes) {
-                if (shapeA->IsDisabled()) continue;
-                partsA.clear();
-                shapeA->WorldParts(partsA);
-                for (const CollisionShape* shapeB : entryB.shapes) {
-                    if (shapeB->IsDisabled()) continue;
-                    partsB.clear();
-                    shapeB->WorldParts(partsB);
-                    for (const ConvexPart& partA : partsA)
-                        for (const ConvexPart& partB : partsB) {
-                            const auto penetration = ConvexPenetration(partA, partB);
-                            if (!penetration || penetration->depth < kMinDepth) continue;
-                            const Vector2 n = penetration->normal;
-                            const Vector2 relative{A.v.x - velocityB.x, A.v.y - velocityB.y};
-                            // platforma jednostronna zatrzymuje tylko opadanie na nią od góry
-                            const auto oneWayBlocks = [&](const CollisionShape& platform,
-                                                          Vector2 push, Vector2 motion) {
-                                const Vector2 up = platform.OneWayDirection();
-                                const float down = -Dot(motion, up) * dt;
-                                return Dot(push, up) >= kOneWayCos && Dot(motion, up) <= 0.0f &&
-                                       penetration->depth <= std::max(down, 0.0f) + kOneWayMargin;
-                            };
-                            if (shapeB->IsOneWay() && !oneWayBlocks(*shapeB, n, relative)) continue;
-                            if (shapeA->IsOneWay() &&
-                                !oneWayBlocks(*shapeA, {-n.x, -n.y}, {-relative.x, -relative.y}))
-                                continue;
-                            const int count = ConvexContacts(partA, partB, *penetration, manifold);
-                            for (int k = 0; k < count; ++k) {
-                                SolverContact contact;
-                                contact.a = static_cast<int>(i);
-                                contact.b = j;
-                                contact.vB = vB;
-                                contact.n = n;
-                                contact.point = manifold[static_cast<std::size_t>(k)].point;
-                                contact.depth = manifold[static_cast<std::size_t>(k)].depth;
-                                contact.key = {entryA.object, shapeA, entryB.object, shapeB};
-                                contact.other = entryB.body;
-                                contacts.push_back(contact);
-                            }
-                            if (!recorded) {
-                                Record(
-                                    *A.body,
-                                    Collision{entryB.body, shapeA, shapeB, n, penetration->depth}
-                                );
-                                recorded = true;
-                            }
-                        }
-                }
-            }
-        }
-    }
-
-    // ---- 3. przygotowanie i warm starting ----
-    const auto apply = [&](SolverContact& c, Vector2 impulse) {
-        Body& A = bodies[static_cast<std::size_t>(c.a)];
-        A.v = {A.v.x + impulse.x * A.invMass, A.v.y + impulse.y * A.invMass};
-        A.w += A.invInertia * Cross(c.rA, impulse);
-        if (c.b < 0) return;
-        Body& B = bodies[static_cast<std::size_t>(c.b)];
-        B.v = {B.v.x - impulse.x * B.invMass, B.v.y - impulse.y * B.invMass};
-        B.w -= B.invInertia * Cross(c.rB, impulse);
-    };
-    const auto relativeVelocity = [&](const SolverContact& c) {
-        const Body& A = bodies[static_cast<std::size_t>(c.a)];
-        const Vector2 va = PointVelocity(A.v, A.w, c.rA);
-        if (c.b < 0) return Vector2{va.x - c.vB.x, va.y - c.vB.y};
-        const Body& B = bodies[static_cast<std::size_t>(c.b)];
-        const Vector2 vb = PointVelocity(B.v, B.w, c.rB);
-        return Vector2{va.x - vb.x, va.y - vb.y};
-    };
-    for (SolverContact& c : contacts) {
-        const Body& A = bodies[static_cast<std::size_t>(c.a)];
-        const Body* B = c.b >= 0 ? &bodies[static_cast<std::size_t>(c.b)] : nullptr;
-        c.rA = {c.point.x - A.com.x, c.point.y - A.com.y};
-        c.rB = B ? Vector2{c.point.x - B->com.x, c.point.y - B->com.y} : Vector2{};
-        const float invMassB = B ? B->invMass : 0.0f;
-        const float invInertiaB = B ? B->invInertia : 0.0f;
-        const Vector2 t{-c.n.y, c.n.x};
-        const float rnA = Cross(c.rA, c.n);
-        const float rnB = Cross(c.rB, c.n);
-        const float rtA = Cross(c.rA, t);
-        const float rtB = Cross(c.rB, t);
-        const float kn = A.invMass + invMassB + A.invInertia * rnA * rnA + invInertiaB * rnB * rnB;
-        const float kt = A.invMass + invMassB + A.invInertia * rtA * rtA + invInertiaB * rtB * rtB;
-        c.normalMass = kn > 0.0f ? 1.0f / kn : 0.0f;
-        c.tangentMass = kt > 0.0f ? 1.0f / kt : 0.0f;
-
-        // materiał pary: tarcie - średnia geometryczna, odbicie - większe z dwóch
-        c.friction = std::sqrt(std::max(0.0f, A.body->friction_ * c.other->friction_));
-        const float bounce = std::max(A.body->bounce_, c.other->bounce_);
-        // prędkość uderzenia sprzed grawitacji tego kroku - inaczej leżąca piłka co krok
-        // „uderzałaby” z prędkością g * dt i podskakiwała bez końca
-        Vector2 approach = PointVelocity(A.v0, A.w0, c.rA);
-        if (B) {
-            const Vector2 vb = PointVelocity(B->v0, B->w0, c.rB);
-            approach = {approach.x - vb.x, approach.y - vb.y};
-        } else {
-            approach = {approach.x - c.vB.x, approach.y - c.vB.y};
-        }
-        const float vn = Dot(approach, c.n);
-        const float bounceTarget = vn < -kBounceThreshold ? -bounce * vn : 0.0f;
-        // korekta wnikania osobno (split impulse) - nie dodaje bryłom energii przy zderzeniu
-        c.pushTarget = kBaumgarte / dt * std::max(0.0f, c.depth - kSlop);
-        c.target = bounceTarget;
-
-        // impulsy z poprzedniego kroku w tym samym miejscu - solver zaczyna blisko wyniku
-        if (const auto cached = warmStart_.find(c.key); cached != warmStart_.end())
-            for (const CachedContact& old : cached->second) {
-                const Vector2 offset{old.point.x - c.point.x, old.point.y - c.point.y};
-                if (Dot(offset, offset) > kWarmStartDistance * kWarmStartDistance) continue;
-                c.pn = old.normalImpulse;
-                c.pt = old.tangentImpulse;
-                apply(c, {c.n.x * c.pn + t.x * c.pt, c.n.y * c.pn + t.y * c.pt});
-                break;
-            }
-    }
-
-    // ---- 4. iteracje impulsów: tarcie, potem nacisk (z odbiciem i korektą wnikania) ----
-    for (int iteration = 0; iteration < kSolverIterations; ++iteration)
-        for (SolverContact& c : contacts) {
-            const Vector2 t{-c.n.y, c.n.x};
-            const float vt = Dot(relativeVelocity(c), t);
-            const float maxFriction = c.friction * c.pn;
-            const float pt = std::clamp(c.pt - vt * c.tangentMass, -maxFriction, maxFriction);
-            apply(c, {t.x * (pt - c.pt), t.y * (pt - c.pt)});
-            c.pt = pt;
-
-            const float vn = Dot(relativeVelocity(c), c.n);
-            const float pn = std::max(c.pn + (c.target - vn) * c.normalMass, 0.0f);
-            apply(c, {c.n.x * (pn - c.pn), c.n.y * (pn - c.pn)});
-            c.pn = pn;
-        }
-
-    // korekta wnikania: te same iteracje na pseudo-prędkościach, używanych tylko do ruchu
-    const auto applyPush = [&](SolverContact& c, Vector2 impulse) {
-        Body& A = bodies[static_cast<std::size_t>(c.a)];
-        A.pushV = {A.pushV.x + impulse.x * A.invMass, A.pushV.y + impulse.y * A.invMass};
-        A.pushW += A.invInertia * Cross(c.rA, impulse);
-        if (c.b < 0) return;
-        Body& B = bodies[static_cast<std::size_t>(c.b)];
-        B.pushV = {B.pushV.x - impulse.x * B.invMass, B.pushV.y - impulse.y * B.invMass};
-        B.pushW -= B.invInertia * Cross(c.rB, impulse);
-    };
-    for (int iteration = 0; iteration < kSolverIterations; ++iteration)
-        for (SolverContact& c : contacts) {
-            const Body& A = bodies[static_cast<std::size_t>(c.a)];
-            Vector2 relative = PointVelocity(A.pushV, A.pushW, c.rA);
-            if (c.b >= 0) {
-                const Body& B = bodies[static_cast<std::size_t>(c.b)];
-                const Vector2 vb = PointVelocity(B.pushV, B.pushW, c.rB);
-                relative = {relative.x - vb.x, relative.y - vb.y};
-            }
-            const float vn = Dot(relative, c.n);
-            const float impulse =
-                std::max(c.pushImpulse + (c.pushTarget - vn) * c.normalMass, 0.0f);
-            applyPush(c, {c.n.x * (impulse - c.pushImpulse), c.n.y * (impulse - c.pushImpulse)});
-            c.pushImpulse = impulse;
-        }
-
-    std::map<ManifoldKey, std::vector<CachedContact>> cache;
-    for (const SolverContact& c : contacts)
-        cache[c.key].push_back({c.point, c.pn, c.pt});
-    warmStart_ = std::move(cache);
-
-    // ---- 5. ruch: przesunięcie środka masy i obrót wokół niego ----
-    for (Body& body : bodies) {
-        RigidBody& rigid = *body.body;
-        const Vector2 delta{(body.v.x + body.pushV.x) * dt, (body.v.y + body.pushV.y) * dt};
-        rigid.MoveInScene(delta);
-        const Vector2 com{body.com.x + delta.x, body.com.y + delta.y};
-        const float turn = (body.w + body.pushW) * dt;
-        if (turn != 0.0f) {
-            // Rotate() działa w układzie rodzica - tam przeliczamy środek obrotu
-            const Entity* parent = rigid.Parent();
-            rigid.Rotate(turn, parent ? parent->ToLocal(com) : com);
-        }
-        rigid.linearVelocity_ = body.v;
-        rigid.angularVelocity_ = body.w;
-        rigid.centerOfMass_ = com;
-    }
-}
-
 void PhysicsWorld::EndStep() {
-    Simulate(delta_);
-    const std::vector<Entry>& entries = Entries();
+    dirty_ = true; // obiekty mogły zostać dodane albo usunięte w FixedTick()
+    PrepareStep();
+    b2World_Step(impl_->world, delta_, kSubSteps);
+    ReadBack();
+
+    Impl& impl = *impl_;
+    // zderzenia brył z Box2D (styki z punktami); postacie dopisują swoje w MoveAndSlide()
+    std::vector<b2ContactData> contactData;
+    for (BodyRecord& record : impl.records) {
+        if (!record.rigid || !b2Body_IsValid(record.id) || !b2Body_IsEnabled(record.id)) continue;
+        const int capacity = b2Body_GetContactCapacity(record.id);
+        contactData.resize(static_cast<std::size_t>(std::max(capacity, 1)));
+        const int count = b2Body_GetContactData(record.id, contactData.data(), capacity);
+        for (int k = 0; k < count; ++k) {
+            const b2ContactData& data = contactData[static_cast<std::size_t>(k)];
+            if (data.manifold.pointCount == 0) continue;
+            const bool mineIsA = Impl::ObjectOf(data.shapeIdA) == record.object;
+            const b2ShapeId mine = mineIsA ? data.shapeIdA : data.shapeIdB;
+            const b2ShapeId theirs = mineIsA ? data.shapeIdB : data.shapeIdA;
+            auto* other = dynamic_cast<PhysicsBody*>(Impl::ObjectOf(theirs));
+            if (!other) continue;
+            float depth = 0.0f;
+            for (int p = 0; p < data.manifold.pointCount; ++p)
+                depth = std::max(depth, -data.manifold.points[p].separation);
+            // normalna Box2D: od A do B; w Collision - od drugiego ciała do mnie
+            Vector2 normal = FromB2(data.manifold.normal);
+            if (mineIsA) normal = {-normal.x, -normal.y};
+            Record(
+                *record.rigid,
+                Collision{
+                    other, static_cast<const CollisionShape*>(b2Shape_GetUserData(mine)),
+                    static_cast<const CollisionShape*>(b2Shape_GetUserData(theirs)), normal, depth
+                }
+            );
+        }
+    }
+
     // obiekty usunięte ze sceny przed tym krokiem nie istnieją - nie wolno ich dotykać
     const auto present = [&](const CollisionObject* object) {
-        return std::any_of(entries.begin(), entries.end(), [object](const Entry& e) {
-            return e.object == object;
-        });
+        return impl.Find(object) != nullptr;
     };
 
     // najpierw zebranie zdarzeń, potem wywołanie: callback może usuwać i dodawać obiekty
-    std::vector<Event> events;
+    std::vector<std::function<void()>> events;
 
     for (const auto& [key, contact] : contacts_) {
-        // zderzenie z MoveAndSlide() w Tick() mogło dotyczyć obiektu usuniętego potem ze sceny
         if (!present(key.first) || !present(key.second)) continue;
         const bool stay = lastContacts_.contains(key);
         PhysicsBody* first = contact.first;
@@ -751,77 +704,63 @@ void PhysicsWorld::EndStep() {
     lastContacts_ = std::move(contacts_);
     contacts_.clear();
 
-    // obszary: pary (obszar, wykryty obiekt) i pary colliderów (do OnBodyShapeEnter/Exit)
+    // obszary: stan nachodzenia czujników po kroku
     std::set<Pair> overlaps;
     std::set<ShapePair> shapeOverlaps;
-    std::vector<ConvexPart> areaParts;
-    std::vector<ConvexPart> otherParts;
-    const auto touching = [&](const CollisionShape& a, const CollisionShape& b) {
-        areaParts.clear();
-        otherParts.clear();
-        a.WorldParts(areaParts);
-        b.WorldParts(otherParts);
-        for (const ConvexPart& partA : areaParts)
-            for (const ConvexPart& partB : otherParts)
-                if (ConvexOverlap(partA, partB)) return true;
-        return false;
-    };
-    for (const Entry& area : entries) {
-        if (!area.area || area.object->IsDestroyed()) continue;
-        Area* self = area.area;
-        for (const Entry& other : entries) {
-            if (other.object == area.object || other.object->IsDestroyed()) continue;
-            if (!area.object->CollidesWith(*other.object)) continue;
-            bool any = false;
-            for (const CollisionShape* areaShape : area.shapes) {
-                if (areaShape->IsDisabled()) continue;
-                for (const CollisionShape* otherShape : other.shapes) {
-                    if (otherShape->IsDisabled() || !touching(*areaShape, *otherShape)) continue;
-                    any = true;
-                    if (!other.body) continue;
-                    const ShapePair shapeKey{area.object, areaShape, other.object, otherShape};
-                    shapeOverlaps.insert(shapeKey);
-                    if (lastShapeOverlaps_.contains(shapeKey)) continue;
-                    const AreaShapeContact contact{other.body, otherShape, areaShape};
-                    events.emplace_back([self, contact] {
-                        if (self->shapeEnter_) self->shapeEnter_(contact);
-                    });
+    std::vector<b2ShapeId> visitors;
+    for (BodyRecord& record : impl.records) {
+        if (!record.area || record.object->IsDestroyed()) continue;
+        Area* self = record.area;
+        for (const ShapeRecord& areaShape : record.shapes)
+            for (const b2ShapeId sensor : areaShape.ids) {
+                const int capacity = b2Shape_GetSensorCapacity(sensor);
+                if (capacity <= 0) continue;
+                visitors.resize(static_cast<std::size_t>(capacity));
+                const int count = b2Shape_GetSensorOverlaps(sensor, visitors.data(), capacity);
+                for (int k = 0; k < count; ++k) {
+                    const b2ShapeId visitor = visitors[static_cast<std::size_t>(k)];
+                    if (!b2Shape_IsValid(visitor)) continue;
+                    CollisionObject* other = Impl::ObjectOf(visitor);
+                    if (!other || other == record.object || other->IsDestroyed()) continue;
+                    if (!record.object->CollidesWith(*other)) continue;
+                    const auto* otherShape =
+                        static_cast<const CollisionShape*>(b2Shape_GetUserData(visitor));
+                    const Pair key{record.object, other};
+                    if (overlaps.insert(key).second && !lastOverlaps_.contains(key)) {
+                        if (auto* body = dynamic_cast<PhysicsBody*>(other)) {
+                            events.emplace_back([self, body] {
+                                if (self->bodyEnter_) self->bodyEnter_(*body);
+                            });
+                        } else if (auto* entered = dynamic_cast<Area*>(other)) {
+                            events.emplace_back([self, entered] {
+                                if (self->areaEnter_) self->areaEnter_(*entered);
+                            });
+                        }
+                    }
+                    auto* body = dynamic_cast<PhysicsBody*>(other);
+                    if (!body) continue;
+                    const ShapePair shapeKey{record.object, areaShape.shape, other, otherShape};
+                    if (shapeOverlaps.insert(shapeKey).second &&
+                        !lastShapeOverlaps_.contains(shapeKey)) {
+                        const AreaShapeContact contact{body, otherShape, areaShape.shape};
+                        events.emplace_back([self, contact] {
+                            if (self->shapeEnter_) self->shapeEnter_(contact);
+                        });
+                    }
                 }
             }
-            if (!any) continue;
-            const Pair key{area.object, other.object};
-            overlaps.insert(key);
-            if (lastOverlaps_.contains(key)) continue;
-            if (other.body) {
-                PhysicsBody* body = other.body;
-                events.emplace_back([self, body] {
-                    if (self->bodyEnter_) self->bodyEnter_(*body);
-                });
-            } else if (other.area) {
-                Area* entered = other.area;
-                events.emplace_back([self, entered] {
-                    if (self->areaEnter_) self->areaEnter_(*entered);
-                });
-            }
-        }
     }
-    // obiekt usunięty w tym kroku jeszcze istnieje (Destroy() usuwa go na końcu klatki), ale ten
-    // usunięty przed krokiem - już nie: zdarzenie wyjścia tylko dla obiektów z bieżącej listy
-    const auto entryOf = [&](const CollisionObject* object) -> const Entry* {
-        for (const Entry& entry : entries)
-            if (entry.object == object) return &entry;
-        return nullptr;
-    };
-    const auto ownsShape = [](const Entry* entry, const CollisionShape* shape) {
-        return entry &&
-               std::find(entry->shapes.begin(), entry->shapes.end(), shape) != entry->shapes.end();
+    const auto ownsShape = [&](const CollisionObject* object, const CollisionShape* shape) {
+        const BodyRecord* record = impl.Find(object);
+        return record && std::find(record->current.begin(), record->current.end(), shape) !=
+                             record->current.end();
     };
     for (const ShapePair& key : lastShapeOverlaps_) {
         if (shapeOverlaps.contains(key)) continue;
         const auto& [areaObject, areaShape, bodyObject, bodyShape] = key;
-        const Entry* area = entryOf(areaObject);
-        const Entry* other = entryOf(bodyObject);
-        if (!ownsShape(area, areaShape) || !ownsShape(other, bodyShape)) continue;
+        if (!ownsShape(areaObject, areaShape) || !ownsShape(bodyObject, bodyShape)) continue;
+        const BodyRecord* area = impl.Find(areaObject);
+        const BodyRecord* other = impl.Find(bodyObject);
         if (!area->area || !other->body) continue;
         Area* self = area->area;
         const AreaShapeContact contact{other->body, bodyShape, areaShape};
@@ -831,8 +770,8 @@ void PhysicsWorld::EndStep() {
     }
     for (const Pair& key : lastOverlaps_) {
         if (overlaps.contains(key)) continue;
-        const Entry* area = entryOf(key.first);
-        const Entry* other = entryOf(key.second);
+        const BodyRecord* area = impl.Find(key.first);
+        const BodyRecord* other = impl.Find(key.second);
         if (!area || !other || !area->area) continue;
         Area* self = area->area;
         if (other->body) {
@@ -851,42 +790,405 @@ void PhysicsWorld::EndStep() {
     lastShapeOverlaps_ = std::move(shapeOverlaps);
 
     // stan po kroku - koniec interpolacji (obiekt dodany w trakcie kroku jej nie ma)
-    for (const Entry& entry : entries) {
-        entry.object->stepped_ = entry.object->transform_;
-        entry.object->interpolated_ = entry.object->inStep_;
-        entry.object->inStep_ = false;
+    for (BodyRecord& record : impl.records) {
+        record.object->stepped_ = record.object->transform_;
+        record.object->interpolated_ = record.object->inStep_;
+        record.object->inStep_ = false;
     }
 
-    for (const Event& event : events)
+    for (const auto& event : events)
         event();
 }
 
-void PhysicsWorld::Draw(PrimitiveRenderer& renderer) const {
+// ---------------------------------------------------------------------------------------------
+// Postać: mover Box2D
+// ---------------------------------------------------------------------------------------------
+
+bool PhysicsWorld::MoveAndSlide(CharacterBody& body) {
+    const bool wasOnFloor = body.onFloor_;
+    body.collisions_.clear();
+    body.onFloor_ = body.onWall_ = body.onCeiling_ = false;
+
+    SyncTransforms();
+    BodyRecord* record = impl_->Find(&body);
+    const Vector2 motion{body.velocity_.x * delta_, body.velocity_.y * delta_};
+    if (!record || record->shapes.empty() || body.IsDestroyed()) {
+        body.MoveInScene(motion); // bez colliderów - zwykły ruch
+        return false;
+    }
+
+    // kapsuła movera z obrysu colliderów (Box2D przesuwa postać kapsułą)
     std::vector<ConvexPart> parts;
-    for (const Entry& entry : Entries()) {
-        Color color = GRAY;
-        if (entry.area)
-            color = ORANGE;
-        else if (dynamic_cast<const CharacterBody*>(entry.object))
-            color = LIME;
-        else if (entry.rigid)
-            color = VIOLET;
-        else if (entry.body)
-            color = SKYBLUE;
-        for (const CollisionShape* shape : entry.shapes) {
-            parts.clear();
-            shape->WorldParts(parts);
-            renderer.Reset().TargetScreen().Paint(shape->IsDisabled() ? Fade(GRAY, 0.5f) : color);
-            for (const ConvexPart& part : parts) {
-                const std::vector<Point2D> outline = part.Outline();
-                if (outline.size() == 1)
-                    renderer.Circle(outline[0], 3.0f);
-                else if (outline.size() == 2)
-                    renderer.Line(outline[0], outline[1]);
-                else if (!outline.empty())
-                    renderer.Polyline(outline, true);
+    for (const CollisionShape* shape : record->current)
+        if (!shape->IsDisabled()) shape->WorldParts(parts);
+    float left = INFINITY, top = INFINITY, right = -INFINITY, bottom = -INFINITY;
+    for (const ConvexPart& part : parts)
+        for (const Vector2 direction :
+             {Vector2{1, 0}, Vector2{-1, 0}, Vector2{0, 1}, Vector2{0, -1}}) {
+            const Vector2 point = part.Support(direction);
+            left = std::min(left, point.x);
+            right = std::max(right, point.x);
+            top = std::min(top, point.y);
+            bottom = std::max(bottom, point.y);
+        }
+    if (parts.empty() || !std::isfinite(left)) {
+        body.MoveInScene(motion);
+        return false;
+    }
+    const Vector2 origin = body.WorldPosition();
+    const float width = right - left;
+    const float height = bottom - top;
+    const float radius = std::max(0.5f, std::min(width, height) * 0.5f);
+    const Vector2 middle{(left + right) * 0.5f, (top + bottom) * 0.5f};
+    const float half = std::max(0.01f, std::max(width, height) * 0.5f - radius);
+    const Vector2 axis = height >= width ? Vector2{0, half} : Vector2{half, 0};
+    const Vector2 offset1{middle.x - axis.x - origin.x, middle.y - axis.y - origin.y};
+    const Vector2 offset2{middle.x + axis.x - origin.x, middle.y + axis.y - origin.y};
+    const auto capsule = [&](Vector2 at) {
+        return b2Capsule{ToB2(Add(at, offset1)), ToB2(Add(at, offset2)), radius};
+    };
+
+    const Vector2 up = body.up_;
+    const b2Vec2 upB2 = ToB2(up);
+    const float floorCos = std::cos(body.floorMaxAngle_);
+    const b2QueryFilter collideFilter{kQueryBit | kOneWayBit, body.mask_};
+
+    // postać nie może zderzać się sama ze sobą - jej ciało jest wyłączone na czas ruchu
+    b2Body_Disable(record->id);
+
+    // wożenie przez platformę: przesunięcie punktu pod postacią od jej ostatniego ruchu
+    body.platformVelocity_ = {};
+    const PhysicsBody* floorBody = wasOnFloor ? body.floorBody_ : nullptr;
+    const bool teleported = std::fabs(origin.x - body.floorWorld_.x) > 0.01f ||
+                            std::fabs(origin.y - body.floorWorld_.y) > 0.01f;
+    Vector2 position = origin;
+    if (floorBody && !teleported && impl_->Find(floorBody)) {
+        const Vector2 now = floorBody->World(body.floorLocal_);
+        const Vector2 carry{now.x - body.floorWorld_.x, now.y - body.floorWorld_.y};
+        position = Add(position, carry);
+        if (delta_ > 0.0f) body.platformVelocity_ = Scale(carry, 1.0f / delta_);
+    }
+
+    MoverContext context;
+    context.up = &upB2;
+    std::vector<std::pair<b2ShapeId, b2Plane>> touched; // do zderzeń i zdarzeń
+    // jedna pętla movera: zderzenie -> płaszczyzny -> rzut kapsuły
+    const auto slide = [&](Vector2 translation) {
+        const Vector2 target = Add(position, translation);
+        for (int iteration = 0; iteration < kMoverIterations; ++iteration) {
+            context.count = 0;
+            context.insideOneWay = false;
+            context.motion = translation;
+            const b2Capsule mover = capsule(position);
+            b2World_CollideMover(impl_->world, &mover, collideFilter, CollectPlane, &context);
+            for (int k = 0; k < context.count; ++k)
+                touched.emplace_back(
+                    context.shapes[static_cast<std::size_t>(k)],
+                    context.planes[static_cast<std::size_t>(k)].plane
+                );
+            const Vector2 remaining{target.x - position.x, target.y - position.y};
+            const b2PlaneSolverResult solved =
+                b2SolvePlanes(ToB2(remaining), context.planes.data(), context.count);
+            // platformy jednostronne blokują rzut tylko przy ruchu w dół i gdy postać na nie nie
+            // nachodzi (inaczej zatrzymałaby się w środku platformy, przez którą przeskakuje)
+            const bool oneWay = Dot(remaining, up) <= 0.0f && !context.insideOneWay;
+            const b2QueryFilter castFilter{kQueryBit | (oneWay ? kOneWayBit : 0), body.mask_};
+            const float fraction =
+                b2World_CastMover(impl_->world, &mover, solved.translation, castFilter);
+            const Vector2 step = Scale(FromB2(solved.translation), fraction);
+            position = Add(position, step);
+            if (Dot(step, step) < 1e-4f) break;
+        }
+    };
+
+    const float vertical = Dot(motion, up);
+    if (wasOnFloor && vertical <= 0.0f) {
+        // na podłodze: ruch w bok ślizga się po powierzchni (także pod górę pochylni), a spadek
+        // w dół jest rzutem - bez zsuwania się z pochylni pod wpływem grawitacji
+        // bez ruchu w bok nie ma czego rozwiązywać - wypychanie z zapasu Box2D wzdłuż normalnej
+        // pochylni przesuwałoby stojącą postać w dół zbocza
+        const Vector2 lateral{motion.x - up.x * vertical, motion.y - up.y * vertical};
+        if (Dot(lateral, lateral) > 1e-8f) {
+            slide(lateral);
+        } else {
+            // stoi: wypchnięcie z zapasu Box2D pionowo w górę (z podłogi) i wzdłuż normalnej
+            // (ze ścian) - bez tego rzut w dół startowałby z wnikania i przelatywał przez podłogę
+            context.count = 0;
+            context.motion = Scale(up, -1.0f);
+            const b2Capsule mover = capsule(position);
+            b2World_CollideMover(impl_->world, &mover, collideFilter, CollectPlane, &context);
+            float lift = 0.0f;
+            for (int k = 0; k < context.count; ++k) {
+                const b2Plane plane = context.planes[static_cast<std::size_t>(k)].plane;
+                const Vector2 normal = FromB2(plane.normal);
+                const float upness = Dot(normal, up);
+                if (upness >= floorCos)
+                    lift = std::max(lift, plane.offset / upness);
+                else
+                    position = Add(position, Scale(normal, plane.offset));
+            }
+            position = Add(position, Scale(up, lift));
+        }
+        const float drop = -vertical + body.floorSnapLength_;
+        const b2Capsule mover = capsule(position);
+        const b2QueryFilter castFilter{kQueryBit | kOneWayBit, body.mask_};
+        const Vector2 down = Scale(up, -drop);
+        const float fraction = b2World_CastMover(impl_->world, &mover, ToB2(down), castFilter);
+        position = fraction < 1.0f ? Add(position, Scale(down, fraction))
+                                   : Add(position, Scale(up, vertical));
+    } else {
+        slide(motion);
+    }
+
+    // styk po ruchu: podłoga, ściany, sufit
+    context.count = 0;
+    context.motion = Dot(motion, up) <= 0.0f ? Scale(up, -1.0f) : motion;
+    const b2Capsule final = capsule(position);
+    b2World_CollideMover(impl_->world, &final, collideFilter, CollectPlane, &context);
+    std::array<b2CollisionPlane, kMaxPlanes> clipPlanes{};
+    int clipCount = 0;
+    const PhysicsBody* standingOn = nullptr;
+    for (int k = 0; k < context.count; ++k) {
+        const b2Plane plane = context.planes[static_cast<std::size_t>(k)].plane;
+        touched.emplace_back(context.shapes[static_cast<std::size_t>(k)], plane);
+        const float upness = Dot(FromB2(plane.normal), up);
+        if (upness >= floorCos) {
+            body.onFloor_ = true;
+            body.floorNormal_ = FromB2(plane.normal);
+            standingOn = dynamic_cast<const PhysicsBody*>(
+                Impl::ObjectOf(context.shapes[static_cast<std::size_t>(k)])
+            );
+        } else {
+            if (upness <= -floorCos)
+                body.onCeiling_ = true;
+            else
+                body.onWall_ = true;
+            clipPlanes[static_cast<std::size_t>(clipCount++)] =
+                context.planes[static_cast<std::size_t>(k)];
+        }
+    }
+
+    b2Body_Enable(record->id);
+    body.MoveInScene({position.x - origin.x, position.y - origin.y});
+
+    // prędkość: na podłodze bez składowej w dół, na ścianach i suficie - wzdłuż powierzchni
+    if (body.onFloor_) {
+        const float into = Dot(body.velocity_, up);
+        if (into < 0.0f)
+            body.velocity_ = {body.velocity_.x - up.x * into, body.velocity_.y - up.y * into};
+    }
+    if (clipCount > 0)
+        body.velocity_ = FromB2(b2ClipVector(ToB2(body.velocity_), clipPlanes.data(), clipCount));
+
+    // zderzenia (po jednym na collider innego ciała) i zdarzenia
+    const CollisionShape* myShape = record->current.empty() ? nullptr : record->current.front();
+    for (const auto& [shapeId, plane] : touched) {
+        if (!b2Shape_IsValid(shapeId)) continue;
+        auto* other = dynamic_cast<PhysicsBody*>(Impl::ObjectOf(shapeId));
+        if (!other || other == &body) continue;
+        const auto* otherShape = static_cast<const CollisionShape*>(b2Shape_GetUserData(shapeId));
+        const bool known =
+            std::any_of(body.collisions_.begin(), body.collisions_.end(), [&](const Collision& c) {
+                return c.otherShape == otherShape;
+            });
+        if (known) continue;
+        const Collision hit{
+            other, myShape, otherShape, FromB2(plane.normal), std::max(0.0f, plane.offset)
+        };
+        body.collisions_.push_back(hit);
+        Record(body, hit);
+    }
+
+    // zapamiętanie podłogi do wożenia w następnym ruchu
+    body.floorBody_ = body.onFloor_ ? standingOn : nullptr;
+    if (body.floorBody_) {
+        body.floorWorld_ = body.WorldPosition();
+        body.floorLocal_ = body.floorBody_->ToLocal(body.floorWorld_);
+    }
+    // zejście z jadącej platformy (skok, krawędź) - postać zachowuje jej prędkość
+    if (wasOnFloor && !body.onFloor_) body.velocity_ = Add(body.velocity_, body.platformVelocity_);
+    return !body.collisions_.empty();
+}
+
+// ---------------------------------------------------------------------------------------------
+// Zapytania
+// ---------------------------------------------------------------------------------------------
+
+std::vector<PhysicsBody*> PhysicsWorld::OverlappingBodies(const Area& area) {
+    SyncStructure();
+    std::vector<PhysicsBody*> bodies;
+    const BodyRecord* record = impl_->Find(&area);
+    if (!record) return bodies;
+    std::vector<b2ShapeId> visitors;
+    for (const ShapeRecord& shape : record->shapes)
+        for (const b2ShapeId sensor : shape.ids) {
+            const int capacity = b2Shape_GetSensorCapacity(sensor);
+            if (capacity <= 0) continue;
+            visitors.resize(static_cast<std::size_t>(capacity));
+            const int count = b2Shape_GetSensorOverlaps(sensor, visitors.data(), capacity);
+            for (int k = 0; k < count; ++k) {
+                if (!b2Shape_IsValid(visitors[static_cast<std::size_t>(k)])) continue;
+                auto* body = dynamic_cast<PhysicsBody*>(
+                    Impl::ObjectOf(visitors[static_cast<std::size_t>(k)])
+                );
+                if (!body || body->IsDestroyed() || !area.CollidesWith(*body)) continue;
+                if (std::find(bodies.begin(), bodies.end(), body) == bodies.end())
+                    bodies.push_back(body);
             }
         }
-        if (entry.rigid) renderer.Paint(VIOLET).Circle(entry.rigid->CenterOfMass(), 2.0f);
+    return bodies;
+}
+
+std::vector<Area*> PhysicsWorld::OverlappingAreas(const Area& area) {
+    SyncStructure();
+    std::vector<Area*> areas;
+    const BodyRecord* record = impl_->Find(&area);
+    if (!record) return areas;
+    std::vector<b2ShapeId> visitors;
+    for (const ShapeRecord& shape : record->shapes)
+        for (const b2ShapeId sensor : shape.ids) {
+            const int capacity = b2Shape_GetSensorCapacity(sensor);
+            if (capacity <= 0) continue;
+            visitors.resize(static_cast<std::size_t>(capacity));
+            const int count = b2Shape_GetSensorOverlaps(sensor, visitors.data(), capacity);
+            for (int k = 0; k < count; ++k) {
+                if (!b2Shape_IsValid(visitors[static_cast<std::size_t>(k)])) continue;
+                auto* other =
+                    dynamic_cast<Area*>(Impl::ObjectOf(visitors[static_cast<std::size_t>(k)]));
+                if (!other || other == &area || other->IsDestroyed() || !area.CollidesWith(*other))
+                    continue;
+                if (std::find(areas.begin(), areas.end(), other) == areas.end())
+                    areas.push_back(other);
+            }
+        }
+    return areas;
+}
+
+namespace {
+
+/** @brief Kontekst callbacku promienia. */
+struct RayContext {
+    const CollisionObject* exclude = nullptr;
+    Vector2 direction{};
+    std::optional<RayHit> hit;
+};
+
+float RayCallback(b2ShapeId shapeId, b2Vec2 point, b2Vec2 normal, float fraction, void* context) {
+    auto& ray = *static_cast<RayContext*>(context);
+    auto* body = dynamic_cast<PhysicsBody*>(
+        static_cast<CollisionObject*>(b2Body_GetUserData(b2Shape_GetBody(shapeId)))
+    );
+    const auto* shape = static_cast<const CollisionShape*>(b2Shape_GetUserData(shapeId));
+    if (!body || body == ray.exclude || body->IsDestroyed()) return -1.0f; // pomiń
+    // platforma jednostronna zatrzymuje tylko promień lecący z jej „góry”
+    if (shape && shape->IsOneWay() && Dot(ray.direction, shape->OneWayDirection()) >= 0.0f)
+        return -1.0f;
+    ray.hit = RayHit{body, shape, FromB2(point), FromB2(normal), fraction * Length(ray.direction)};
+    return fraction; // dalej szukamy tylko bliżej
+}
+
+/** @brief Kontekst callbacku nachodzenia. */
+struct OverlapContext {
+    const CollisionObject* exclude = nullptr;
+    std::vector<PhysicsBody*> bodies;
+};
+
+bool OverlapCallback(b2ShapeId shapeId, void* context) {
+    auto& overlap = *static_cast<OverlapContext*>(context);
+    auto* body = dynamic_cast<PhysicsBody*>(
+        static_cast<CollisionObject*>(b2Body_GetUserData(b2Shape_GetBody(shapeId)))
+    );
+    if (!body || body == overlap.exclude || body->IsDestroyed()) return true;
+    if (std::find(overlap.bodies.begin(), overlap.bodies.end(), body) == overlap.bodies.end())
+        overlap.bodies.push_back(body);
+    return true;
+}
+
+} // namespace
+
+std::optional<RayHit> PhysicsWorld::Raycast(
+    Vector2 from,
+    Vector2 to,
+    std::uint32_t mask,
+    const CollisionObject* exclude
+) const {
+    SyncTransforms();
+    RayContext context;
+    context.exclude = exclude;
+    context.direction = {to.x - from.x, to.y - from.y};
+    const b2QueryFilter filter{kQueryBit | kOneWayBit, mask};
+    b2World_CastRay(
+        impl_->world, ToB2(from), ToB2(context.direction), filter, RayCallback, &context
+    );
+    return context.hit;
+}
+
+std::vector<PhysicsBody*> PhysicsWorld::Overlap(
+    const ConvexPart& part,
+    std::uint32_t mask,
+    const CollisionObject* exclude
+) const {
+    SyncTransforms();
+    b2ShapeProxy proxy{};
+    if (part.kind == ConvexPart::Kind::Ellipse) {
+        const b2Vec2 center = ToB2(part.center);
+        proxy = b2MakeProxy(&center, 1, std::max(Length(part.axisX), Length(part.axisY)));
+    } else {
+        std::array<b2Vec2, B2_MAX_POLYGON_VERTICES> points{};
+        const int count =
+            std::min<int>(static_cast<int>(part.points.size()), B2_MAX_POLYGON_VERTICES);
+        for (int k = 0; k < count; ++k)
+            points[static_cast<std::size_t>(k)] = ToB2(part.points[static_cast<std::size_t>(k)]);
+        proxy = b2MakeProxy(points.data(), count, 0.0f);
     }
+    OverlapContext context;
+    context.exclude = exclude;
+    const b2QueryFilter filter{kQueryBit | kOneWayBit, mask};
+    b2World_OverlapShape(impl_->world, &proxy, filter, OverlapCallback, &context);
+    return context.bodies;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Podgląd
+// ---------------------------------------------------------------------------------------------
+
+void PhysicsWorld::Draw(PrimitiveRenderer& renderer) const {
+    // własne przejście po drzewie (bez Box2D) - rysowany jest kształt figury, nie przybliżenie
+    std::vector<ConvexPart> parts;
+    std::function<void(const Entity&)> visit = [&](const Entity& entity) {
+        if (entity.destroyed_) return;
+        if (const auto* object = dynamic_cast<const CollisionObject*>(&entity)) {
+            Color color = SKYBLUE;
+            if (dynamic_cast<const Area*>(object))
+                color = ORANGE;
+            else if (dynamic_cast<const CharacterBody*>(object))
+                color = LIME;
+            else if (dynamic_cast<const RigidBody*>(object))
+                color = VIOLET;
+            std::vector<const CollisionShape*> shapes;
+            CollectShapes(*object, shapes);
+            for (const CollisionShape* shape : shapes) {
+                parts.clear();
+                shape->WorldParts(parts);
+                renderer.Reset().TargetScreen().Paint(
+                    shape->IsDisabled() ? Fade(GRAY, 0.5f) : color
+                );
+                for (const ConvexPart& part : parts) {
+                    const std::vector<Point2D> outline = part.Outline();
+                    if (outline.size() == 1)
+                        renderer.Circle(outline[0], 3.0f);
+                    else if (outline.size() == 2)
+                        renderer.Line(outline[0], outline[1]);
+                    else if (!outline.empty())
+                        renderer.Polyline(outline, true);
+                }
+            }
+            if (const auto* rigid = dynamic_cast<const RigidBody*>(object))
+                renderer.Paint(VIOLET).Circle(rigid->CenterOfMass(), 2.0f);
+        }
+        for (const auto& child : entity.children_)
+            visit(*child);
+    };
+    for (const auto& root : roots_)
+        if (!root->screenSpace_) visit(*root);
 }

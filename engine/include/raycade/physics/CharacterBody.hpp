@@ -99,9 +99,11 @@ class CharacterBody : public PhysicsBody {
     /**
      * @brief Przesuwa postać o Velocity() * krok, wypychając ją z innych ciał i ślizgając wzdłuż.
      * @details Krokiem jest bieżący krok stały (w FixedTick()) albo czas klatki (w Tick()).
-     * Długi ruch jest dzielony na krótsze odcinki, żeby szybka postać nie przeleciała przez
-     * cienką ścianę. Postać zderza się z ciałami (StaticBody, CharacterBody), których warstwy
-     * pasują do jej CollisionMask(); obszary Area jej nie zatrzymują.
+     * Ruch liczy mover Box2D: kapsuła wpisana w obrys colliderów postaci jest rzucana przez
+     * świat (bez przelatywania przez cienkie ściany) i ślizga się po płaszczyznach styku.
+     * Postać zderza się z ciałami (StaticBody, CharacterBody, RigidBody), których warstwy
+     * pasują do jej CollisionMask(); obszary Area jej nie zatrzymują. Zaokrąglone końce
+     * kapsuły sprawiają, że prostokątna postać schodzi z krawędzi trochę wcześniej.
      * @return true, gdy postać w trakcie ruchu na coś wpadła.
      */
     bool MoveAndSlide();

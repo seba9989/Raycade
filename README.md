@@ -21,7 +21,7 @@ int main() { return Engine::Get().StartScene("menu").Run(); }
 Projekt na zajęcia z Podstaw Grafiki Komputerowej. Program `demo/` pokazuje funkcje
 z laboratoriów: własne algorytmy odcinka, okręgu i elipsy, wypełnianie scanline, flood fill
 i boundary fill, przekształcenia, hierarchię obiektów, kamerę, obsługę wejścia, animację
-bitmap, przycinanie, shadery, krok stały i kolizje (GJK/EPA).
+bitmap, przycinanie, shadery, krok stały i fizykę (Box2D).
 
 ## Wymagania
 
@@ -30,6 +30,7 @@ bitmap, przycinanie, shadery, krok stały i kolizje (GJK/EPA).
 - raylib 5.x albo 6.x - jeśli nie ma go w systemie, CMake pobiera wersję 5.5
 - nlohmann/json 3.11+ (arkusze sprite'ów z JSON) - jeśli nie ma go w systemie, CMake pobiera
   wersję 3.12
+- Box2D 3.1+ (fizyka) - jeśli nie ma go w systemie, CMake pobiera wersję 3.1.1
 
 ## Kompilacja
 
