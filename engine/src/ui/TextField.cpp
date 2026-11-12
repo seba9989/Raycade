@@ -49,8 +49,8 @@ void TextField::Tick(float, const Input& input) {
 }
 
 void TextField::Draw(PrimitiveRenderer& renderer) const {
-    renderer.Paint(RAYWHITE).Fill().Rect({0, 0}, size_);
-    renderer.Paint(IsFocused() ? SKYBLUE : (IsHovered() ? GRAY : LIGHTGRAY)).Fill(false);
+    renderer.Paint(RAYWHITE).Filled().Rect({0, 0}, size_);
+    renderer.Paint(IsFocused() ? SKYBLUE : (IsHovered() ? GRAY : LIGHTGRAY)).Filled(false);
     renderer.Rect({0, 0}, size_);
     if (IsFocused()) renderer.Rect({1, 1}, {size_.x - 2, size_.y - 2});
 
@@ -71,7 +71,7 @@ void TextField::Draw(PrimitiveRenderer& renderer) const {
     const bool blinkOn = std::fmod(::GetTime() - blinkStart_, 1.0) < 0.5;
     if (IsFocused() && blinkOn) {
         const float x = static_cast<float>(kPadding + Width(firstVisible_, caret_));
-        renderer.Paint(color_).Fill().Rect({x, textY}, {2, fontSize_});
+        renderer.Paint(color_).Filled().Rect({x, textY}, {2, fontSize_});
     }
 }
 

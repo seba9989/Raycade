@@ -77,7 +77,7 @@ class Drawable {
      * pomijany.
      * @code{.cpp}
      * auto glow = Shared(ShaderProgram::Load("", "assets/glow.fs"));
-     * scene.Spawn<shapes::Circle>().Radius(40).Fill().Shader(glow);
+     * scene.Spawn<shapes::Circle>().Radius(40).Filled().Shader(glow);
      * @endcode
      * @param shader Shader (współdzielony) albo nullptr - bez shadera.
      * @return Ten sam obiekt.

@@ -91,7 +91,7 @@ class CollisionObject : public Entity {
      * więc rysowany w położeniu pośrednim między stanem przed i po ostatnim kroku
      * (Engine::FixedAlpha()), czyli do jednego kroku „w tyle”. Obiekt przesunięty poza krokiem
      * stałym (np. w OnUpdate()) albo o więcej niż 64 px naraz (teleport) jest rysowany tam,
-     * gdzie jest. Wyłącza się ją dla sceny: Scene::PhysicsInterpolation(false).
+     * gdzie jest. Wyłącza się ją dla sceny: Scene::PhysicsInterpolated(false).
      */
     AffineMatrix2D DrawTransform() const override;
 

@@ -16,9 +16,9 @@ namespace shapes {
  * @brief Wspólna baza figur geometrycznych: wypełnienie i algorytm rasteryzacji.
  * @details Po Shape dziedziczą tylko figury opisane geometrią (punkty, odcinki, łamane,
  * wielokąty, okręgi i elipsy). Obiekty z obrazem albo tekstem (@ref visual) i kontenery
- * (Group, visual::RenderGroup) dziedziczą wprost po Entity, więc nie mają Fill() ani Raster().
+ * (Group, visual::RenderGroup) dziedziczą wprost po Entity, więc nie mają Filled() ani Raster().
  *
- * Fill() działa w figurach z wnętrzem: Rect, Triangle, Polygon, Circle i Ellipse. Point, Points,
+ * Filled() działa w figurach z wnętrzem: Rect, Triangle, Polygon, Circle i Ellipse. Point, Points,
  * Line, Lines i Polyline je ignorują.
  *
  * Raster(Rasterizer::Custom) włącza własny algorytm z laboratorium zamiast raylib:
@@ -41,12 +41,12 @@ class Shape : public Entity {
      * @param value Czy figura ma być wypełniona.
      * @return Ten sam obiekt jako jego konkretny typ.
      */
-    template <typename Self> Self& Fill(this Self& self, bool value = true) {
+    template <typename Self> Self& Filled(this Self& self, bool value = true) {
         self.filled_ = value;
         return self;
     }
 
-    /** @brief Sprawdza, czy figura jest wypełniona (Fill()). */
+    /** @brief Sprawdza, czy figura jest wypełniona (Filled()). */
     bool IsFilled() const { return filled_; }
 
     /**
@@ -84,7 +84,7 @@ class Shape : public Entity {
      * @return Ten sam renderer - do wywołania rysującego w tym samym łańcuchu.
      */
     PrimitiveRenderer& Brush(PrimitiveRenderer& renderer) const {
-        return renderer.Paint(color_).Fill(filled_).Raster(raster_);
+        return renderer.Paint(color_).Filled(filled_).Raster(raster_);
     }
 
     bool filled_ = false;                    /**< Czy figura jest wypełniona. */

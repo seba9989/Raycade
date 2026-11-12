@@ -39,7 +39,7 @@ class Input {
      * @param value Czy włączyć klawiaturę.
      * @return Ten sam obiekt.
      */
-    Input& Keyboard(bool value = true) {
+    Input& KeyboardEnabled(bool value = true) {
         keyboard_ = value;
         return *this;
     }
@@ -49,7 +49,7 @@ class Input {
      * @param value Czy włączyć mysz.
      * @return Ten sam obiekt.
      */
-    Input& Mouse(bool value = true) {
+    Input& MouseEnabled(bool value = true) {
         mouse_ = value;
         return *this;
     }
@@ -59,7 +59,7 @@ class Input {
      * @param value Czy włączyć pady.
      * @return Ten sam obiekt.
      */
-    Input& Gamepad(bool value = true) {
+    Input& GamepadEnabled(bool value = true) {
         gamepad_ = value;
         return *this;
     }
@@ -69,7 +69,7 @@ class Input {
      * @param value Czy włączyć dotyk.
      * @return Ten sam obiekt.
      */
-    Input& Touch(bool value = true) {
+    Input& TouchEnabled(bool value = true) {
         touch_ = value;
         return *this;
     }
@@ -306,7 +306,7 @@ class Input {
     /**
      * @brief Sprawdza, czy raylib wykrył teraz gest (dotyk albo mysz).
      * @details Gesty rozpoznaje raylib (moduł rgestures); na komputerze działają też myszą
-     * (lewy przycisk). Wyłącznik Touch(false) wyłącza także gesty. Które gesty są
+     * (lewy przycisk). Wyłącznik TouchEnabled(false) wyłącza także gesty. Które gesty są
      * rozpoznawane, ustawia Engine::Gestures().
      * @param gesture Gest (GESTURE_TAP, GESTURE_DOUBLETAP, GESTURE_HOLD, GESTURE_DRAG,
      * GESTURE_SWIPE_*, GESTURE_PINCH_IN, GESTURE_PINCH_OUT).
@@ -455,7 +455,7 @@ class Input {
     /**
      * @brief Naciśnięcie klawisza systemowego - działa także przy przejętej klawiaturze.
      * @details Dla klawiszy, które silnik obsługuje zawsze, np. Tab przenoszący fokus
-     * (inaczej z pola tekstowego nie dałoby się przejść dalej). Respektuje Keyboard(false).
+     * (inaczej z pola tekstowego nie dałoby się przejść dalej). Respektuje KeyboardEnabled(false).
      */
     bool SystemKeyPressed(int key) const { return keyboard_ && ::IsKeyPressed(key); }
 

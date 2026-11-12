@@ -11,7 +11,7 @@ SCENE("menu") {
         .Position({400, 300})
         .Radius(20)
         .Paint(ORANGE)
-        .Fill()
+        .Filled()
         .OnClick([](shapes::Circle& self) { self.Paint(RED); });
 }
 

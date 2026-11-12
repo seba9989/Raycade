@@ -19,8 +19,8 @@ constexpr float kZoom = 2.0f; /**< Powiększenie podglądu arkusza. */
  * @brief Arkusz testowy w assets/: 8 x 3 klatek 32 x 32, margines 1 px, odstęp 2 px.
  * @details Każda klatka ma swój numer, więc widać, którą klatkę arkusza pokazuje sprite.
  * Margines i odstępy są magentowe - jeśli siatka byłaby źle policzona, magenta pojawi się
- * na krawędzi sprite'a. Biały "nos" po prawej i żółty pasek u góry pokazują FlipX() i FlipY().
- * Plik można edytować w dowolnym programie graficznym i przeładować klawiszem L.
+ * na krawędzi sprite'a. Biały "nos" po prawej i żółty pasek u góry pokazują FlippedX() i
+ * FlippedY(). Plik można edytować w dowolnym programie graficznym i przeładować klawiszem L.
  */
 constexpr const char* kFile = "sprite-test.png";
 
@@ -166,8 +166,8 @@ SCENE("sprite") {
         .OnKeyPressed(
             KEY_DOWN, [](visual::Sprite& self) { self.Speed(std::max(0.125f, self.Speed() / 2)); }
         )
-        .OnKeyPressed(KEY_X, [](visual::Sprite& self) { self.FlipX(!self.IsFlipX()); })
-        .OnKeyPressed(KEY_Y, [](visual::Sprite& self) { self.FlipY(!self.IsFlipY()); })
+        .OnKeyPressed(KEY_X, [](visual::Sprite& self) { self.FlippedX(!self.IsFlippedX()); })
+        .OnKeyPressed(KEY_Y, [](visual::Sprite& self) { self.FlippedY(!self.IsFlippedY()); })
         .OnKeyPressed(KEY_Z, [](visual::Sprite& self) { self.Rotate(PI / 12); })
         .OnKeyPressed(KEY_P, [](visual::Sprite& self) { self.Play("nie-ma-takiej"); }) // log raz
         // L: plik od nowa z dysku (z pominięciem Assets) i podmiana bitmapy we wspólnym arkuszu -
@@ -198,9 +198,10 @@ SCENE("sprite") {
                 "Klatka: " + std::to_string(self.Frame()) + "   w arkuszu: " +
                 std::to_string(self.SheetFrame()) + " / " + std::to_string(self.SheetFrames()) +
                 "\n" + "Gra: " + (self.IsPlaying() ? "tak" : "nie") +
-                "   Speed: " + ::TextFormat("%.3g", self.Speed()) + "\n" + "FlipX: " +
-                (self.IsFlipX() ? "tak" : "nie") + "   FlipY: " + (self.IsFlipY() ? "tak" : "nie") +
-                "\n" + "FrameSize: " + std::to_string(static_cast<int>(size.x)) + "x" +
+                "   Speed: " + ::TextFormat("%.3g", self.Speed()) + "\n" +
+                "FlippedX: " + (self.IsFlippedX() ? "tak" : "nie") +
+                "   FlippedY: " + (self.IsFlippedY() ? "tak" : "nie") + "\n" +
+                "FrameSize: " + std::to_string(static_cast<int>(size.x)) + "x" +
                 std::to_string(static_cast<int>(size.y))
             );
         });

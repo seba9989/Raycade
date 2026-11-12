@@ -15,7 +15,7 @@
  * #include <raycade>
  *
  * SCENE("menu") {
- *     scene.Spawn<shapes::Circle>().Position({400, 300}).Radius(20).Fill();
+ *     scene.Spawn<shapes::Circle>().Position({400, 300}).Radius(20).Filled();
  * }
  *
  * int main() { return Engine::Get().StartScene("menu").Run(); }

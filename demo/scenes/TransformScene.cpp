@@ -13,7 +13,7 @@ SCENE("transformacje") {
         .Position({170, 150})
         .Size({170, 90})
         .Paint(DARKBLUE)
-        .Fill()
+        .Filled()
         .Rotate(PI / 6.0f, {255, 195})
         .OnClick([](shapes::Rect& self) { self.Paint(RED); });
 
@@ -22,7 +22,7 @@ SCENE("transformacje") {
         .Position({650, 200})
         .Radius(65)
         .Paint(SKYBLUE)
-        .Fill()
+        .Filled()
         .ScaleBy({1.5f, 0.6f}); // względem własnej pozycji (650, 200)
 
     scene.Spawn<Group>().Position({200, 440}).Layer(1).Children([](Group& self) {
@@ -33,8 +33,8 @@ SCENE("transformacje") {
     scene.Spawn<Group>()
         .Position({200, 440})
         .Children([](Group& self) {
-            self.Spawn<shapes::Rect>().Position({-50, -30}).Size({100, 60}).Paint(GOLD).Fill();
-            self.Spawn<shapes::Circle>().Position({80, 0}).Radius(25).Paint(ORANGE).Fill();
+            self.Spawn<shapes::Rect>().Position({-50, -30}).Size({100, 60}).Paint(GOLD).Filled();
+            self.Spawn<shapes::Circle>().Position({80, 0}).Radius(25).Paint(ORANGE).Filled();
         })
         .Rotate(PI / 5.0f); // wokół własnej pozycji (200, 440)
 

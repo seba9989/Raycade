@@ -30,7 +30,7 @@ namespace visual {
  *     .Paint(Fade(WHITE, 0.7f)) // kolor mnożący teksturę
  *     .Position({50, 50})
  *     .Children([](visual::RenderGroup& panel) {
- *         panel.Spawn<shapes::Circle>().Position({290, 100}).Radius(40).Fill(); // ucięte
+ *         panel.Spawn<shapes::Circle>().Position({290, 100}).Radius(40).Filled(); // ucięte
  *     });
  * @endcode
  */

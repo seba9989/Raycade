@@ -29,7 +29,7 @@ struct AreaShapeContact {
  * scene.Spawn<Area>()
  *     .Position({500, 600})
  *     .Children([](Area& coin) {
- *         coin.Spawn<collider::Circle>().Radius(10).Paint(GOLD).Fill().Visible();
+ *         coin.Spawn<collider::Circle>().Radius(10).Paint(GOLD).Filled().Visible();
  *     })
  *     .OnBodyEnter([](Area& coin, PhysicsBody& body) {
  *         if (dynamic_cast<Player*>(&body)) coin.Destroy();

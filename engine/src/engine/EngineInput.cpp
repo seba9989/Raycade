@@ -25,8 +25,8 @@ Engine& Engine::MouseCursor(int cursor) {
     return *this;
 }
 
-Engine& Engine::HideCursor(bool value) {
-    if (!RequireWindow("HideCursor")) return *this;
+Engine& Engine::CursorHidden(bool value) {
+    if (!RequireWindow("CursorHidden")) return *this;
     if (value)
         ::HideCursor();
     else
@@ -34,8 +34,8 @@ Engine& Engine::HideCursor(bool value) {
     return *this;
 }
 
-Engine& Engine::LockCursor(bool value) {
-    if (!RequireWindow("LockCursor")) return *this;
+Engine& Engine::CursorLocked(bool value) {
+    if (!RequireWindow("CursorLocked")) return *this;
     cursorLocked_ = value;
     if (value)
         ::DisableCursor();

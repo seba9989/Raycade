@@ -72,11 +72,9 @@ void RenderTarget::Release() {
     target_ = {};
 }
 
-RenderTarget& RenderTarget::Smooth(bool smooth) {
+RenderTarget& RenderTarget::Smooth(bool value) {
     if (IsValid())
-        ::SetTextureFilter(
-            target_.texture, smooth ? TEXTURE_FILTER_BILINEAR : TEXTURE_FILTER_POINT
-        );
+        ::SetTextureFilter(target_.texture, value ? TEXTURE_FILTER_BILINEAR : TEXTURE_FILTER_POINT);
     return *this;
 }
 

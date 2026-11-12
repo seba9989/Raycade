@@ -179,7 +179,7 @@ class Updatable {
      * także gdy kursor wyjdzie poza obiekt. Przesunięcie jest w układzie rodzica, więc
      * `self.Translate(delta)` przesuwa obiekt dokładnie za kursorem, nawet w obróconej grupie.
      * @code{.cpp}
-     * scene.Spawn<shapes::Rect>().Size({80, 50}).Fill()
+     * scene.Spawn<shapes::Rect>().Size({80, 50}).Filled()
      *     .OnDrag([](shapes::Rect& self, Vector2 delta) { self.Translate(delta); });
      * @endcode
      * @param callback Funkcja otrzymująca obiekt i przesunięcie kursora od poprzedniej klatki.

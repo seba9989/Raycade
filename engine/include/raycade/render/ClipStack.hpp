@@ -24,7 +24,7 @@
  * Zwykle wystarczy Drawable::Clip() - Entity samo woła Push() i Pop() przy rysowaniu.
  * @code{.cpp}
  * ClipStack::Push({0, 0, 200, 100});
- * renderer.Paint(RED).Fill().Circle({200, 100}, 80); // widać tylko ćwiartkę
+ * renderer.Paint(RED).Filled().Circle({200, 100}, 80); // widać tylko ćwiartkę
  * ClipStack::Pop();
  * @endcode
  */

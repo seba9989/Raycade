@@ -39,7 +39,7 @@ class Button : public Entity {
   protected:
     void Draw(PrimitiveRenderer& renderer) const override {
         renderer.Paint(IsHovered() ? ::ColorBrightness(color_, 0.3f) : color_)
-            .Fill()
+            .Filled()
             .Rect({0, 0}, size_);
         ::DrawText(label_.c_str(), 12, static_cast<int>(size_.y / 2) - 9, 18, WHITE);
     }
@@ -69,10 +69,10 @@ class Card : public Entity {
 
   protected:
     void Draw(PrimitiveRenderer& renderer) const override {
-        renderer.Paint(color_).Fill().Rect({0, 0}, kSize);
+        renderer.Paint(color_).Filled().Rect({0, 0}, kSize);
         // grubsza ramka tylko na karcie, którą naprawdę widać pod kursorem
         if (IsHovered()) {
-            renderer.Paint(BLACK).Fill(false);
+            renderer.Paint(BLACK).Filled(false);
             for (float i = 0; i < 3; ++i)
                 renderer.Rect({-i, -i}, {kSize.x + 2 * i, kSize.y + 2 * i});
         }
@@ -94,12 +94,12 @@ class Card : public Entity {
 class Robot : public Group {
   public:
     Robot() {
-        body_ = &Spawn<shapes::Rect>().Position({-40, 0}).Size({80, 90}).Paint(GRAY).Fill();
-        Spawn<shapes::Circle>().Position({0, -30}).Radius(28).Paint(LIGHTGRAY).Fill();
-        Spawn<shapes::Circle>().Position({-10, -34}).Radius(5).Paint(DARKBLUE).Fill();
-        Spawn<shapes::Circle>().Position({10, -34}).Radius(5).Paint(DARKBLUE).Fill();
-        Spawn<shapes::Rect>().Position({-60, 10}).Size({18, 60}).Paint(GRAY).Fill();
-        Spawn<shapes::Rect>().Position({42, 10}).Size({18, 60}).Paint(GRAY).Fill();
+        body_ = &Spawn<shapes::Rect>().Position({-40, 0}).Size({80, 90}).Paint(GRAY).Filled();
+        Spawn<shapes::Circle>().Position({0, -30}).Radius(28).Paint(LIGHTGRAY).Filled();
+        Spawn<shapes::Circle>().Position({-10, -34}).Radius(5).Paint(DARKBLUE).Filled();
+        Spawn<shapes::Circle>().Position({10, -34}).Radius(5).Paint(DARKBLUE).Filled();
+        Spawn<shapes::Rect>().Position({-60, 10}).Size({18, 60}).Paint(GRAY).Filled();
+        Spawn<shapes::Rect>().Position({42, 10}).Size({18, 60}).Paint(GRAY).Filled();
         OnDrag([](Robot& self, Vector2 delta) { self.Translate(delta); });
     }
 

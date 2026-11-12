@@ -14,7 +14,7 @@ namespace shapes {
 /**
  * @brief Wielokąt (łamana zwyczajna zamknięta) o wierzchołkach lokalnych względem obiektu.
  * @details Łamana wiązana (przecinające się krawędzie niesąsiednie) nie jest rysowana -
- * można to sprawdzić przez IsSimple(). Fill() wypełnia wielokąt algorytmem scanline
+ * można to sprawdzić przez IsSimple(). Filled() wypełnia wielokąt algorytmem scanline
  * z kontrolą parzystości.
  */
 class Polygon : public Shape {

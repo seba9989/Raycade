@@ -70,7 +70,7 @@ struct Balls {
 class Ball : public shapes::Circle {
   public:
     Ball() {
-        Radius(18).Fill().OnClick([](Ball& self) {
+        Radius(18).Filled().OnClick([](Ball& self) {
             // najpierw z listy fizyki - po końcu klatki wskaźnik będzie nieważny
             if (Balls* balls = self.Context<Balls>()) {
                 std::erase(balls->list, &self);
@@ -101,8 +101,8 @@ std::shared_ptr<const Bitmap> MakeWheelSheet() {
             18 * std::cos(static_cast<float>(i) * PI / 4.0f),
             18 * std::sin(static_cast<float>(i) * PI / 4.0f)
         };
-        renderer.Paint(ORANGE).Fill().Circle(center, 20);
-        renderer.Paint(DARKBROWN).Fill(false).Circle(center, 20);
+        renderer.Paint(ORANGE).Filled().Circle(center, 20);
+        renderer.Paint(DARKBROWN).Filled(false).Circle(center, 20);
         renderer.Line(center, Vector2{center.x + spoke.x, center.y + spoke.y});
         renderer.Line(center, Vector2{center.x - spoke.x, center.y - spoke.y});
     }
@@ -172,7 +172,7 @@ SCENE("efekty") {
         .Origin({kFrame / 2, kFrame / 2})
         .Position({230, 140})
         .Paint(SKYBLUE)
-        .OnKeyPressed(KEY_X, [](visual::Sprite& self) { self.FlipX(!self.IsFlipX()); });
+        .OnKeyPressed(KEY_X, [](visual::Sprite& self) { self.FlippedX(!self.IsFlippedX()); });
     title({40, 230}, "drugie: PingPong, Speed(0.5), Paint(SKYBLUE)").FontSize(16);
 
     // ---------------- przycinanie ----------------
@@ -185,7 +185,7 @@ SCENE("efekty") {
             .Position({10, 10.0f + static_cast<float>(i) * 40})
             .Size({240, 32})
             .Paint(i % 2 ? BEIGE : Color{245, 222, 179, 255})
-            .Fill()
+            .Filled()
             .OnClick([](shapes::Rect& self) { self.Paint(GOLD); })
             .Children([i](shapes::Rect& row) {
                 row.Spawn<visual::Text>()
@@ -214,12 +214,12 @@ SCENE("efekty") {
         .Position({690, 70})
         .Shader(wave)
         .Children([](visual::RenderGroup& surface) {
-            surface.Spawn<shapes::Circle>().Position({70, 100}).Radius(50).Paint(RED).Fill();
+            surface.Spawn<shapes::Circle>().Position({70, 100}).Radius(50).Paint(RED).Filled();
             surface.Spawn<shapes::Rect>()
                 .Position({130, 40})
                 .Size({100, 120})
                 .Paint(DARKBLUE)
-                .Fill();
+                .Filled();
             for (int x = 0; x < 260; x += 20)
                 surface.Spawn<shapes::Line>()
                     .From({static_cast<float>(x), 0})

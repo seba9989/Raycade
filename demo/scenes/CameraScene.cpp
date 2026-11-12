@@ -62,7 +62,7 @@ class HudButton : public Entity {
   protected:
     void Draw(PrimitiveRenderer& renderer) const override {
         renderer.Paint(IsHovered() ? ::ColorBrightness(color_, 0.3f) : color_)
-            .Fill()
+            .Filled()
             .Rect({0, 0}, kSize);
         ::DrawText(label_.c_str(), 10, 8, 20, WHITE);
     }
@@ -76,14 +76,14 @@ class HudButton : public Entity {
 class Crate : public shapes::Rect {
   public:
     Crate() {
-        Size({60, 60}).Paint(BROWN).Fill();
+        Size({60, 60}).Paint(BROWN).Filled();
         OnDrag([](Crate& self, Vector2 delta) { self.Translate(delta); });
     }
 
   protected:
     void Draw(PrimitiveRenderer& renderer) const override {
         shapes::Rect::Draw(renderer);
-        if (IsHovered()) renderer.Paint(BLACK).Fill(false).Rect({-3, -3}, {66, 66});
+        if (IsHovered()) renderer.Paint(BLACK).Filled(false).Rect({-3, -3}, {66, 66});
     }
 };
 
@@ -91,7 +91,7 @@ class Crate : public shapes::Rect {
 class Coin : public shapes::Circle {
   public:
     Coin() {
-        Radius(14).Paint(GOLD).Fill();
+        Radius(14).Paint(GOLD).Filled();
         OnClick([](Coin& self) {
             ++coins;
             Engine& engine = Engine::Get();
@@ -126,7 +126,7 @@ SCENE("kamera") {
         );
 
     auto& player = scene.Spawn<Walker>();
-    player.Position({0, 0}).Paint(DARKBLUE).Fill().Radius(20);
+    player.Position({0, 0}).Paint(DARKBLUE).Filled().Radius(20);
     ResetCamera(scene.Camera(), player);
 
     // --- HUD: obiekty ekranu, kamera ich nie przesuwa ---

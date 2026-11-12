@@ -8,9 +8,9 @@
  *
  * @section cel Cel projektu
  * Raycade (ray + cascade + arcade) to silnik 2D napisany w C++23 z użyciem raylib,
- * z API opartym na kaskadzie wywołań: `scene.Spawn<shapes::Circle>().Radius(20).Fill()`. Biblioteka
- * udostępnia sceny, obiekty z hierarchią dzieci, wejście z klawiatury i myszy oraz renderer
- * prymitywów. Program zawiera demonstrację funkcji z laboratoriów 1-4.
+ * z API opartym na kaskadzie wywołań: `scene.Spawn<shapes::Circle>().Radius(20).Filled()`.
+ * Biblioteka udostępnia sceny, obiekty z hierarchią dzieci, wejście z klawiatury i myszy oraz
+ * renderer prymitywów. Program zawiera demonstrację funkcji z laboratoriów 1-4.
  *
  * @section uruchomienie Kompilacja i uruchomienie
  * W katalogu głównym projektu należy wykonać:

@@ -70,7 +70,7 @@
  * if (!engine.IsReady()) return 1;
  *
  * engine.CreateScene("menu", [&](Scene& scene) { // pierwsza scena staje się aktywna
- *     scene.Spawn<shapes::Circle>().Position({400, 300}).Radius(20).Paint(ORANGE).Fill();
+ *     scene.Spawn<shapes::Circle>().Position({400, 300}).Radius(20).Paint(ORANGE).Filled();
  * });
  *
  * return engine
@@ -324,8 +324,8 @@ class Engine : public Contextable {
      * @param value Czy włączyć klawiaturę.
      * @return Ten sam silnik.
      */
-    Engine& Keyboard(bool value = true) {
-        input_.Keyboard(value);
+    Engine& KeyboardEnabled(bool value = true) {
+        input_.KeyboardEnabled(value);
         return *this;
     }
 
@@ -338,8 +338,8 @@ class Engine : public Contextable {
      * @param value Czy włączyć mysz.
      * @return Ten sam silnik.
      */
-    Engine& Mouse(bool value = true) {
-        input_.Mouse(value);
+    Engine& MouseEnabled(bool value = true) {
+        input_.MouseEnabled(value);
         return *this;
     }
 
@@ -351,8 +351,8 @@ class Engine : public Contextable {
      * @param value Czy włączyć pady.
      * @return Ten sam silnik.
      */
-    Engine& Gamepad(bool value = true) {
-        input_.Gamepad(value);
+    Engine& GamepadEnabled(bool value = true) {
+        input_.GamepadEnabled(value);
         return *this;
     }
 
@@ -364,8 +364,8 @@ class Engine : public Contextable {
      * @param value Czy włączyć dotyk.
      * @return Ten sam silnik.
      */
-    Engine& Touch(bool value = true) {
-        input_.Touch(value);
+    Engine& TouchEnabled(bool value = true) {
+        input_.TouchEnabled(value);
         return *this;
     }
 
@@ -815,7 +815,7 @@ class Engine : public Contextable {
      * @param value true - ukryj, false - pokaż.
      * @return Ten sam silnik.
      */
-    Engine& HideCursor(bool value = true);
+    Engine& CursorHidden(bool value = true);
 
     /**
      * @brief Blokuje kursor w oknie (ukryty, ruch tylko przez MouseDelta()) albo go zwalnia.
@@ -823,12 +823,12 @@ class Engine : public Contextable {
      * @param value true - zablokuj, false - zwolnij.
      * @return Ten sam silnik.
      */
-    Engine& LockCursor(bool value = true);
+    Engine& CursorLocked(bool value = true);
 
     /** @brief Sprawdza, czy kursor jest ukryty (także gdy jest zablokowany). */
     bool IsCursorHidden() const;
 
-    /** @brief Sprawdza, czy kursor jest zablokowany w oknie (LockCursor()). */
+    /** @brief Sprawdza, czy kursor jest zablokowany w oknie (CursorLocked()). */
     bool IsCursorLocked() const { return cursorLocked_; }
 
     /** @brief Sprawdza, czy kursor znajduje się nad oknem. */
@@ -1372,7 +1372,7 @@ class Engine : public Contextable {
     std::optional<int> monitor_;            /**< Monitor do ustawienia przy Init(). */
     unsigned int gestures_ = 0b1111111111;  /**< Rozpoznawane gesty (domyślnie wszystkie). */
     std::optional<float> opacity_;          /**< Przezroczystość okna do ustawienia przy Init(). */
-    bool cursorLocked_ = false;             /**< Czy kursor jest zablokowany (LockCursor()). */
+    bool cursorLocked_ = false;             /**< Czy kursor jest zablokowany (CursorLocked()). */
     bool eventWaiting_ = false;             /**< Czy włączone jest EventWaiting(). */
     unsigned int windowFlags_ = 0;          /**< Flagi okna (FLAG_*) z Resizable() itd. */
     std::optional<std::pair<int, int>> minSize_; /**< Minimalny rozmiar okna. */

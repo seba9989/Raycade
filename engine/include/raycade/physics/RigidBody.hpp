@@ -23,10 +23,11 @@
  * i impulsami albo wprost prędkością; Position() i Rotate() przenoszą bryłę natychmiast.
  * @code{.cpp}
  * auto& crate = scene.Spawn<RigidBody>().Position({400, 100}).Mass(2).Friction(0.8f);
- * crate.Spawn<collider::Rect>().Position({-15, -15}).Size({30, 30}).Paint(BROWN).Fill().Visible();
+ * crate.Spawn<collider::Rect>().Position({-15, -15}).Size({30,
+ * 30}).Paint(BROWN).Filled().Visible();
  *
  * auto& ball = scene.Spawn<RigidBody>().Position({500, 100}).Bounce(0.7f);
- * ball.Spawn<collider::Circle>().Radius(12).Paint(RED).Fill().Visible();
+ * ball.Spawn<collider::Circle>().Radius(12).Paint(RED).Filled().Visible();
  * ball.ApplyCentralImpulse({200, -100}); // rzut
  * @endcode
  */
@@ -115,7 +116,7 @@ class RigidBody : public PhysicsBody {
      * @param value Czy zablokować.
      * @return Ten sam obiekt.
      */
-    template <typename Self> Self& LockRotation(this Self& self, bool value = true) {
+    template <typename Self> Self& RotationLocked(this Self& self, bool value = true) {
         self.lockRotation_ = value;
         return self;
     }

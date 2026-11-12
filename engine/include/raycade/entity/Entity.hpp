@@ -113,7 +113,7 @@ struct PointerFrame {
  * @code{.cpp}
  * class Player : public Group {
  *   public:
- *     Player() { Spawn<shapes::Rect>().Position({-15, -20}).Size({30, 40}).Fill(); }
+ *     Player() { Spawn<shapes::Rect>().Position({-15, -20}).Size({30, 40}).Filled(); }
  *     template <typename Self> Self& Speed(this Self& self, float speed) {
  *         self.speed_ = speed;
  *         return self;

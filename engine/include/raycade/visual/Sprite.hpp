@@ -306,7 +306,7 @@ class Sprite : public Entity {
      * @param value Czy odbić.
      * @return Ten sam obiekt.
      */
-    template <typename Self> Self& FlipX(this Self& self, bool value = true) {
+    template <typename Self> Self& FlippedX(this Self& self, bool value = true) {
         self.flipX_ = value;
         return self;
     }
@@ -316,16 +316,16 @@ class Sprite : public Entity {
      * @param value Czy odbić.
      * @return Ten sam obiekt.
      */
-    template <typename Self> Self& FlipY(this Self& self, bool value = true) {
+    template <typename Self> Self& FlippedY(this Self& self, bool value = true) {
         self.flipY_ = value;
         return self;
     }
 
     /** @brief Sprawdza, czy klatka jest odbita w poziomie. */
-    bool IsFlipX() const { return flipX_; }
+    bool IsFlippedX() const { return flipX_; }
 
     /** @brief Sprawdza, czy klatka jest odbita w pionie. */
-    bool IsFlipY() const { return flipY_; }
+    bool IsFlippedY() const { return flipY_; }
 
     /**
      * @brief Ustawia punkt zaczepienia w klatce (piksele od jej lewego górnego rogu).

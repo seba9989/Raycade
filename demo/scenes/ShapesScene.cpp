@@ -33,8 +33,8 @@ SCENE("figury") {
         .Radius(45)
         .Raster(Rasterizer::Custom)
         .Paint(RED)
-        .Fill();
-    scene.Spawn<shapes::Circle>().Position({230, 245}).Radius(45).Paint(BLUE).Fill();
+        .Filled();
+    scene.Spawn<shapes::Circle>().Position({230, 245}).Radius(45).Paint(BLUE).Filled();
 
     // ---------------- elipsa: 4-krotna symetria vs raylib ----------------
     scene.Spawn<shapes::Ellipse>()
@@ -56,8 +56,8 @@ SCENE("figury") {
         .Radius({40, 48})
         .Raster(Rasterizer::Custom)
         .Paint(RED)
-        .Fill();
-    scene.Spawn<shapes::Ellipse>().Position({760, 245}).Radius({40, 48}).Paint(BLUE).Fill();
+        .Filled();
+    scene.Spawn<shapes::Ellipse>().Position({760, 245}).Radius({40, 48}).Paint(BLUE).Filled();
 
     // ---------------- wielokąty ----------------
     const std::vector<Point2D> arrow{{0, 0}, {120, 50}, {60, 60}, {50, 120}};
@@ -68,15 +68,15 @@ SCENE("figury") {
         .Vertices(arrow)
         .Raster(Rasterizer::Custom)
         .Paint(RED)
-        .OnMouseEnter([](shapes::Polygon& self) { self.Fill(); })
-        .OnMouseLeave([](shapes::Polygon& self) { self.Fill(false); });
+        .OnMouseEnter([](shapes::Polygon& self) { self.Filled(); })
+        .OnMouseLeave([](shapes::Polygon& self) { self.Filled(false); });
 
     // wielokąt wklęsły wypełniony z kontrolą parzystości - wcięcie zostaje puste
     scene.Spawn<shapes::Polygon>()
         .Position({180, 360})
         .Vertices({{0, 0}, {130, 0}, {130, 120}, {65, 40}, {0, 120}})
         .Paint(RED)
-        .Fill();
+        .Filled();
 
     // wielokąt zbudowany ze zbioru odcinków (LineSegment)
     scene.Spawn<shapes::Polygon>()
@@ -117,10 +117,10 @@ SCENE("figury") {
         // prostokąt z kolorowymi paskami: flood fill zatrzyma się na paskach,
         // boundary fill zamaluje całe wnętrze aż do czarnej krawędzi
         r.Polygon(std::vector<Point2D>{{10, 10}, {190, 10}, {190, 130}, {10, 130}});
-        r.Paint(GOLD).Fill().Rect({50, 11}, {20, 119}).Paint(SKYBLUE).Rect({120, 11}, {20, 119});
+        r.Paint(GOLD).Filled().Rect({50, 11}, {20, 119}).Paint(SKYBLUE).Rect({120, 11}, {20, 119});
 
         // okrąg z czerwonym pierścieniem w środku
-        r.Fill(false).Paint(BLACK).Circle({300, 70}, 60).Paint(RED).Circle({300, 70}, 30);
+        r.Filled(false).Paint(BLACK).Circle({300, 70}, 60).Paint(RED).Circle({300, 70}, 30);
 
         // elipsa i wklęsły wielokąt
         r.Paint(BLACK).Ellipse({300, 205}, {95, 50});

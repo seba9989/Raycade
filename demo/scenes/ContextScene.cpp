@@ -62,8 +62,8 @@ class Tile : public Entity {
 
     void Draw(PrimitiveRenderer& renderer) const override {
         const Color color = theme_ ? kPalette[static_cast<std::size_t>(theme_->color)] : GRAY;
-        renderer.Paint(color).Fill().Rect({0, 0}, {kSize, kSize});
-        if (IsHovered()) renderer.Paint(BLACK).Fill(false).Rect({-2, -2}, {kSize + 4, kSize + 4});
+        renderer.Paint(color).Filled().Rect({0, 0}, {kSize, kSize});
+        if (IsHovered()) renderer.Paint(BLACK).Filled(false).Rect({-2, -2}, {kSize + 4, kSize + 4});
     }
 
   private:
@@ -149,12 +149,12 @@ class ScoreBar : public Entity {
         constexpr float kMax = 20.0f; // tyle kliknięć wypełnia pasek
         const auto fraction = [&](int value) { return std::min(value / kMax, 1.0f) * kWidth; };
 
-        renderer.Paint(LIGHTGRAY).Fill().Rect({0, 0}, {kWidth, 24});
+        renderer.Paint(LIGHTGRAY).Filled().Rect({0, 0}, {kWidth, 24});
         if (const Score* score = Context<Score>())
-            renderer.Paint(DARKGREEN).Fill().Rect({0, 0}, {fraction(score->value), 24});
+            renderer.Paint(DARKGREEN).Filled().Rect({0, 0}, {fraction(score->value), 24});
         if (const BestScore* best = Context<BestScore>()) {
             const float x = fraction(best->value);
-            renderer.Paint(MAROON).Fill().Rect({x - 2, -6}, {4, 36});
+            renderer.Paint(MAROON).Filled().Rect({x - 2, -6}, {4, 36});
         }
     }
 };
@@ -180,13 +180,13 @@ SCENE("kontekst") {
 
     // SetContext: gracza udostępniamy przez referencję, bez kopiowania.
     auto& player = scene.Spawn<Player>();
-    player.Position({750, 260}).Radius(16).Paint(DARKBLUE).Fill();
+    player.Position({750, 260}).Radius(16).Paint(DARKBLUE).Filled();
     scene.SetContext(player);
 
     // Radius() z shapes::Circle zwraca Circle&, dlatego jest na końcu łańcucha
-    scene.Spawn<Follower>().Speed(60).Position({560, 130}).Paint(RED).Fill().Radius(10);
-    scene.Spawn<Follower>().Speed(90).Position({940, 130}).Paint(MAROON).Fill().Radius(10);
-    scene.Spawn<Follower>().Speed(120).Position({940, 390}).Paint(PINK).Fill().Radius(10);
+    scene.Spawn<Follower>().Speed(60).Position({560, 130}).Paint(RED).Filled().Radius(10);
+    scene.Spawn<Follower>().Speed(90).Position({940, 130}).Paint(MAROON).Filled().Radius(10);
+    scene.Spawn<Follower>().Speed(120).Position({940, 390}).Paint(PINK).Filled().Radius(10);
 
     scene.Spawn<ScoreBar>().Position({60, 520});
 

@@ -81,7 +81,7 @@ SCENE("formularz") {
     auto& button = scene.Spawn<shapes::Rect>()
                        .Size({140, 40})
                        .Paint(SKYBLUE)
-                       .Fill()
+                       .Filled()
                        .Position({40, 290})
                        .OnClick([submit](shapes::Rect&) { submit(); });
     button.Spawn<visual::Text>()

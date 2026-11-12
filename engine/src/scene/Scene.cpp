@@ -61,7 +61,7 @@ void Scene::Draw(PrimitiveRenderer& renderer) const {
     ::BeginMode2D(camera_.Raw());
     if (drawWorld_) drawWorld_(renderer.Reset().TargetScreen());
     DrawRoots(renderer, false);
-    if (physics_.IsDebug()) physics_.Draw(renderer);
+    if (physics_.IsDebugColliders()) physics_.Draw(renderer);
     ::EndMode2D();
     DrawRoots(renderer, true);
     if (draw_) draw_(renderer.Reset().TargetScreen());

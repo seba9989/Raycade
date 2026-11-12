@@ -37,8 +37,8 @@ enum class Rasterizer {
  * `Circle({100, 100}, 40)` działają bez zmian; listy wierzchołków to `std::vector<Point2D>`.
  * Rozmiary i promienie pozostają typu Vector2 - to wektory, a nie punkty.
  * @code{.cpp}
- * renderer.Paint(RED).Fill().Circle({100, 100}, 40)
- *         .Fill(false).Rect({200, 60}, {120, 80});
+ * renderer.Paint(RED).Filled().Circle({100, 100}, 40)
+ *         .Filled(false).Rect({200, 60}, {120, 80});
  * @endcode
  */
 class PrimitiveRenderer {
@@ -61,7 +61,7 @@ class PrimitiveRenderer {
      * @param value Czy rysować wnętrze.
      * @return Ten sam renderer.
      */
-    PrimitiveRenderer& Fill(bool value = true) {
+    PrimitiveRenderer& Filled(bool value = true) {
         filled_ = value;
         return *this;
     }
@@ -183,7 +183,7 @@ class PrimitiveRenderer {
      * @brief Rysuje wielokąt (łamaną zwyczajną zamkniętą) z uporządkowanych wierzchołków.
      * @details Gdy krawędzie niesąsiednie się przecinają (łamana wiązana), nic nie jest
      * rysowane - można to sprawdzić wcześniej przez IsSimplePolygon(). Wypełnienie
-     * (Fill()) korzysta z algorytmu scanline z kontrolą parzystości.
+     * (Filled()) korzysta z algorytmu scanline z kontrolą parzystości.
      * @param vertices Wierzchołki w kolejności obwodu.
      * @return Ten sam renderer.
      * @see ScanlineFill() - opis wypełniania z kontrolą parzystości.

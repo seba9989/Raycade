@@ -17,7 +17,7 @@ SCENE("menu") {
         .Position({500, 440})
         .Radius(20)
         .Paint(ORANGE)
-        .Fill()
+        .Filled()
         .OnUpdate([time = 0.0f](shapes::Circle& self, float dt) mutable {
             time += dt;
             self.Position({500 + 150 * std::sin(time * 2), 440});
@@ -28,8 +28,8 @@ SCENE("menu") {
         .Position({400, 300})
         .Size({200, 60})
         .Paint(DARKBLUE)
-        .OnMouseEnter([](shapes::Rect& self) { self.Fill(); })
-        .OnMouseLeave([](shapes::Rect& self) { self.Fill(false); })
+        .OnMouseEnter([](shapes::Rect& self) { self.Filled(); })
+        .OnMouseLeave([](shapes::Rect& self) { self.Filled(false); })
         .OnClick([](shapes::Rect&) { Engine::Get().SwitchScene("prymitywy"); });
 
     scene.OnDraw([](PrimitiveRenderer&) {

@@ -58,7 +58,7 @@ class CollisionShape {
      * platformę, wystarczy na chwilę wyłączyć collider (Disabled()) albo zmienić maskę postaci.
      * @code{.cpp}
      * scene.Spawn<StaticBody>().Position({300, 400}).Children([](StaticBody& ledge) {
-     *     ledge.Spawn<collider::Rect>().Size({120, 10}).OneWay().Paint(BROWN).Fill().Visible();
+     *     ledge.Spawn<collider::Rect>().Size({120, 10}).OneWay().Paint(BROWN).Filled().Visible();
      * });
      * @endcode
      * @param value Czy collider jest jednostronny.

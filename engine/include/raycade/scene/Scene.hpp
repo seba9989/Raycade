@@ -170,12 +170,12 @@ class Scene : public Contextable {
      * @return Ta sama scena.
      */
     Scene& DebugColliders(bool value = true) {
-        physics_.Debug(value);
+        physics_.DebugColliders(value);
         return *this;
     }
 
     /** @brief Sprawdza, czy obrysy colliderów są rysowane. */
-    bool IsDebugColliders() const { return physics_.IsDebug(); }
+    bool IsDebugColliders() const { return physics_.IsDebugColliders(); }
 
     /**
      * @brief Włącza płynne rysowanie obiektów fizyki między krokami stałymi (domyślnie włączone).
@@ -184,13 +184,13 @@ class Scene : public Contextable {
      * @param value Czy interpolować.
      * @return Ta sama scena.
      */
-    Scene& PhysicsInterpolation(bool value = true) {
-        physics_.Interpolation(value);
+    Scene& PhysicsInterpolated(bool value = true) {
+        physics_.Interpolated(value);
         return *this;
     }
 
     /** @brief Sprawdza, czy obiekty fizyki są interpolowane przy rysowaniu. */
-    bool IsPhysicsInterpolation() const { return physics_.IsInterpolation(); }
+    bool IsPhysicsInterpolated() const { return physics_.IsInterpolated(); }
 
     /**
      * @brief Szuka pierwszego ciała na odcinku from-to (RayCast2D z Godota).

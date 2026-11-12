@@ -46,8 +46,10 @@ w `src/`. Katalogi mają nazwy małymi literami, pliki z klasami - PascalCase.
 - **Setter i getter mają tę samą nazwę.** Setter przyjmuje wartość i zwraca obiekt
   (`Size(v)`), getter nie ma argumentów i zwraca wartość (`Size()`).
 - **Getter stanu logicznego ma prefiks `Is`:** `IsFullscreen()`, `IsHovered()`,
-  `IsFilled()`. Setter takiej flagi to sama nazwa z domyślnym `true`:
-  `Fullscreen()`, `Fill()`.
+  `IsFilled()`. Setter takiej flagi to **dokładnie ta sama nazwa bez `Is`**, z domyślnym
+  `true`: `Fullscreen()`, `Filled()`, `FlippedX()`, `RotationLocked()`, `CursorHidden()`,
+  `KeyboardEnabled()`. Nazwa jest więc przymiotnikiem albo imiesłowem opisującym stan, a nie
+  czasownikiem (`Filled()`, nie `Fill()`; `CursorHidden()`, nie `HideCursor()`).
 - **Wybór jednej z kilku wartości to setter z typem wyliczeniowym**, a nie kilka flag:
   `Raster(Rasterizer::Custom)`, `ScaleMode(Scaling::Fit)`. Typ ma inną nazwę niż metoda
   (`Rasterizer`, nie `Raster`), bo wewnątrz klasy nazwa metody zasłoniłaby typ.

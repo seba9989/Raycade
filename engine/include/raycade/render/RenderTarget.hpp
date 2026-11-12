@@ -58,10 +58,10 @@ class RenderTarget {
 
     /**
      * @brief Wybiera filtr przy skalowaniu tekstury.
-     * @param smooth false - ostre piksele (domyślnie), true - wygładzanie dwuliniowe.
+     * @param value true - wygładzanie dwuliniowe, false - ostre piksele (stan tekstury po utworzeniu).
      * @return Ten sam cel.
      */
-    RenderTarget& Smooth(bool smooth);
+    RenderTarget& Smooth(bool value = true);
 
     /**
      * @brief Udostępnia teksturę z zawartością.

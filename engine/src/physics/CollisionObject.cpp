@@ -31,7 +31,7 @@ void CollisionObject::MoveInScene(Vector2 delta) {
 
 AffineMatrix2D CollisionObject::DrawTransform() const {
     const PhysicsWorld* world = Physics();
-    if (!world || !world->IsInterpolation() || !interpolated_) return transform_;
+    if (!world || !world->IsInterpolated() || !interpolated_) return transform_;
     // przesunięty poza krokiem stałym - rysowany tam, gdzie jest
     const AffineMatrix2D& now = transform_;
     if (now.a != stepped_.a || now.b != stepped_.b || now.c != stepped_.c || now.d != stepped_.d ||

@@ -11,7 +11,7 @@
  * @namespace shapes
  * @brief Figury geometryczne, które można tworzyć przez Scene::Spawn() i Entity::Spawn().
  * @details W kodzie wystarczy wpisać `Spawn<shapes::`, aby edytor podpowiedział typy. Wszystkie
- * dziedziczą po shapes::Shape (wypełnienie Fill() i algorytm Raster()).
+ * dziedziczą po shapes::Shape (wypełnienie Filled() i algorytm Raster()).
  *
  * | Typ                   | Co rysuje                             | Własne metody (settery i gettery)                 |
  * |-----------------------|---------------------------------------|---------------------------------------------------|
@@ -28,11 +28,11 @@
  *
  * Obiekty z obrazem i tekstem (Sprite, Text, Canvas, RenderGroup) są w przestrzeni nazw
  * @ref visual, pole tekstowe w @ref ui, a niewidoczny rodzic Group - obok Entity, bez
- * przestrzeni nazw. Nie są figurami, więc nie mają Fill() ani Raster().
+ * przestrzeni nazw. Nie są figurami, więc nie mają Filled() ani Raster().
  *
  * Metody wspólne ma każda figura (z klas Shape, Transformable, Drawable, Updatable i Entity):
  * - przekształcenia: Position(), Translate(), Rotation(), Rotate(), Scale(), ScaleBy(),
- * - wygląd: Paint(), Fill(), Raster(), Layer(), Blend(), ClipRect(), Shader(),
+ * - wygląd: Paint(), Filled(), Raster(), Layer(), Blend(), ClipRect(), Shader(),
  * - drzewo i układ: Spawn(), Children(), ScreenSpace(),
  * - zdarzenia: OnUpdate(), OnClick(), OnMouseReleased(), OnMouseEnter(), OnMouseLeave(), OnScroll(),
  *   OnDragStart(), OnDrag(), OnDragEnd(), OnKeyPressed(), OnKeyReleased(),
@@ -40,7 +40,7 @@
  *
  * Konwencje: setter i getter mają tę samą nazwę (`Size(v)` / `Size()`), getter stanu
  * logicznego ma prefiks `Is` (`IsFilled()`), a punkty i wierzchołki są typu Point2D.
- * Fill() działa w Rect, Triangle, Circle, Ellipse i Polygon, a Raster(Rasterizer::Custom)
+ * Filled() działa w Rect, Triangle, Circle, Ellipse i Polygon, a Raster(Rasterizer::Custom)
  * (algorytmy z laboratorium) - w figurach z odcinków oraz w Circle i Ellipse; tabela jest
  * przy shapes::Shape. Wszystkie metody konfiguracji używają deducing this i zwracają typ
  * obiektu, na którym je wywołano - także klasy pochodnej, np.

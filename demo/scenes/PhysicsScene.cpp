@@ -37,7 +37,7 @@ class Player : public CharacterBody {
   public:
     /** @brief Buduje grafikę i collider (punkt zaczepienia - środek dolnej krawędzi). */
     Player() {
-        body_ = &Spawn<shapes::Rect>().Position({-12, -32}).Size({24, 32}).Paint(BLUE).Fill();
+        body_ = &Spawn<shapes::Rect>().Position({-12, -32}).Size({24, 32}).Paint(BLUE).Filled();
         Spawn<collider::Rect>().Position({-12, -32}).Size({24, 32});
     }
 
@@ -81,21 +81,26 @@ class Player : public CharacterBody {
 /** @brief Dodaje nieruchomy prostokąt (widoczny collider). */
 StaticBody& Block(Scene& scene, Vector2 position, Vector2 size, Color color) {
     StaticBody& body = scene.Spawn<StaticBody>().Position(position);
-    body.Spawn<collider::Rect>().Size(size).Paint(color).Fill().Visible();
+    body.Spawn<collider::Rect>().Size(size).Paint(color).Filled().Visible();
     return body;
 }
 
 /** @brief Dodaje skrzynię - bryłę sztywną, którą gracz może pchać. */
 void Crate(Scene& scene, Vector2 center) {
     auto& crate = scene.Spawn<RigidBody>().Position(center).Mass(1).Friction(0.7f);
-    crate.Spawn<collider::Rect>().Position({-15, -15}).Size({30, 30}).Paint(BROWN).Fill().Visible();
+    crate.Spawn<collider::Rect>()
+        .Position({-15, -15})
+        .Size({30, 30})
+        .Paint(BROWN)
+        .Filled()
+        .Visible();
     crate.Spawn<shapes::Rect>().Position({-15, -15}).Size({30, 30}).Paint(DARKBROWN);
 }
 
 /** @brief Dodaje sprężystą piłkę - bryłę sztywną w kształcie koła. */
 void Ball(Scene& scene, Vector2 center) {
     auto& ball = scene.Spawn<RigidBody>().Position(center).Mass(0.5f).Bounce(0.6f).Friction(0.4f);
-    ball.Spawn<collider::Circle>().Radius(10).Paint(MAROON).Fill().Visible();
+    ball.Spawn<collider::Circle>().Radius(10).Paint(MAROON).Filled().Visible();
     ball.Spawn<shapes::Line>().From({0, 0}).To({10, 0}).Paint(WHITE); // widać obrót
 }
 
@@ -104,7 +109,7 @@ void Coin(Scene& scene, Vector2 position) {
     scene.Spawn<Area>()
         .Position(position)
         .Children([](Area& coin) {
-            coin.Spawn<collider::Circle>().Radius(10).Paint(GOLD).Fill().Visible();
+            coin.Spawn<collider::Circle>().Radius(10).Paint(GOLD).Filled().Visible();
         })
         .OnBodyEnter([](Area& coin, PhysicsBody& body) {
             if (!dynamic_cast<Player*>(&body)) return;
@@ -136,12 +141,12 @@ SCENE("fizyka") {
         hill.Spawn<collider::Triangle>()
             .Vertices({380, 620}, {560, 620}, {560, 500})
             .Paint(GRAY)
-            .Fill()
+            .Filled()
             .Visible();
     });
     Block(scene, {560, 500}, {160, 120}, GRAY);
     scene.Spawn<StaticBody>().Position({300, 620}).Children([](StaticBody& bump) {
-        bump.Spawn<collider::Circle>().Radius(40).Paint(GRAY).Fill().Visible();
+        bump.Spawn<collider::Circle>().Radius(40).Paint(GRAY).Filled().Visible();
     });
     // obrócona platforma - collider obraca się razem z ciałem
     scene.Spawn<StaticBody>().Position({830, 420}).Rotate(-0.3f).Children([](StaticBody& tilt) {
@@ -149,7 +154,7 @@ SCENE("fizyka") {
             .Position({-70, -10})
             .Size({140, 20})
             .Paint(GRAY)
-            .Fill()
+            .Filled()
             .Visible();
     });
 
@@ -162,11 +167,11 @@ SCENE("fizyka") {
 
     // platforma jednostronna nad blokiem - wskakuje się na nią od dołu
     auto& ledge = scene.Spawn<StaticBody>().Position({580, 410}).Spawn<collider::Rect>();
-    ledge.Size({140, 8}).OneWay().Paint(BROWN).Fill().Visible();
+    ledge.Size({140, 8}).OneWay().Paint(BROWN).Filled().Visible();
 
     // blok reagujący na zderzenia (OnCollisionEnter / OnCollisionExit)
     StaticBody& touch = scene.Spawn<StaticBody>().Position({140, 330});
-    auto& tile = touch.Spawn<collider::Rect>().Size({90, 20}).Paint(GRAY).Fill().Visible();
+    auto& tile = touch.Spawn<collider::Rect>().Size({90, 20}).Paint(GRAY).Filled().Visible();
     touch.OnCollisionEnter(
              [&tile](StaticBody&, const Collision&) { tile.Paint(ORANGE); }
     ).OnCollisionExit([&tile](StaticBody&, PhysicsBody&) { tile.Paint(GRAY); });
@@ -179,7 +184,7 @@ SCENE("fizyka") {
     scene.Spawn<Area>()
         .Position({880, 604})
         .Children([](Area& lava) {
-            lava.Spawn<collider::Rect>().Size({100, 16}).Paint(RED).Fill().Visible();
+            lava.Spawn<collider::Rect>().Size({100, 16}).Paint(RED).Filled().Visible();
         })
         .OnBodyEnter([](Area&, PhysicsBody& body) {
             if (auto* player = dynamic_cast<Player*>(&body)) player->Respawn();
@@ -196,7 +201,7 @@ SCENE("fizyka") {
 
     // oko: promień do gracza - czy nic nie zasłania widoku
     constexpr Vector2 kEye{960, 90};
-    scene.Spawn<shapes::Circle>().Position(kEye).Radius(10).Paint(DARKPURPLE).Fill();
+    scene.Spawn<shapes::Circle>().Position(kEye).Radius(10).Paint(DARKPURPLE).Filled();
     scene.OnDrawWorld([&scene, &player, kEye](PrimitiveRenderer& renderer) {
         const Vector2 target{player.WorldPosition().x, player.WorldPosition().y - 16};
         const auto hit = scene.Raycast(kEye, target);

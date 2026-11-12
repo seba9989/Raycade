@@ -30,14 +30,14 @@
  * class Player : public CharacterBody {
  *   public:
  *     Player() {
- *         Spawn<shapes::Rect>().Position({-12, -32}).Size({24, 32}).Paint(BLUE).Fill(); // grafika
- *         Spawn<collider::Rect>().Position({-12, -32}).Size({24, 32});                  // kolizja
+ *         Spawn<shapes::Rect>().Position({-12, -32}).Size({24, 32}).Paint(BLUE).Filled(); //
+ * grafika Spawn<collider::Rect>().Position({-12, -32}).Size({24, 32});                  // kolizja
  *     }
  * };
  *
  * // platforma: widoczny collider to grafika i kolizja naraz
  * scene.Spawn<StaticBody>().Position({0, 650}).Children([](StaticBody& floor) {
- *     floor.Spawn<collider::Rect>().Size({1000, 50}).Paint(DARKGRAY).Fill().Visible();
+ *     floor.Spawn<collider::Rect>().Size({1000, 50}).Paint(DARKGRAY).Filled().Visible();
  * });
  * @endcode
  * @tparam S Figura z @ref shapes (dziedzicząca po shapes::Shape).

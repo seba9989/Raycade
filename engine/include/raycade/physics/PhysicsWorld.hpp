@@ -76,22 +76,22 @@ class PhysicsWorld {
     Vector2 Gravity() const { return gravity_; }
 
     /** @brief Włącza rysowanie colliderów (Scene::DebugColliders()). */
-    PhysicsWorld& Debug(bool value) {
+    PhysicsWorld& DebugColliders(bool value = true) {
         debug_ = value;
         return *this;
     }
 
     /** @brief Sprawdza, czy collidery są rysowane. */
-    bool IsDebug() const { return debug_; }
+    bool IsDebugColliders() const { return debug_; }
 
-    /** @brief Włącza interpolację rysowania obiektów fizyki (Scene::PhysicsInterpolation()). */
-    PhysicsWorld& Interpolation(bool value) {
+    /** @brief Włącza interpolację rysowania obiektów fizyki (Scene::PhysicsInterpolated()). */
+    PhysicsWorld& Interpolated(bool value = true) {
         interpolation_ = value;
         return *this;
     }
 
     /** @brief Sprawdza, czy interpolacja rysowania jest włączona. */
-    bool IsInterpolation() const { return interpolation_; }
+    bool IsInterpolated() const { return interpolation_; }
 
     /** @brief Ustawia ułamek drogi do następnego kroku stałego (Engine::FixedAlpha()). */
     PhysicsWorld& Alpha(float alpha) {
