@@ -36,7 +36,7 @@ void Entity::FixedUpdate(float step, const Input& input) {
 }
 
 void Entity::Render(PrimitiveRenderer& renderer) const {
-    const auto matrix = transform_.RlglMatrix();
+    const auto matrix = DrawTransform().RlglMatrix();
     rlPushMatrix();
     rlMultMatrixf(matrix.data());
     // przycięcie obejmuje własny rysunek i dzieci (prostokąt w układzie lokalnym)

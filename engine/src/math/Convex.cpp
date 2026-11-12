@@ -380,6 +380,148 @@ std::optional<ConvexRayHit> ConvexRaycast(const ConvexPart& part, Vector2 from, 
     return ConvexRayHit{enter, unit(enterNormal)};
 }
 
+ConvexMass ConvexMassProperties(const ConvexPart& part) {
+    ConvexMass mass;
+    if (part.kind == ConvexPart::Kind::Ellipse) {
+        mass.area = PI * std::fabs(Cross(part.axisX, part.axisY));
+        mass.centroid = part.center;
+        mass.inertia = mass.area * (LengthSqr(part.axisX) + LengthSqr(part.axisY)) / 4.0f;
+        return mass;
+    }
+    const std::vector<Vector2>& points = part.points;
+    if (points.empty()) return mass;
+    mass.centroid = part.Center();
+    if (points.size() < 3) return mass;
+
+    // trójkąty (p0, pi, pi+1); współrzędne względem p0 - mniejsze błędy zaokrągleń
+    const Vector2 origin = points[0];
+    float area = 0.0f;
+    Vector2 centroid{};
+    float inertia = 0.0f; // względem origin
+    for (std::size_t i = 1; i + 1 < points.size(); ++i) {
+        const Vector2 e1 = Sub(points[i], origin);
+        const Vector2 e2 = Sub(points[i + 1], origin);
+        const float cross = Cross(e1, e2);
+        const float triangle = 0.5f * cross;
+        area += triangle;
+        centroid = Add(centroid, Scale(Add(e1, e2), triangle / 3.0f));
+        inertia += cross / 12.0f * (Dot(e1, e1) + Dot(e1, e2) + Dot(e2, e2));
+    }
+    if (std::fabs(area) < kEpsilon) return mass;
+    centroid = Scale(centroid, 1.0f / area);
+    mass.area = std::fabs(area);
+    mass.centroid = Add(origin, centroid);
+    // twierdzenie Steinera: z punktu origin do środka ciężkości
+    mass.inertia = std::fabs(inertia - area * LengthSqr(centroid));
+    return mass;
+}
+
+namespace {
+
+/** @brief Krawędź figury najbardziej zwrócona w danym kierunku (do obcinania punktów styku). */
+struct Feature {
+    Vector2 deepest{}; /**< Wierzchołek najdalej w kierunku. */
+    Vector2 from{};    /**< Początek krawędzi. */
+    Vector2 to{};      /**< Koniec krawędzi. */
+};
+
+Feature BestEdge(const std::vector<Vector2>& points, Vector2 direction) {
+    const std::size_t count = points.size();
+    std::size_t best = 0;
+    for (std::size_t i = 1; i < count; ++i)
+        if (Dot(points[i], direction) > Dot(points[best], direction)) best = i;
+    if (count == 2) return {points[best], points[0], points[1]};
+    const Vector2 vertex = points[best];
+    const Vector2 next = points[(best + 1) % count];
+    const Vector2 prev = points[(best + count - 1) % count];
+    const auto unit = [](Vector2 v) {
+        const float length = std::sqrt(LengthSqr(v));
+        return length < kEpsilon ? v : Scale(v, 1.0f / length);
+    };
+    // krawędź bardziej prostopadła do kierunku
+    if (std::fabs(Dot(unit(Sub(vertex, prev)), direction)) <=
+        std::fabs(Dot(unit(Sub(next, vertex)), direction)))
+        return {vertex, prev, vertex};
+    return {vertex, vertex, next};
+}
+
+/** @brief Obcina odcinek do półpłaszczyzny dot(normal, p) >= offset. */
+int Clip(Vector2 a, Vector2 b, Vector2 normal, float offset, std::array<Vector2, 2>& out) {
+    int count = 0;
+    const float da = Dot(normal, a) - offset;
+    const float db = Dot(normal, b) - offset;
+    if (da >= 0.0f) out[static_cast<std::size_t>(count++)] = a;
+    if (db >= 0.0f) out[static_cast<std::size_t>(count++)] = b;
+    if (da * db < 0.0f && count < 2) {
+        const float t = da / (da - db);
+        out[static_cast<std::size_t>(count++)] = Add(a, Scale(Sub(b, a), t));
+    }
+    return count;
+}
+
+} // namespace
+
+int ConvexContacts(
+    const ConvexPart& a,
+    const ConvexPart& b,
+    const Penetration& penetration,
+    std::array<ContactPoint, 2>& points
+) {
+    const Vector2 n = penetration.normal; // od b do a
+    const auto polygonal = [](const ConvexPart& part) {
+        return part.kind == ConvexPart::Kind::Polygon && part.points.size() >= 2;
+    };
+    // z elipsą albo punktem - jeden punkt: najgłębszy punkt tej figury w drugiej
+    if (!polygonal(a)) {
+        points[0] = {a.Support(Negate(n)), penetration.depth};
+        return 1;
+    }
+    if (!polygonal(b)) {
+        points[0] = {b.Support(n), penetration.depth};
+        return 1;
+    }
+
+    const Feature featureA = BestEdge(a.points, Negate(n)); // ściana a zwrócona do b
+    const Feature featureB = BestEdge(b.points, n);         // ściana b zwrócona do a
+    const auto unit = [](Vector2 v) {
+        const float length = std::sqrt(LengthSqr(v));
+        return length < kEpsilon ? v : Scale(v, 1.0f / length);
+    };
+    const Vector2 edgeA = unit(Sub(featureA.to, featureA.from));
+    const Vector2 edgeB = unit(Sub(featureB.to, featureB.from));
+    // krawędź odniesienia - bardziej prostopadła do normalnej; druga jest obcinana
+    const bool referenceIsA = std::fabs(Dot(edgeA, n)) <= std::fabs(Dot(edgeB, n));
+    const Feature& reference = referenceIsA ? featureA : featureB;
+    const Feature& incident = referenceIsA ? featureB : featureA;
+    const Vector2 along = referenceIsA ? edgeA : edgeB;
+
+    std::array<Vector2, 2> clipped{};
+    std::array<Vector2, 2> clipped2{};
+    if (Clip(incident.from, incident.to, along, Dot(along, reference.from), clipped) < 2 ||
+        Clip(clipped[0], clipped[1], Negate(along), -Dot(along, reference.to), clipped2) < 2) {
+        points[0] = {a.Support(Negate(n)), penetration.depth};
+        return 1;
+    }
+
+    // normalna ściany odniesienia, zwrócona do drugiej figury
+    Vector2 faceNormal{-along.y, along.x};
+    const Vector2 towardOther = referenceIsA ? Negate(n) : n;
+    if (Dot(faceNormal, towardOther) < 0.0f) faceNormal = Negate(faceNormal);
+    const float face = Dot(faceNormal, reference.deepest);
+
+    int count = 0;
+    for (const Vector2 point : clipped2) {
+        const float depth = face - Dot(faceNormal, point); // punkt za ścianą odniesienia
+        if (depth < 0.0f) continue;
+        points[static_cast<std::size_t>(count++)] = {point, depth};
+    }
+    if (count == 0) {
+        points[0] = {a.Support(Negate(n)), penetration.depth};
+        return 1;
+    }
+    return count;
+}
+
 bool IsConvexPolygon(std::span<const Point2D> vertices) {
     const std::size_t count = vertices.size();
     if (count < 3) return false;

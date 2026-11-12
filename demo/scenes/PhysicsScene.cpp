@@ -11,6 +11,9 @@
  * - monety i lawa to obszary (Area) z OnBodyEnter(),
  * - brązowa półka to platforma jednostronna (OneWay()): wskakuje się na nią od dołu, a S albo
  *   strzałka w dół na chwilę wyłącza jej collider (Disabled()) - postać spada przez nią,
+ * - brązowe skrzynie i piłki to bryły sztywne (RigidBody): spadają, odbijają się, obracają
+ *   i układają w stos; gracz pcha skrzynie siłą przyłożoną przy zderzeniu (SlideCollisions()),
+ *   a B tworzy piłkę pod kursorem,
  * - fioletowe oko w rogu co klatkę rzuca promień do gracza (Scene::Raycast()): zielona linia -
  *   widzi go, czerwona - kończy się na przeszkodzie,
  * - F1 pokazuje obrysy wszystkich colliderów (Scene::DebugColliders()), R wczytuje scenę od nowa.
@@ -62,6 +65,10 @@ class Player : public CharacterBody {
         if (jump_ && IsOnFloor()) velocity.y = -540.0f;
         jump_ = false;
         Velocity(velocity).MoveAndSlide();
+        // pchanie skrzyń: postać ma dla brył nieskończoną masę, więc pcha je sama - siłą w bok
+        for (const Collision& hit : SlideCollisions())
+            if (auto* crate = dynamic_cast<RigidBody*>(hit.other))
+                crate->ApplyCentralForce({-hit.normal.x * 2500.0f, 0.0f});
         if (Position().y > 900) Respawn();
     }
 
@@ -76,6 +83,20 @@ StaticBody& Block(Scene& scene, Vector2 position, Vector2 size, Color color) {
     StaticBody& body = scene.Spawn<StaticBody>().Position(position);
     body.Spawn<collider::Rect>().Size(size).Paint(color).Fill().Visible();
     return body;
+}
+
+/** @brief Dodaje skrzynię - bryłę sztywną, którą gracz może pchać. */
+void Crate(Scene& scene, Vector2 center) {
+    auto& crate = scene.Spawn<RigidBody>().Position(center).Mass(1).Friction(0.7f);
+    crate.Spawn<collider::Rect>().Position({-15, -15}).Size({30, 30}).Paint(BROWN).Fill().Visible();
+    crate.Spawn<shapes::Rect>().Position({-15, -15}).Size({30, 30}).Paint(DARKBROWN);
+}
+
+/** @brief Dodaje sprężystą piłkę - bryłę sztywną w kształcie koła. */
+void Ball(Scene& scene, Vector2 center) {
+    auto& ball = scene.Spawn<RigidBody>().Position(center).Mass(0.5f).Bounce(0.6f).Friction(0.4f);
+    ball.Spawn<collider::Circle>().Radius(10).Paint(MAROON).Fill().Visible();
+    ball.Spawn<shapes::Line>().From({0, 0}).To({10, 0}).Paint(WHITE); // widać obrót
 }
 
 /** @brief Dodaje monetę - obszar, który znika po wejściu gracza. */
@@ -164,6 +185,12 @@ SCENE("fizyka") {
             if (auto* player = dynamic_cast<Player*>(&body)) player->Respawn();
         });
 
+    // bryły sztywne: stos skrzyń przy lawie i piłka na platformie
+    for (int i = 0; i < 3; ++i)
+        Crate(scene, {800, 604.0f - 31.0f * static_cast<float>(i)});
+    Crate(scene, {740, 604});
+    Ball(scene, {250, 300});
+
     Player& player = scene.Spawn<Player>();
     player.Respawn();
 
@@ -182,6 +209,7 @@ SCENE("fizyka") {
         Engine& engine = Engine::Get();
         if (engine.KeyPressed(KEY_F1)) scene.DebugColliders(!scene.IsDebugColliders());
         if (engine.KeyPressed(KEY_R)) engine.ReloadScene("fizyka");
+        if (engine.KeyPressed(KEY_B)) Ball(scene, engine.MousePosition());
         // zeskok przez platformę jednostronną: collider wyłączony, póki trzymany jest klawisz
         ledge.Disabled(engine.KeyDown(KEY_S) || engine.KeyDown(KEY_DOWN));
     });
@@ -189,8 +217,9 @@ SCENE("fizyka") {
     scene.OnDraw([&player](PrimitiveRenderer&) {
         const auto yes = [](bool value) { return value ? "tak" : "nie"; };
         ::DrawText(
-            "A/D lub strzalki - ruch   spacja/W - skok   S - zeskok z polki   F1 - collidery   "
-            "R - od nowa",
+            "A/D lub strzalki - ruch   spacja/W - skok   S - zeskok z polki   B - pilka pod "
+            "kursorem   \n"
+            "F1 - collidery   R - od nowa",
             20, 20, 18, DARKGRAY
         );
         const std::string state =

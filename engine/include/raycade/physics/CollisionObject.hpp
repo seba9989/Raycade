@@ -77,6 +77,17 @@ class CollisionObject : public Entity {
     void Draw(PrimitiveRenderer&) const override {}
 
     /**
+     * @brief Położenie rysowania między dwoma krokami fizyki (interpolacja).
+     * @details Fizyka zmienia pozycje w kroku stałym (np. 60 razy na sekundę), a obraz rysuje się
+     * częściej - bez interpolacji obiekt stałby przez kilka klatek i przeskakiwał. Obiekt jest
+     * więc rysowany w położeniu pośrednim między stanem przed i po ostatnim kroku
+     * (Engine::FixedAlpha()), czyli do jednego kroku „w tyle”. Obiekt przesunięty poza krokiem
+     * stałym (np. w OnUpdate()) albo o więcej niż 64 px naraz (teleport) jest rysowany tam,
+     * gdzie jest. Wyłącza się ją dla sceny: Scene::PhysicsInterpolation(false).
+     */
+    AffineMatrix2D DrawTransform() const override;
+
+    /**
      * @brief Przesuwa obiekt o wektor w układzie sceny.
      * @details Position() jest w układzie rodzica - przesunięcie jest przeliczane przez rodzica,
      * więc działa także w obróconej albo przeskalowanej grupie.
@@ -86,4 +97,12 @@ class CollisionObject : public Entity {
 
     std::uint32_t layer_ = 1; /**< Warstwy obiektu. */
     std::uint32_t mask_ = 1;  /**< Warstwy, z którymi obiekt się zderza. */
+
+  private:
+    friend class PhysicsWorld;
+
+    AffineMatrix2D previous_{}; /**< Przekształcenie przed ostatnim krokiem stałym. */
+    AffineMatrix2D stepped_{};  /**< Przekształcenie po ostatnim kroku stałym. */
+    bool inStep_ = false;       /**< Czy obiekt był na liście na początku kroku. */
+    bool interpolated_ = false; /**< Czy previous_ i stepped_ opisują ostatni krok. */
 };

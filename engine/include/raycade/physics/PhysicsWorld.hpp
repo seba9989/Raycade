@@ -17,6 +17,7 @@
 #include <raycade/physics/Area.hpp>
 #include <raycade/physics/CharacterBody.hpp>
 #include <raycade/physics/PhysicsBody.hpp>
+#include <raycade/physics/RigidBody.hpp>
 
 /**
  * @brief Trafienie promieniem (Scene::Raycast()).
@@ -64,6 +65,18 @@ class PhysicsWorld {
 
     /** @brief Sprawdza, czy collidery są rysowane. */
     bool IsDebug() const { return debug_; }
+
+    /** @brief Włącza interpolację rysowania obiektów fizyki (Scene::PhysicsInterpolation()). */
+    void Interpolation(bool value) { interpolation_ = value; }
+
+    /** @brief Sprawdza, czy interpolacja rysowania jest włączona. */
+    bool IsInterpolation() const { return interpolation_; }
+
+    /** @brief Ustawia ułamek drogi do następnego kroku stałego (Engine::FixedAlpha()). */
+    void Alpha(float alpha) { alpha_ = alpha; }
+
+    /** @brief Ułamek drogi do następnego kroku stałego - położenie rysowania między krokami. */
+    float Alpha() const { return alpha_; }
 
     /** @brief Krok czasu dla MoveAndSlide(): krok stały albo czas klatki. */
     float Delta() const { return delta_; }
@@ -131,6 +144,7 @@ class PhysicsWorld {
         CollisionObject* object = nullptr;
         PhysicsBody* body = nullptr; /**< Ten sam obiekt, jeśli jest ciałem. */
         Area* area = nullptr;        /**< Ten sam obiekt, jeśli jest obszarem. */
+        RigidBody* rigid = nullptr;  /**< Ten sam obiekt, jeśli jest bryłą sztywną. */
         std::vector<const CollisionShape*> shapes;
     };
 
@@ -165,12 +179,37 @@ class PhysicsWorld {
     const Entry* Find(const CollisionObject* object) const;
 
     /** @brief Zapisuje zderzenie postaci z ciałem do zdarzeń na końcu kroku. */
-    void Record(CharacterBody& body, const Collision& hit);
+    void Record(PhysicsBody& body, const Collision& hit);
+
+    /**
+     * @brief Krok brył sztywnych (solver impulsowy w stylu Box2D).
+     * @details 1. siły, impulsy, grawitacja i tłumienie zmieniają prędkości, 2. punkty styku
+     * (ConvexContacts()) z impulsami z poprzedniego kroku (warm starting), 3. kilka iteracji
+     * impulsów normalnych (z odbiciem i korektą wnikania) i tarcia, 4. przesunięcie i obrót.
+     * @param dt Krok w sekundach.
+     */
+    void Simulate(float dt);
+
+    /** @brief Impulsy styku z poprzedniego kroku - start solvera (warm starting). */
+    struct CachedContact {
+        Vector2 point{};
+        float normalImpulse = 0;
+        float tangentImpulse = 0;
+    };
+    /** @brief Para colliderów brył: (bryła, jej collider, drugie ciało, jego collider). */
+    using ManifoldKey = std::tuple<
+        const CollisionObject*,
+        const CollisionShape*,
+        const CollisionObject*,
+        const CollisionShape*>;
+    std::map<ManifoldKey, std::vector<CachedContact>> warmStart_; /**< Impulsy styków. */
 
     const std::vector<std::unique_ptr<Entity>>& roots_; /**< Obiekty sceny. */
     Vector2 gravity_{0.0f, 980.0f};                     /**< Grawitacja sceny. */
     float delta_ = 0.0f;                                /**< Krok dla MoveAndSlide(). */
     bool debug_ = false;                                /**< Rysowanie colliderów. */
+    bool interpolation_ = true;                         /**< Interpolacja rysowania. */
+    float alpha_ = 1.0f;                                /**< Ułamek do następnego kroku. */
 
     mutable std::vector<Entry> entries_; /**< Obiekty kolizji (zbierane na żądanie). */
     mutable bool dirty_ = true;          /**< Czy entries_ trzeba zebrać od nowa. */

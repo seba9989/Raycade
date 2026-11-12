@@ -178,6 +178,27 @@ class Scene : public Contextable {
     bool IsDebugColliders() const { return physics_.IsDebug(); }
 
     /**
+     * @brief Włącza płynne rysowanie obiektów fizyki między krokami stałymi (domyślnie włączone).
+     * @details Patrz CollisionObject::DrawTransform(). Wyłączenie pokazuje dokładne położenia
+     * z kroków fizyki, ale przy częstotliwości obrazu wyższej niż kroków ruch szarpie.
+     * @param value Czy interpolować.
+     * @return Ta sama scena.
+     */
+    Scene& PhysicsInterpolation(bool value = true) {
+        physics_.Interpolation(value);
+        return *this;
+    }
+
+    /** @brief Sprawdza, czy obiekty fizyki są interpolowane przy rysowaniu. */
+    bool IsPhysicsInterpolation() const { return physics_.IsInterpolation(); }
+
+    /**
+     * @brief Ustawia ułamek drogi do następnego kroku stałego - wywołuje silnik przed Draw().
+     * @param alpha Engine::FixedAlpha() (1, gdy krok stały jest wyłączony).
+     */
+    void FixedAlpha(float alpha) { physics_.Alpha(alpha); }
+
+    /**
      * @brief Szuka pierwszego ciała na odcinku from-to (RayCast2D z Godota).
      * @details Trafia ciała (StaticBody, CharacterBody), nie obszary. Promień zaczynający się
      * wewnątrz collidera go nie trafia; platformę jednostronną trafia tylko od jej „góry”.

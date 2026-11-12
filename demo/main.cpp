@@ -101,7 +101,9 @@
  * prostokąty, trójkątna pochylnia, koło, obrócona platforma). Ruchoma platforma to StaticBody
  * przesuwany w kodzie, który wiezie stojącą na nim postać, szary blok zmienia kolor przy
  * zderzeniu, a monety i lawa to obszary (Area). Na brązową półkę (OneWay()) wskakuje się od
- * dołu, a S zeskakuje przez nią. Fioletowe oko rzuca promień do gracza (Scene::Raycast()) -
+ * dołu, a S zeskakuje przez nią. Skrzynie i piłki to bryły sztywne (RigidBody) - spadają,
+ * obracają się i układają w stos; gracz pcha skrzynie, a B tworzy piłkę pod kursorem.
+ * Fioletowe oko rzuca promień do gracza (Scene::Raycast()) -
  * linia jest zielona, gdy nic go nie zasłania. F1 pokazuje obrysy colliderów, R wczytuje scenę
  * od nowa.
  *

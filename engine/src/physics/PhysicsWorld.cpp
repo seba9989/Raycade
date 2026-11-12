@@ -24,6 +24,26 @@ constexpr float kOneWayMargin = 1.0f;
 /** @brief Najmniejszy cosinus kąta między wypchnięciem a „górą” platformy jednostronnej. */
 constexpr float kOneWayCos = 0.7f;
 
+/** @brief Iteracje solvera brył - więcej to stabilniejsze stosy, ale wolniej. */
+constexpr int kSolverIterations = 12;
+/** @brief Ułamek wnikania usuwany w jednym kroku (korekta Baumgarte'a). */
+constexpr float kBaumgarte = 0.2f;
+/** @brief Dozwolone wnikanie bez korekty - zapobiega drganiom leżących brył. */
+constexpr float kSlop = 0.5f;
+/** @brief Prędkość zderzenia (px/s), poniżej której bryła się nie odbija. */
+constexpr float kBounceThreshold = 40.0f;
+/** @brief Odległość (px), w której punkt styku uznaje się za ten sam co w poprzednim kroku. */
+constexpr float kWarmStartDistance = 3.0f;
+
+float Cross(Vector2 a, Vector2 b) {
+    return a.x * b.y - a.y * b.x;
+}
+
+/** @brief Prędkość punktu bryły: v + ω × r. */
+Vector2 PointVelocity(Vector2 velocity, float angular, Vector2 arm) {
+    return {velocity.x - angular * arm.y, velocity.y + angular * arm.x};
+}
+
 /** @brief Zdarzenie do wysłania po zakończeniu analizy kroku (bez zmian list w trakcie). */
 using Event = std::function<void()>;
 
@@ -37,6 +57,11 @@ void PhysicsWorld::BeginFrame(float dt) {
 void PhysicsWorld::BeginStep(float step) {
     delta_ = step;
     dirty_ = true;
+    // stan przed krokiem - początek interpolacji rysowania
+    for (const Entry& entry : Entries()) {
+        entry.object->previous_ = entry.object->transform_;
+        entry.object->inStep_ = true;
+    }
 }
 
 void PhysicsWorld::CollectShapes(const Entity& object, std::vector<const CollisionShape*>& shapes) {
@@ -68,6 +93,7 @@ void PhysicsWorld::Collect(const Entity& entity, int owner) const {
         entry.object = object;
         entry.body = dynamic_cast<PhysicsBody*>(object);
         entry.area = dynamic_cast<Area*>(object);
+        entry.rigid = dynamic_cast<RigidBody*>(object);
         entries_.push_back(std::move(entry));
         owner = static_cast<int>(entries_.size()) - 1;
     } else if (const auto* shape = dynamic_cast<const CollisionShape*>(&entity);
@@ -134,7 +160,7 @@ bool PhysicsWorld::Overlap(const Entry& a, const Entry& b) {
     return false;
 }
 
-void PhysicsWorld::Record(CharacterBody& body, const Collision& hit) {
+void PhysicsWorld::Record(PhysicsBody& body, const Collision& hit) {
     const bool bodyFirst = std::less<const CollisionObject*>{}(&body, hit.other);
     const Pair key = bodyFirst ? Pair{&body, hit.other} : Pair{hit.other, &body};
     if (contacts_.contains(key)) return; // w kroku liczy się pierwsze zderzenie pary
@@ -344,7 +370,347 @@ std::vector<PhysicsBody*> PhysicsWorld::Overlap(
     return bodies;
 }
 
+void PhysicsWorld::Simulate(float dt) {
+    if (dt <= 0.0f) return;
+    const std::vector<Entry>& entries = Entries();
+
+    // ---- 1. stan brył: masa, środek masy, siły, impulsy i całkowanie prędkości ----
+    struct Body {
+        RigidBody* body = nullptr;
+        const Entry* entry = nullptr;
+        Vector2 com{};
+        float invMass = 0;
+        float invInertia = 0;
+        Vector2 v{};
+        float w = 0;
+        Vector2 v0{}; /**< Prędkość przed grawitacją i siłami tego kroku (do odbić). */
+        float w0 = 0;
+        Vector2 pushV{}; /**< Pseudo-prędkość korekty wnikania (nie zostaje w prędkości). */
+        float pushW = 0;
+    };
+    std::vector<Body> bodies;
+    std::vector<ConvexPart> parts;
+    for (const Entry& entry : entries) {
+        if (!entry.rigid || entry.object->IsDestroyed()) continue;
+        RigidBody& rigid = *entry.rigid;
+        parts.clear();
+        for (const CollisionShape* shape : entry.shapes)
+            if (!shape->IsDisabled()) shape->WorldParts(parts);
+
+        // masa rozłożona równomiernie na pole: środek masy i moment z twierdzenia Steinera
+        float area = 0.0f;
+        Vector2 weighted{};
+        Vector2 centers{};
+        std::vector<ConvexMass> masses;
+        masses.reserve(parts.size());
+        for (const ConvexPart& part : parts) {
+            const ConvexMass mass = ConvexMassProperties(part);
+            masses.push_back(mass);
+            area += mass.area;
+            weighted = {
+                weighted.x + mass.centroid.x * mass.area, weighted.y + mass.centroid.y * mass.area
+            };
+            centers = {centers.x + mass.centroid.x, centers.y + mass.centroid.y};
+        }
+        Body body;
+        body.body = &rigid;
+        body.entry = &entry;
+        float inertia = rigid.mass_ * 100.0f; // bez pola (punkty, odcinki) - jak kulka o r = 14 px
+        if (area > 1e-3f) {
+            body.com = {weighted.x / area, weighted.y / area};
+            float moment = 0.0f;
+            for (const ConvexMass& mass : masses) {
+                const Vector2 arm{mass.centroid.x - body.com.x, mass.centroid.y - body.com.y};
+                moment += mass.inertia + mass.area * Dot(arm, arm);
+            }
+            inertia = rigid.mass_ * moment / area;
+        } else if (!parts.empty()) {
+            const float count = static_cast<float>(parts.size());
+            body.com = {centers.x / count, centers.y / count};
+        } else {
+            body.com = rigid.WorldPosition();
+        }
+        body.invMass = 1.0f / rigid.mass_;
+        body.invInertia = rigid.lockRotation_ || inertia <= 0.0f ? 0.0f : 1.0f / inertia;
+        body.v = rigid.linearVelocity_;
+        body.w = rigid.angularVelocity_;
+
+        Vector2 force{};
+        float torque = rigid.torque_;
+        for (const RigidBody::Pending& pending : rigid.pending_) {
+            const Vector2 arm =
+                pending.central
+                    ? Vector2{}
+                    : Vector2{pending.point.x - body.com.x, pending.point.y - body.com.y};
+            if (pending.impulse) {
+                body.v = {
+                    body.v.x + pending.vector.x * body.invMass,
+                    body.v.y + pending.vector.y * body.invMass
+                };
+                body.w += body.invInertia * Cross(arm, pending.vector);
+            } else {
+                force = {force.x + pending.vector.x, force.y + pending.vector.y};
+                torque += Cross(arm, pending.vector);
+            }
+        }
+        body.w += body.invInertia * rigid.torqueImpulse_;
+        body.v0 = body.v;
+        body.w0 = body.w;
+        rigid.pending_.clear();
+        rigid.torque_ = 0.0f;
+        rigid.torqueImpulse_ = 0.0f;
+
+        const Vector2 gravity{gravity_.x * rigid.gravityScale_, gravity_.y * rigid.gravityScale_};
+        body.v = {
+            body.v.x + (gravity.x + force.x * body.invMass) * dt,
+            body.v.y + (gravity.y + force.y * body.invMass) * dt
+        };
+        body.w += torque * body.invInertia * dt;
+        const float linearDamp = 1.0f / (1.0f + dt * rigid.linearDamp_);
+        body.v = {body.v.x * linearDamp, body.v.y * linearDamp};
+        body.w *= 1.0f / (1.0f + dt * rigid.angularDamp_);
+        if (rigid.lockRotation_) body.w = 0.0f;
+        rigid.centerOfMass_ = body.com;
+        bodies.push_back(body);
+    }
+    if (bodies.empty()) {
+        warmStart_.clear();
+        return;
+    }
+    const auto indexOf = [&](const RigidBody* rigid) {
+        for (std::size_t i = 0; i < bodies.size(); ++i)
+            if (bodies[i].body == rigid) return static_cast<int>(i);
+        return -1;
+    };
+
+    // ---- 2. punkty styku ----
+    struct SolverContact {
+        int a = 0;
+        int b = -1;   /**< Druga bryła albo -1 (ciało o nieskończonej masie). */
+        Vector2 vB{}; /**< Prędkość ciała o nieskończonej masie. */
+        Vector2 n{};  /**< Normalna od b do a. */
+        Vector2 point{};
+        Vector2 rA{};
+        Vector2 rB{};
+        float depth = 0;
+        float normalMass = 0;
+        float tangentMass = 0;
+        float target = 0;     /**< Docelowa prędkość normalna (odbicie). */
+        float pushTarget = 0; /**< Docelowa pseudo-prędkość rozsuwania (korekta wnikania). */
+        float pushImpulse = 0;
+        float friction = 0;
+        float pn = 0;
+        float pt = 0;
+        const PhysicsBody* other = nullptr; /**< Drugie ciało (materiał). */
+        ManifoldKey key;
+    };
+    std::vector<SolverContact> contacts;
+    std::vector<ConvexPart> partsA;
+    std::vector<ConvexPart> partsB;
+    std::array<ContactPoint, 2> manifold{};
+    for (std::size_t i = 0; i < bodies.size(); ++i) {
+        const Body& A = bodies[i];
+        const Entry& entryA = *A.entry;
+        for (const Entry& entryB : entries) {
+            if (!entryB.body || entryB.object == entryA.object || entryB.object->IsDestroyed())
+                continue;
+            if (!entryA.object->CollidesWith(*entryB.object) &&
+                !entryB.object->CollidesWith(*entryA.object))
+                continue;
+            int j = -1;
+            Vector2 vB{};
+            if (entryB.rigid) {
+                j = indexOf(entryB.rigid);
+                if (j <= static_cast<int>(i)) continue; // para brył - raz
+            } else if (const auto* character = dynamic_cast<const CharacterBody*>(entryB.object)) {
+                vB = character->velocity_;
+            }
+            const Vector2 velocityB = j >= 0 ? bodies[static_cast<std::size_t>(j)].v : vB;
+            bool recorded = false;
+            for (const CollisionShape* shapeA : entryA.shapes) {
+                if (shapeA->IsDisabled()) continue;
+                partsA.clear();
+                shapeA->WorldParts(partsA);
+                for (const CollisionShape* shapeB : entryB.shapes) {
+                    if (shapeB->IsDisabled()) continue;
+                    partsB.clear();
+                    shapeB->WorldParts(partsB);
+                    for (const ConvexPart& partA : partsA)
+                        for (const ConvexPart& partB : partsB) {
+                            const auto penetration = ConvexPenetration(partA, partB);
+                            if (!penetration || penetration->depth < kMinDepth) continue;
+                            const Vector2 n = penetration->normal;
+                            const Vector2 relative{A.v.x - velocityB.x, A.v.y - velocityB.y};
+                            // platforma jednostronna zatrzymuje tylko opadanie na nią od góry
+                            const auto oneWayBlocks = [&](const CollisionShape& platform,
+                                                          Vector2 push, Vector2 motion) {
+                                const Vector2 up = platform.OneWayDirection();
+                                const float down = -Dot(motion, up) * dt;
+                                return Dot(push, up) >= kOneWayCos && Dot(motion, up) <= 0.0f &&
+                                       penetration->depth <= std::max(down, 0.0f) + kOneWayMargin;
+                            };
+                            if (shapeB->IsOneWay() && !oneWayBlocks(*shapeB, n, relative)) continue;
+                            if (shapeA->IsOneWay() &&
+                                !oneWayBlocks(*shapeA, {-n.x, -n.y}, {-relative.x, -relative.y}))
+                                continue;
+                            const int count = ConvexContacts(partA, partB, *penetration, manifold);
+                            for (int k = 0; k < count; ++k) {
+                                SolverContact contact;
+                                contact.a = static_cast<int>(i);
+                                contact.b = j;
+                                contact.vB = vB;
+                                contact.n = n;
+                                contact.point = manifold[static_cast<std::size_t>(k)].point;
+                                contact.depth = manifold[static_cast<std::size_t>(k)].depth;
+                                contact.key = {entryA.object, shapeA, entryB.object, shapeB};
+                                contact.other = entryB.body;
+                                contacts.push_back(contact);
+                            }
+                            if (!recorded) {
+                                Record(
+                                    *A.body,
+                                    Collision{entryB.body, shapeA, shapeB, n, penetration->depth}
+                                );
+                                recorded = true;
+                            }
+                        }
+                }
+            }
+        }
+    }
+
+    // ---- 3. przygotowanie i warm starting ----
+    const auto apply = [&](SolverContact& c, Vector2 impulse) {
+        Body& A = bodies[static_cast<std::size_t>(c.a)];
+        A.v = {A.v.x + impulse.x * A.invMass, A.v.y + impulse.y * A.invMass};
+        A.w += A.invInertia * Cross(c.rA, impulse);
+        if (c.b < 0) return;
+        Body& B = bodies[static_cast<std::size_t>(c.b)];
+        B.v = {B.v.x - impulse.x * B.invMass, B.v.y - impulse.y * B.invMass};
+        B.w -= B.invInertia * Cross(c.rB, impulse);
+    };
+    const auto relativeVelocity = [&](const SolverContact& c) {
+        const Body& A = bodies[static_cast<std::size_t>(c.a)];
+        const Vector2 va = PointVelocity(A.v, A.w, c.rA);
+        if (c.b < 0) return Vector2{va.x - c.vB.x, va.y - c.vB.y};
+        const Body& B = bodies[static_cast<std::size_t>(c.b)];
+        const Vector2 vb = PointVelocity(B.v, B.w, c.rB);
+        return Vector2{va.x - vb.x, va.y - vb.y};
+    };
+    for (SolverContact& c : contacts) {
+        const Body& A = bodies[static_cast<std::size_t>(c.a)];
+        const Body* B = c.b >= 0 ? &bodies[static_cast<std::size_t>(c.b)] : nullptr;
+        c.rA = {c.point.x - A.com.x, c.point.y - A.com.y};
+        c.rB = B ? Vector2{c.point.x - B->com.x, c.point.y - B->com.y} : Vector2{};
+        const float invMassB = B ? B->invMass : 0.0f;
+        const float invInertiaB = B ? B->invInertia : 0.0f;
+        const Vector2 t{-c.n.y, c.n.x};
+        const float rnA = Cross(c.rA, c.n);
+        const float rnB = Cross(c.rB, c.n);
+        const float rtA = Cross(c.rA, t);
+        const float rtB = Cross(c.rB, t);
+        const float kn = A.invMass + invMassB + A.invInertia * rnA * rnA + invInertiaB * rnB * rnB;
+        const float kt = A.invMass + invMassB + A.invInertia * rtA * rtA + invInertiaB * rtB * rtB;
+        c.normalMass = kn > 0.0f ? 1.0f / kn : 0.0f;
+        c.tangentMass = kt > 0.0f ? 1.0f / kt : 0.0f;
+
+        // materiał pary: tarcie - średnia geometryczna, odbicie - większe z dwóch
+        c.friction = std::sqrt(std::max(0.0f, A.body->friction_ * c.other->friction_));
+        const float bounce = std::max(A.body->bounce_, c.other->bounce_);
+        // prędkość uderzenia sprzed grawitacji tego kroku - inaczej leżąca piłka co krok
+        // „uderzałaby” z prędkością g * dt i podskakiwała bez końca
+        Vector2 approach = PointVelocity(A.v0, A.w0, c.rA);
+        if (B) {
+            const Vector2 vb = PointVelocity(B->v0, B->w0, c.rB);
+            approach = {approach.x - vb.x, approach.y - vb.y};
+        } else {
+            approach = {approach.x - c.vB.x, approach.y - c.vB.y};
+        }
+        const float vn = Dot(approach, c.n);
+        const float bounceTarget = vn < -kBounceThreshold ? -bounce * vn : 0.0f;
+        // korekta wnikania osobno (split impulse) - nie dodaje bryłom energii przy zderzeniu
+        c.pushTarget = kBaumgarte / dt * std::max(0.0f, c.depth - kSlop);
+        c.target = bounceTarget;
+
+        // impulsy z poprzedniego kroku w tym samym miejscu - solver zaczyna blisko wyniku
+        if (const auto cached = warmStart_.find(c.key); cached != warmStart_.end())
+            for (const CachedContact& old : cached->second) {
+                const Vector2 offset{old.point.x - c.point.x, old.point.y - c.point.y};
+                if (Dot(offset, offset) > kWarmStartDistance * kWarmStartDistance) continue;
+                c.pn = old.normalImpulse;
+                c.pt = old.tangentImpulse;
+                apply(c, {c.n.x * c.pn + t.x * c.pt, c.n.y * c.pn + t.y * c.pt});
+                break;
+            }
+    }
+
+    // ---- 4. iteracje impulsów: tarcie, potem nacisk (z odbiciem i korektą wnikania) ----
+    for (int iteration = 0; iteration < kSolverIterations; ++iteration)
+        for (SolverContact& c : contacts) {
+            const Vector2 t{-c.n.y, c.n.x};
+            const float vt = Dot(relativeVelocity(c), t);
+            const float maxFriction = c.friction * c.pn;
+            const float pt = std::clamp(c.pt - vt * c.tangentMass, -maxFriction, maxFriction);
+            apply(c, {t.x * (pt - c.pt), t.y * (pt - c.pt)});
+            c.pt = pt;
+
+            const float vn = Dot(relativeVelocity(c), c.n);
+            const float pn = std::max(c.pn + (c.target - vn) * c.normalMass, 0.0f);
+            apply(c, {c.n.x * (pn - c.pn), c.n.y * (pn - c.pn)});
+            c.pn = pn;
+        }
+
+    // korekta wnikania: te same iteracje na pseudo-prędkościach, używanych tylko do ruchu
+    const auto applyPush = [&](SolverContact& c, Vector2 impulse) {
+        Body& A = bodies[static_cast<std::size_t>(c.a)];
+        A.pushV = {A.pushV.x + impulse.x * A.invMass, A.pushV.y + impulse.y * A.invMass};
+        A.pushW += A.invInertia * Cross(c.rA, impulse);
+        if (c.b < 0) return;
+        Body& B = bodies[static_cast<std::size_t>(c.b)];
+        B.pushV = {B.pushV.x - impulse.x * B.invMass, B.pushV.y - impulse.y * B.invMass};
+        B.pushW -= B.invInertia * Cross(c.rB, impulse);
+    };
+    for (int iteration = 0; iteration < kSolverIterations; ++iteration)
+        for (SolverContact& c : contacts) {
+            const Body& A = bodies[static_cast<std::size_t>(c.a)];
+            Vector2 relative = PointVelocity(A.pushV, A.pushW, c.rA);
+            if (c.b >= 0) {
+                const Body& B = bodies[static_cast<std::size_t>(c.b)];
+                const Vector2 vb = PointVelocity(B.pushV, B.pushW, c.rB);
+                relative = {relative.x - vb.x, relative.y - vb.y};
+            }
+            const float vn = Dot(relative, c.n);
+            const float impulse =
+                std::max(c.pushImpulse + (c.pushTarget - vn) * c.normalMass, 0.0f);
+            applyPush(c, {c.n.x * (impulse - c.pushImpulse), c.n.y * (impulse - c.pushImpulse)});
+            c.pushImpulse = impulse;
+        }
+
+    std::map<ManifoldKey, std::vector<CachedContact>> cache;
+    for (const SolverContact& c : contacts)
+        cache[c.key].push_back({c.point, c.pn, c.pt});
+    warmStart_ = std::move(cache);
+
+    // ---- 5. ruch: przesunięcie środka masy i obrót wokół niego ----
+    for (Body& body : bodies) {
+        RigidBody& rigid = *body.body;
+        const Vector2 delta{(body.v.x + body.pushV.x) * dt, (body.v.y + body.pushV.y) * dt};
+        rigid.MoveInScene(delta);
+        const Vector2 com{body.com.x + delta.x, body.com.y + delta.y};
+        const float turn = (body.w + body.pushW) * dt;
+        if (turn != 0.0f) {
+            // Rotate() działa w układzie rodzica - tam przeliczamy środek obrotu
+            const Entity* parent = rigid.Parent();
+            rigid.Rotate(turn, parent ? parent->ToLocal(com) : com);
+        }
+        rigid.linearVelocity_ = body.v;
+        rigid.angularVelocity_ = body.w;
+        rigid.centerOfMass_ = com;
+    }
+}
+
 void PhysicsWorld::EndStep() {
+    Simulate(delta_);
     const std::vector<Entry>& entries = Entries();
     // obiekty usunięte ze sceny przed tym krokiem nie istnieją - nie wolno ich dotykać
     const auto present = [&](const CollisionObject* object) {
@@ -484,6 +850,13 @@ void PhysicsWorld::EndStep() {
     lastOverlaps_ = std::move(overlaps);
     lastShapeOverlaps_ = std::move(shapeOverlaps);
 
+    // stan po kroku - koniec interpolacji (obiekt dodany w trakcie kroku jej nie ma)
+    for (const Entry& entry : entries) {
+        entry.object->stepped_ = entry.object->transform_;
+        entry.object->interpolated_ = entry.object->inStep_;
+        entry.object->inStep_ = false;
+    }
+
     for (const Event& event : events)
         event();
 }
@@ -496,6 +869,8 @@ void PhysicsWorld::Draw(PrimitiveRenderer& renderer) const {
             color = ORANGE;
         else if (dynamic_cast<const CharacterBody*>(entry.object))
             color = LIME;
+        else if (entry.rigid)
+            color = VIOLET;
         else if (entry.body)
             color = SKYBLUE;
         for (const CollisionShape* shape : entry.shapes) {
@@ -512,5 +887,6 @@ void PhysicsWorld::Draw(PrimitiveRenderer& renderer) const {
                     renderer.Polyline(outline, true);
             }
         }
+        if (entry.rigid) renderer.Paint(VIOLET).Circle(entry.rigid->CenterOfMass(), 2.0f);
     }
 }

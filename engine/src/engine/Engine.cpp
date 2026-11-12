@@ -171,7 +171,11 @@ int Engine::Run() {
         else
             ::BeginDrawing();
         ::ClearBackground(background_);
-        if (scene) scene->Draw(primitives_);
+        if (scene) {
+            // położenie obiektów fizyki między krokami stałymi (interpolacja rysowania)
+            scene->FixedAlpha(fixedStep_ > 0.0f ? FixedAlpha() : 1.0f);
+            scene->Draw(primitives_);
+        }
         if (draw_) draw_(primitives_.Reset().TargetScreen());
         if (scaled) {
             target_.End();

@@ -339,6 +339,14 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
     virtual void OnMount() {}
 
     /**
+     * @brief Przekształcenie, z którym obiekt jest rysowany.
+     * @details Domyślnie to samo co przy logice i trafieniach. Obiekty fizyki (CollisionObject)
+     * rysują się w położeniu pośrednim między krokami stałymi - patrz
+     * CollisionObject::DrawTransform().
+     */
+    virtual AffineMatrix2D DrawTransform() const { return transform_; }
+
+    /**
      * @brief Rysuje zawartość obiektu w jego układzie lokalnym (macierz jest już nałożona).
      * @details Domyślnie: własny kształt (Draw()), a nad nim dzieci według warstw. Klasa
      * pochodna może to zmienić, np. visual::RenderGroup rysuje dzieci do tekstury.

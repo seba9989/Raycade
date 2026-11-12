@@ -66,7 +66,7 @@ engine/
     entity/                 Entity, Group i klasy bazowe
     shapes/  shapes.hpp     figury geometryczne (namespace shapes)
     visual/  visual.hpp     obrazy, tekst, płótno, RenderGroup (namespace visual)
-    physics/ physics.hpp    kolizje: Collider<S>, StaticBody, CharacterBody, Area
+    physics/ physics.hpp    kolizje: Collider<S>, StaticBody, CharacterBody, RigidBody, Area
     ui/      ui.hpp         interfejs (namespace ui)
     scene/                  Scene, SceneCamera, PointerSystem (trafienia myszą)
     engine/                 typy ustawień silnika, makro SCENE

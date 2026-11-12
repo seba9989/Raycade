@@ -41,6 +41,35 @@ struct Collision {
 class PhysicsBody : public CollisionObject {
   public:
     /**
+     * @brief Ustawia tarcie powierzchni (dla brył sztywnych - RigidBody).
+     * @details Dla pary ciał używana jest średnia geometryczna ich tarć: 0 - lód, 1 - guma.
+     * @param friction Współczynnik tarcia (domyślnie 0.6).
+     * @return Ten sam obiekt.
+     */
+    template <typename Self> Self& Friction(this Self& self, float friction) {
+        self.friction_ = friction;
+        return self;
+    }
+
+    /** @brief Podaje współczynnik tarcia. */
+    float Friction() const { return friction_; }
+
+    /**
+     * @brief Ustawia sprężystość odbicia (dla brył sztywnych - RigidBody).
+     * @details Dla pary ciał używana jest większa z wartości: 0 - bez odbicia, 1 - odbicie
+     * bez straty prędkości.
+     * @param bounce Współczynnik restytucji (domyślnie 0).
+     * @return Ten sam obiekt.
+     */
+    template <typename Self> Self& Bounce(this Self& self, float bounce) {
+        self.bounce_ = bounce;
+        return self;
+    }
+
+    /** @brief Podaje współczynnik odbicia. */
+    float Bounce() const { return bounce_; }
+
+    /**
      * @brief Ustawia reakcję na początek zderzenia z innym ciałem.
      * @param callback Funkcja otrzymująca ciało i opis zderzenia.
      * @return Ten sam obiekt.
@@ -79,6 +108,8 @@ class PhysicsBody : public CollisionObject {
     std::function<void(const Collision&)> enter_; /**< Początek zderzenia. */
     std::function<void(const Collision&)> stay_;  /**< Trwające zderzenie. */
     std::function<void(PhysicsBody&)> exit_;      /**< Koniec zderzenia. */
+    float friction_ = 0.6f;                       /**< Tarcie powierzchni. */
+    float bounce_ = 0.0f;                         /**< Sprężystość odbicia. */
 };
 
 /**
