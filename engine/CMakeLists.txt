@@ -1,54 +1,8 @@
-# Biblioteka Raycade (bez scen - te należą do gry, patrz makro SCENE).
-add_library(raycade STATIC
-    src/engine/Engine.cpp
-    src/engine/EngineFiles.cpp
-    src/engine/EngineInput.cpp
-    src/engine/EngineScaling.cpp
-    src/engine/EngineScenes.cpp
-    src/engine/EngineSystem.cpp
-    src/engine/EngineWindow.cpp
-    src/math/Convex.cpp
-    src/math/Geometry.cpp
-    src/render/Assets.cpp
-    src/render/Bitmap.cpp
-    src/render/ClipStack.cpp
-    src/render/RenderTarget.cpp
-    src/render/ShaderProgram.cpp
-    src/render/SpriteSheet.cpp
-    src/render/Typeface.cpp
-    src/render/primitive_renderer/Fill.cpp
-    src/render/primitive_renderer/Polygon.cpp
-    src/render/primitive_renderer/Primitives.cpp
-    src/render/primitive_renderer/RoundShapes.cpp
-    src/input/Input.cpp
-    src/entity/Drawable.cpp
-    src/entity/Entity.cpp
-    src/entity/Focusable.cpp
-    src/entity/Updatable.cpp
-    src/shapes/Circle.cpp
-    src/shapes/Ellipse.cpp
-    src/shapes/Line.cpp
-    src/shapes/Lines.cpp
-    src/shapes/Point.cpp
-    src/shapes/Points.cpp
-    src/shapes/Polygon.cpp
-    src/shapes/Polyline.cpp
-    src/shapes/Rect.cpp
-    src/shapes/Triangle.cpp
-    src/visual/Canvas.cpp
-    src/visual/RenderGroup.cpp
-    src/visual/Sprite.cpp
-    src/visual/Text.cpp
-    src/ui/TextField.cpp
-    src/physics/Area.cpp
-    src/physics/CharacterBody.cpp
-    src/physics/CollisionObject.cpp
-    src/physics/CollisionShape.cpp
-    src/physics/PhysicsWorld.cpp
-    src/scene/PointerSystem.cpp
-    src/scene/Scene.cpp
-    src/scene/SceneCamera.cpp
-)
+# Biblioteka Raycade (bez scen - te należą do gry, patrz makro SCENE). Źródła zbiera glob jak
+# w demo; CONFIGURE_DEPENDS sprawia, że nowy albo usunięty plik .cpp w src/ jest wykrywany przy
+# kolejnej kompilacji, bez ręcznego ponownego uruchamiania CMake.
+file(GLOB_RECURSE RAYCADE_SOURCES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
+add_library(raycade STATIC ${RAYCADE_SOURCES})
 add_library(raycade::raycade ALIAS raycade)
 
 # PUBLIC: gra dołącza <raycade> albo <raycade/...> i dostaje te same ustawienia co biblioteka.
