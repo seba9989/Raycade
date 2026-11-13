@@ -16,7 +16,7 @@
 #include <raycade/core/Shared.hpp>
 #include <raycade/entity/Entity.hpp>
 
-namespace visual {
+namespace node::visual {
 
 /**
  * @brief Napis (także wielowierszowy), którego pozycja oznacza punkt zaczepienia.
@@ -34,7 +34,7 @@ namespace visual {
  * Punkt zaczepienia leży w pozycji obiektu i wokół niego działa obrót i skala. To Origin()
  * w pikselach plus Anchor() jako część rozmiaru napisu - domyślnie lewy górny róg.
  * @code{.cpp}
- * scene.Spawn<visual::Text>()
+ * scene.Spawn<node::visual::Text>()
  *     .Content("Koniec gry\nNaciśnij Enter")
  *     .FontSize(32)
  *     .Align(TextAlign::Center)
@@ -167,7 +167,7 @@ class Text : public Entity {
     }
 
     /**
-     * @brief Ustawia czcionkę z pliku - tak jak visual::Sprite::Sheet() z nazwą pliku.
+     * @brief Ustawia czcionkę z pliku - tak jak node::visual::Sprite::Sheet() z nazwą pliku.
      * @details Plik pobiera Assets z kontekstu (`Context<Assets>()`, domyślnie Engine::Assets()),
      * więc wczytuje się raz i jest współdzielony, a brakujący daje font domyślny raylib z wpisem
      * w logu. Bez Assets w kontekście - Assets::Local() (nazwa względem katalogu roboczego).
@@ -192,7 +192,7 @@ class Text : public Entity {
     /**
      * @brief Ustawia przesunięcie punktu zaczepienia w pikselach (od lewego górnego rogu).
      * @details Pozycja obiektu wskazuje punkt Origin() + Anchor() * Size(), a obrót i skala
-     * działają wokół niego - tak samo jak visual::Sprite::Origin().
+     * działają wokół niego - tak samo jak node::visual::Sprite::Origin().
      * @param origin Punkt w pikselach napisu.
      * @return Ten sam obiekt.
      */
@@ -264,4 +264,4 @@ class Text : public Entity {
     mutable const Typeface* measured_ = nullptr; /**< Czcionka zapamiętanego pomiaru. */
 };
 
-} // namespace visual
+} // namespace node::visual

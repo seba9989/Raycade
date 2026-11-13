@@ -4,7 +4,7 @@
  */
 #pragma once
 
-namespace shapes {
+namespace node::shapes {
 
 /**
  * @brief Odległość w pikselach, z jakiej kliknięcie trafia w punkt albo odcinek.
@@ -13,4 +13,4 @@ namespace shapes {
  */
 inline constexpr int kHitDistance = 4;
 
-} // namespace shapes
+} // namespace node::shapes

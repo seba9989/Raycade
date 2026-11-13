@@ -8,18 +8,18 @@
 // Tabela poniżej - formatter łamałby jej wiersze.
 // clang-format off
 /**
- * @namespace visual
+ * @namespace node::visual
  * @brief Obiekty sceny z treścią rastrową: obrazy, napisy, piksele i grupy rysowane do tekstury.
- * @details W odróżnieniu od figur z @ref shapes nie są opisane geometrią, tylko obrazem - nie
+ * @details W odróżnieniu od figur z @ref node::shapes nie są opisane geometrią, tylko obrazem - nie
  * mają więc Filled() ani Raster(). Dziedziczą wprost po Entity, więc mają te same przekształcenia,
  * zdarzenia, dzieci i łańcuchowanie co figury.
  *
- * | Typ                       | Co rysuje                               | Własne metody (wybrane)                                     |
- * |---------------------------|-----------------------------------------|-------------------------------------------------------------|
- * | @ref visual::Sprite       | klatkę z arkusza, z animacją            | `Sheet()` (SpriteSheet), `Animation()`, `Play()`, `Pause()`, `Stop()`, `Frame()`, `Fps()`, `Speed()`, `FlippedX()`, `FlippedY()`, `Origin()`, `OnFinish()`, `OnFrameEvent()` |
- * | @ref visual::Text         | napis z czcionką (polskie znaki)        | `Content()`, `FontSize()`, `Spacing()`, `Font()`, `Align()` |
- * | @ref visual::Canvas       | bitmapę w RAM (flood/boundary fill)     | `Size()`, `Background()`, `Clear()`, `Edit()`, `Pixels()`   |
- * | @ref visual::RenderGroup  | dzieci rysowane do tekstury GPU         | `Size()`, `Background()`, `Smooth()`, `Target()`            |
+ * | Typ                            | Co rysuje                           | Własne metody (wybrane)                                                                                                                                                      |
+ * |--------------------------------|-------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+ * | @ref node::visual::Sprite      | klatkę z arkusza, z animacją        | `Sheet()` (SpriteSheet), `Animation()`, `Play()`, `Pause()`, `Stop()`, `Frame()`, `Fps()`, `Speed()`, `FlippedX()`, `FlippedY()`, `Origin()`, `OnFinish()`, `OnFrameEvent()` |
+ * | @ref node::visual::Text        | napis z czcionką (polskie znaki)    | `Content()`, `FontSize()`, `Spacing()`, `Font()`, `Align()`                                                                                                                  |
+ * | @ref node::visual::Canvas      | bitmapę w RAM (flood/boundary fill) | `Size()`, `Background()`, `Clear()`, `Edit()`, `Pixels()`                                                                                                                    |
+ * | @ref node::visual::RenderGroup | dzieci rysowane do tekstury GPU     | `Size()`, `Background()`, `Smooth()`, `Target()`                                                                                                                             |
  *
  * Paint() to w nich kolor mnożący piksele (domyślnie WHITE - bez zmian,
  * `Fade(WHITE, 0.5f)` - półprzezroczystość).

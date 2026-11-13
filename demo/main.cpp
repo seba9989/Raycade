@@ -8,7 +8,7 @@
  *
  * @section cel Cel projektu
  * Raycade (ray + cascade + arcade) to silnik 2D napisany w C++23 z użyciem raylib,
- * z API opartym na kaskadzie wywołań: `scene.Spawn<shapes::Circle>().Radius(20).Filled()`.
+ * z API opartym na kaskadzie wywołań: `scene.Spawn<node::shapes::Circle>().Radius(20).Filled()`.
  * Biblioteka udostępnia sceny, obiekty z hierarchią dzieci, wejście z klawiatury i myszy oraz
  * renderer prymitywów. Program zawiera demonstrację funkcji z laboratoriów 1-4.
  *
@@ -43,7 +43,7 @@
  * - @ref Entity łączy drzewo obiektów z @ref Updatable, @ref Drawable i @ref Transformable;
  *   ich settery i zdarzenia zwracają konkretny typ figury dzięki deducing this (C++23).
  * - @ref PrimitiveRenderer rysuje na ekranie albo na @ref Bitmap.
- * - @ref visual::Canvas udostępnia bitmapę do algorytmów wypełniania.
+ * - @ref node::visual::Canvas udostępnia bitmapę do algorytmów wypełniania.
  *
  * @section algorytmy Algorytmy laboratoriów
  * Własny algorytm przyrostowy odcinka, okrąg z ośmiokrotną symetrią, elipsa
@@ -76,20 +76,20 @@
  * przybliża, Q/E obracają widok, F przełącza podążanie, a R resetuje kamerę. Skrzynie można
  * przeciągać, a monety klikać przy dowolnym przybliżeniu i obrocie; przyciski w rogu są
  * obiektami ekranu (HUD).
- * Na scenie `efekty` koło z arkusza klatek (visual::Sprite) obraca się animacją - LPM ją
+ * Na scenie `efekty` koło z arkusza klatek (node::visual::Sprite) obraca się animacją - LPM ją
  * wstrzymuje, X odbija drugie koło; lista w panelu z ClipRect() przewija się kółkiem myszy;
  * powierzchnia faluje shaderem, a G włącza szarość całego obrazu (Engine::PostShader());
  * piłki odbijają się z fizyką w kroku stałym (OnFixedUpdate()), LPM usuwa piłkę (Destroy()),
  * a B albo podwójne kliknięcie (gest) dodaje nową.
- * Napisy wszystkich scen (visual::Text) i HUD mają polskie znaki dzięki czcionce
+ * Napisy wszystkich scen (node::visual::Text) i HUD mają polskie znaki dzięki czcionce
  * `demo/assets/font.ttf` (DejaVu Sans, licencja w `demo/assets/FONT-LICENSE.txt`), którą main()
  * udostępnia całej grze jako DefaultTypeface w kontekście silnika; można ją podmienić na dowolny
  * inny plik TTF (Typeface).
- * Na scenie `formularz` dwa pola tekstowe (ui::TextField) zbierają imię i e-mail: Tab
+ * Na scenie `formularz` dwa pola tekstowe (node::ui::TextField) zbierają imię i e-mail: Tab
  * przechodzi między polami, Enter w imieniu przenosi do e-maila, a w e-mailu - tak jak
  * przycisk "Zapisz" - sprawdza dane i dopisuje osobę do listy. Pole z fokusem przejmuje
  * klawiaturę (cyfry nie przełączają wtedy scen), Escape zdejmuje fokus.
- * Scena `sprite` służy do testowania visual::Sprite i SpriteSheet. Arkusz wczytuje przez
+ * Scena `sprite` służy do testowania node::visual::Sprite i SpriteSheet. Arkusz wczytuje przez
  * Engine::Assets() z pliku `demo/assets/sprite-test.json` w formacie eksportu Aseprite (klatki
  * z czasami i tagi animacji), a obraz - z `sprite-test.png` wskazanego w JSON; podgląd arkusza
  * pokazuje ramką bieżącą klatkę. Postać sterują klawisze: Q, W, E, R, C animacje z tagów
@@ -116,8 +116,8 @@
  * M przełącza ścieżkę z przenikaniem (szyna "music" z Exclusive()), a S ją wycisza
  * i zatrzymuje. Enter wstrzymuje samą ścieżkę (Music::Pause()), a Backspace ucina ostatnią monetę;
  * napis pokazuje czas jej odtwarzania i liczbę skończonych monet (Voice::OnFinish()). Na dole sceny
- * postać (strzałki w lewo/prawo) nosi słuchacza (audio::Listener) i stawia kroki ze zdarzeń
- * klatek; ognisko to emiter (audio::Emitter) - słychać je głośniej i z właściwej strony, gdy
+ * postać (strzałki w lewo/prawo) nosi słuchacza (node::sound::Listener) i stawia kroki ze zdarzeń
+ * klatek; ognisko to emiter (node::sound::Emitter) - słychać je głośniej i z właściwej strony, gdy
  * postać podejdzie. C zrzuca skrzynię z dźwiękiem uderzenia zależnym od prędkości, X wywołuje
  * wybuch (emiter usuwający się po dźwięku), a R wczytuje scenę od nowa - ognisko cichnie,
  * a muzyka gra dalej. Próbki WAV w `demo/assets/`
@@ -154,8 +154,9 @@ int main() {
 
     if (!engine.IsReady()) return 1;
 
-    // czcionka z polskimi znakami dla wszystkich napisów gry (visual::Text, ui::TextField i HUD);
-    // brakujący plik daje font raylib (bez polskich liter) i jeden wpis w logu
+    // czcionka z polskimi znakami dla wszystkich napisów gry (node::visual::Text,
+    // node::ui::TextField i HUD); brakujący plik daje font raylib (bez polskich liter) i jeden wpis
+    // w logu
     const auto font = engine.Assets().Font("font.ttf");
     engine.ProvideContext<DefaultTypeface>(font);
 

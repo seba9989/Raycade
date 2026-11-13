@@ -1,7 +1,7 @@
 /**
  * @file AudioScene.cpp
  * @brief Pokaz dźwięku: Engine::Audio() (audio::Sound, audio::Music, audio::Voice), szyny
- * miksera (audio::Bus) i dźwięk w przestrzeni (audio::Emitter, audio::Listener).
+ * miksera (audio::Bus) i dźwięk w przestrzeni (node::sound::Emitter, node::sound::Listener).
  * @details Dźwięki, muzyka i szyny są skonfigurowane raz, w main.cpp - scena tylko je odtwarza.
  * - przyciski albo klawisze odtwarzają dźwięki: spacja moneta (losowa wysokość), K kroki
  *   (losowy plik z trzech), U uderzenie,
@@ -14,7 +14,7 @@
  * - Enter wstrzymuje i wznawia bieżącą ścieżkę (Music::Pause() / Music::Resume()),
  * - moneta ma MaxVoices(4) i MinInterval(): przytrzymana spacja nie zagłusza reszty; Backspace
  *   ucina ostatnią monetę przez zapamiętany uchwyt Voice,
- * - na dole jest świat: postać (strzałki w lewo/prawo) ma słuchacza (audio::Listener), a jej
+ * - na dole jest świat: postać (strzałki w lewo/prawo) ma słuchacza (node::sound::Listener), a jej
  *   kroki grają ze zdarzeń klatek animacji (OnFrameEvent()); ognisko to emiter z zapętlonym
  *   dźwiękiem - słychać je głośniej i z właściwej strony, gdy postać podejdzie,
  * - C zrzuca skrzynię (RigidBody) - uderzenie o podłogę gra z głośnością z prędkości,
@@ -38,14 +38,19 @@ namespace {
 constexpr float kFloor = 600.0f;
 
 /** @brief Skrzynia, która gra uderzenie z głośnością zależną od prędkości. */
-class Crate : public RigidBody {
+class Crate : public node::physics::RigidBody {
   public:
     /** @brief Buduje collider i grafikę oraz reakcję na zderzenie. */
     Crate() {
         Mass(1).Friction(0.6f).Bounce(0.2f);
-        Spawn<collider::Rect>().Position({-14, -14}).Size({28, 28}).Paint(BROWN).Filled().Visible();
-        Spawn<shapes::Rect>().Position({-14, -14}).Size({28, 28}).Paint(DARKBROWN);
-        OnCollisionEnter([](Crate& self, const Collision&) {
+        Spawn<node::collider::Rect>()
+            .Position({-14, -14})
+            .Size({28, 28})
+            .Paint(BROWN)
+            .Filled()
+            .Visible();
+        Spawn<node::shapes::Rect>().Position({-14, -14}).Size({28, 28}).Paint(DARKBROWN);
+        OnCollisionEnter([](Crate& self, const node::physics::Collision&) {
             if (self.speed_ < 60.0f) return; // toczenie i drobne stuknięcia bez dźwięku
             Engine::Get()
                 .Audio()
@@ -69,28 +74,28 @@ class Crate : public RigidBody {
 
 /** @brief Wybuch w danym miejscu: jednorazowy emiter z błyskiem, który znika po dźwięku. */
 void Explosion(Scene& scene, Vector2 where) {
-    auto& boom = scene.Spawn<audio::Emitter>()
+    auto& boom = scene.Spawn<node::sound::Emitter>()
                      .Sound("uderzenie")
                      .MaxDistance(700)
                      .Position(where)
                      .Play()
-                     .OnFinish([](audio::Emitter& self) { self.Destroy(); });
-    boom.Spawn<shapes::Circle>().Radius(18).Paint(Fade(ORANGE, 0.7f)).Filled();
+                     .OnFinish([](node::sound::Emitter& self) { self.Destroy(); });
+    boom.Spawn<node::shapes::Circle>().Radius(18).Paint(Fade(ORANGE, 0.7f)).Filled();
 }
 
 /** @brief Dodaje przycisk, który odtwarza dźwięk (i klik interfejsu). */
 void SoundButton(Scene& scene, Vector2 position, const std::string& label, std::string sound) {
-    auto& button = scene.Spawn<shapes::Rect>()
+    auto& button = scene.Spawn<node::shapes::Rect>()
                        .Position(position)
                        .Size({180, 56})
                        .Paint(DARKBLUE)
-                       .OnMouseEnter([](shapes::Rect& self) { self.Filled(); })
-                       .OnMouseLeave([](shapes::Rect& self) { self.Filled(false); })
-                       .OnClick([sound = std::move(sound)](shapes::Rect&) {
+                       .OnMouseEnter([](node::shapes::Rect& self) { self.Filled(); })
+                       .OnMouseLeave([](node::shapes::Rect& self) { self.Filled(false); })
+                       .OnClick([sound = std::move(sound)](node::shapes::Rect&) {
                            Engine::Get().Audio().Sound("klik").Play();
                            Engine::Get().Audio().Sound(sound).Play();
                        });
-    button.Spawn<visual::Text>()
+    button.Spawn<node::visual::Text>()
         .Content(label)
         .FontSize(20)
         .Paint(GRAY)
@@ -109,12 +114,15 @@ std::string BusLabel(const audio::Bus& bus) {
 
 /** @brief Konfiguruje scenę dźwięku. */
 SCENE("dzwiek") {
-    scene.Spawn<visual::Text>().Content("Dźwięk").FontSize(28).Position({40, 30});
-    scene.Spawn<visual::Text>()
-        .Content("Spacja moneta, K kroki, U uderzenie, Q moneta o kwintę wyżej, Backspace ucina monetę\n"
-                 "P pauza efektów, N wyciszenie efektów, strzałki góra/dół głośność główna\n"
-                 "M zmiana muzyki (przenikanie), Enter pauza ścieżki, S stop muzyki, B wyciszenie muzyki\n"
-                 "Strzałki lewo/prawo postać (słuchacz), C skrzynia, X wybuch, R scena od nowa")
+    scene.Spawn<node::visual::Text>().Content("Dźwięk").FontSize(28).Position({40, 30});
+    scene.Spawn<node::visual::Text>()
+        .Content(
+            "Spacja moneta, K kroki, U uderzenie, Q moneta o kwintę wyżej, Backspace ucina monetę\n"
+            "P pauza efektów, N wyciszenie efektów, strzałki góra/dół głośność główna\n"
+            "M zmiana muzyki (przenikanie), Enter pauza ścieżki, S stop muzyki, B wyciszenie "
+            "muzyki\n"
+            "Strzałki lewo/prawo postać (słuchacz), C skrzynia, X wybuch, R scena od nowa"
+        )
         .FontSize(16)
         .Paint(GRAY)
         .LineHeight(1.4f)
@@ -124,8 +132,8 @@ SCENE("dzwiek") {
     SoundButton(scene, {240, 210}, "Kroki", "kroki");
     SoundButton(scene, {440, 210}, "Uderzenie", "uderzenie");
 
-    auto& status = scene.Spawn<visual::Text>().FontSize(18).Position({40, 70});
-    auto& coinInfo = scene.Spawn<visual::Text>().FontSize(16).Paint(GRAY).Position({40, 285});
+    auto& status = scene.Spawn<node::visual::Text>().FontSize(18).Position({40, 70});
+    auto& coinInfo = scene.Spawn<node::visual::Text>().FontSize(16).Paint(GRAY).Position({40, 285});
 
     // muzyka jest globalna: po powrocie na scenę albo R gra dalej ta ścieżka, która grała
     if (engine.Audio().Bus(Audio::kMusicBus).VoiceCount() == 0)
@@ -133,40 +141,48 @@ SCENE("dzwiek") {
 
     // ---------------- świat: dźwięk w przestrzeni ----------------
     scene.Gravity({0, 1400});
-    scene.Spawn<StaticBody>().Position({0, kFloor}).Children([](StaticBody& floor) {
-        floor.Spawn<collider::Rect>().Size({1000, 20}).Paint(LIGHTGRAY).Filled().Visible();
-    });
+    scene.Spawn<node::physics::StaticBody>()
+        .Position({0, kFloor})
+        .Children([](node::physics::StaticBody& floor) {
+            floor.Spawn<node::collider::Rect>()
+                .Size({1000, 20})
+                .Paint(LIGHTGRAY)
+                .Filled()
+                .Visible();
+        });
 
     // ognisko: emiter z zapętlonym dźwiękiem jako dziecko grafiki - gra tam, gdzie ona jest
-    auto& fire = scene.Spawn<shapes::Circle>()
+    auto& fire = scene.Spawn<node::shapes::Circle>()
                      .Position({840, kFloor - 14})
                      .Radius(14)
                      .Paint(ORANGE)
                      .Filled()
-                     .OnUpdate([time = 0.0f](shapes::Circle& self, float dt) mutable {
+                     .OnUpdate([time = 0.0f](node::shapes::Circle& self, float dt) mutable {
                          time += dt;
                          self.Radius(13 + 2 * std::sin(time * 17) + std::sin(time * 5));
                      });
-    fire.Spawn<audio::Emitter>()
+    fire.Spawn<node::sound::Emitter>()
         .Sound("ogien")
         .MaxDistance(650)
-        .Attenuation(audio::Falloff::Smooth)
+        .Attenuation(node::sound::Falloff::Smooth)
         .Play();
-    scene.Spawn<visual::Text>().Content("ognisko").FontSize(14).Paint(GRAY).Position({812, 626});
+    scene.Spawn<node::visual::Text>().Content("ognisko").FontSize(14).Paint(GRAY).Position(
+        {812, 626}
+    );
 
     // postać: kroki ze zdarzeń klatek, słuchacz jako dziecko - uszy idą z postacią
     auto sheet = std::make_shared<SpriteSheet>(*engine.Assets().Sheet("sprite-test.json"));
     sheet->Event("biegnie", 1, "krok").Event("biegnie", 5, "krok");
-    auto& hero = scene.Spawn<visual::Sprite>()
+    auto& hero = scene.Spawn<node::visual::Sprite>()
                      .Sheet(sheet)
                      .Origin({16, 32})
                      .Scale({2.5f, 2.5f})
                      .Position({160, kFloor})
                      .Play("stoi")
-                     .OnFrameEvent([&engine](visual::Sprite&, const std::string& event) {
+                     .OnFrameEvent([&engine](node::visual::Sprite&, const std::string& event) {
                          if (event == "krok") engine.Audio().Sound("kroki").Play();
                      });
-    hero.Spawn<audio::Listener>();
+    hero.Spawn<node::sound::Listener>();
 
     // stan sceny trzymany w lambdzie: uchwyt ostatniej monety i licznik skończonych
     auto finished = std::make_shared<int>(0);

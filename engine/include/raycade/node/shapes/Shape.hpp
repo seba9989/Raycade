@@ -1,6 +1,6 @@
 /**
  * @file Shape.hpp
- * @brief Baza figur geometrycznych z przestrzeni nazw @ref shapes.
+ * @brief Baza figur geometrycznych z przestrzeni nazw @ref node::shapes.
  */
 #pragma once
 
@@ -10,28 +10,29 @@
 #include <raycade/math/geometry/Convex.hpp>
 #include <raycade/render/primitives/PrimitiveRenderer.hpp>
 
-namespace shapes {
+namespace node::shapes {
 
 /**
  * @brief Wspólna baza figur geometrycznych: wypełnienie i algorytm rasteryzacji.
  * @details Po Shape dziedziczą tylko figury opisane geometrią (punkty, odcinki, łamane,
- * wielokąty, okręgi i elipsy). Obiekty z obrazem albo tekstem (@ref visual) i kontenery
- * (Group, visual::RenderGroup) dziedziczą wprost po Entity, więc nie mają Filled() ani Raster().
+ * wielokąty, okręgi i elipsy). Obiekty z obrazem albo tekstem (@ref node::visual) i kontenery
+ * (Group, node::visual::RenderGroup) dziedziczą wprost po Entity, więc nie mają Filled() ani
+ * Raster().
  *
  * Filled() działa w figurach z wnętrzem: Rect, Triangle, Polygon, Circle i Ellipse. Point, Points,
  * Line, Lines i Polyline je ignorują.
  *
  * Raster(Rasterizer::Custom) włącza własny algorytm z laboratorium zamiast raylib:
- * | Figura                           | Algorytm własny                                         |
- * |----------------------------------|---------------------------------------------------------|
- * | Line, Lines, Polyline            | przyrostowy algorytm odcinka                            |
- * | kontur Rect, Triangle, Polygon   | przyrostowy algorytm odcinka (wypełnienie bez zmian)    |
- * | Circle                           | punktu środkowego z symetrią ośmiokrotną                |
- * | Ellipse                          | punktu środkowego z symetrią czterokrotną               |
- * | Point, Points                    | brak różnicy - piksel jest zawsze ten sam               |
+ * | Figura                         | Algorytm własny                                      |
+ * |--------------------------------|------------------------------------------------------|
+ * | Line, Lines, Polyline          | przyrostowy algorytm odcinka                         |
+ * | kontur Rect, Triangle, Polygon | przyrostowy algorytm odcinka (wypełnienie bez zmian) |
+ * | Circle                         | punktu środkowego z symetrią ośmiokrotną             |
+ * | Ellipse                        | punktu środkowego z symetrią czterokrotną            |
+ * | Point, Points                  | brak różnicy - piksel jest zawsze ten sam            |
  * Szczegóły algorytmów są przy PrimitiveRenderer::Raster().
  * @code{.cpp}
- * scene.Spawn<shapes::Circle>().Radius(40).Raster(Rasterizer::Custom).Paint(RED);
+ * scene.Spawn<node::shapes::Circle>().Radius(40).Raster(Rasterizer::Custom).Paint(RED);
  * @endcode
  */
 class Shape : public Entity {
@@ -91,4 +92,4 @@ class Shape : public Entity {
     Rasterizer raster_ = Rasterizer::Raylib; /**< Algorytm rasteryzacji. */
 };
 
-} // namespace shapes
+} // namespace node::shapes

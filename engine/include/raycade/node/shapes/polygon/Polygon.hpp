@@ -9,7 +9,7 @@
 #include <raycade/math/geometry/Geometry.hpp>
 #include <raycade/node/shapes/Shape.hpp>
 
-namespace shapes {
+namespace node::shapes {
 
 /**
  * @brief Wielokąt (łamana zwyczajna zamknięta) o wierzchołkach lokalnych względem obiektu.
@@ -67,4 +67,4 @@ class Polygon : public Shape {
     bool simple_ = false;           /**< Zapamiętany wynik IsSimplePolygon(). */
 };
 
-} // namespace shapes
+} // namespace node::shapes

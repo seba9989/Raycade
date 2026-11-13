@@ -30,7 +30,7 @@ struct FocusState {
  * @details Dokleja się ją do dowolnego obiektu sceny przez dziedziczenie wielokrotne - sama
  * nie jest obiektem sceny, więc zwykłe obiekty nie płacą za fokus ani pamięcią, ani API:
  * @code{.cpp}
- * class MenuButton : public shapes::Rect, public Focusable {
+ * class MenuButton : public node::shapes::Rect, public Focusable {
  *   protected:
  *     void Tick(float, const Input& input) override {
  *         if (IsFocused() && input.KeyPressed(KEY_ENTER)) Activate();
@@ -49,7 +49,7 @@ struct FocusState {
  *   (Scene::TabNavigation() wyłącza Tab w całej scenie),
  * - Focus() i Blur() zmieniają fokus z kodu, a OnFocus() / OnBlur() reagują na zmianę
  *   (na początku następnej klatki, a przy kliknięciu - w tej samej),
- * - obiekt z fokusem, którego CapturesKeyboard() zwraca true (np. ui::TextField), dostaje
+ * - obiekt z fokusem, którego CapturesKeyboard() zwraca true (np. node::ui::TextField), dostaje
  *   klawiaturę na wyłączność: inne obiekty, OnUpdate sceny i silnika oraz akcje z klawiatury
  *   widzą ją wtedy jak puszczoną (Input::IsKeyboardCaptured()).
  *

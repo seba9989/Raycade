@@ -23,11 +23,11 @@
  * @brief Trafienie promieniem (Scene::Raycast()).
  */
 struct RayHit {
-    PhysicsBody* body = nullptr;           /**< Trafione ciało. */
-    const CollisionShape* shape = nullptr; /**< Trafiony collider. */
-    Vector2 point{};                       /**< Punkt trafienia w układzie sceny. */
-    Vector2 normal{};                      /**< Normalna powierzchni w punkcie trafienia. */
-    float distance = 0;                    /**< Odległość od początku promienia. */
+    node::physics::PhysicsBody* body = nullptr;            /**< Trafione ciało. */
+    const node::collider::CollisionShape* shape = nullptr; /**< Trafiony collider. */
+    Vector2 point{};                                       /**< Punkt trafienia w układzie sceny. */
+    Vector2 normal{};   /**< Normalna powierzchni w punkcie trafienia. */
+    float distance = 0; /**< Odległość od początku promienia. */
 };
 
 /** @brief Maska bitowa wszystkich warstw kolizji. */
@@ -41,14 +41,14 @@ inline constexpr std::uint32_t kAllLayers = 0xFFFFFFFFu;
  * (Raycast(), Overlap()); prowadzenie kroków jest prywatne i dostępne dla Scene i ciał.
  *
  * Obiekty sceny są odwzorowane w świecie Box2D (v3, jednostki: piksele):
- * | Raycade         | Box2D                                                                |
- * |-----------------|----------------------------------------------------------------------|
- * | RigidBody       | ciało dynamiczne (masa = Mass(), rozłożona na pole colliderów)       |
- * | StaticBody      | ciało statyczne; przesunięte w kodzie - kinematyczne (ma prędkość)   |
- * | CharacterBody   | ciało kinematyczne; ruch: mover (kapsuła z obrysu colliderów)        |
- * | Area            | czujniki (sensor) - nachodzenie z b2Shape_GetSensorOverlaps()        |
- * | Collider\<S\>   | wielokąty (do 8 wierzchołków, większe dzielone), koła, odcinki;      |
- * |                 | elipsa i nierówno przeskalowane koło - przybliżenie ośmiokątem      |
+ * | Raycade       | Box2D                                                              |
+ * |---------------|--------------------------------------------------------------------|
+ * | RigidBody     | ciało dynamiczne (masa = Mass(), rozłożona na pole colliderów)     |
+ * | StaticBody    | ciało statyczne; przesunięte w kodzie - kinematyczne (ma prędkość) |
+ * | CharacterBody | ciało kinematyczne; ruch: mover (kapsuła z obrysu colliderów)      |
+ * | Area          | czujniki (sensor) - nachodzenie z b2Shape_GetSensorOverlaps()      |
+ * | Collider\<S\> | wielokąty (do 8 wierzchołków, większe dzielone), koła, odcinki;    |
+ * |               | elipsa i nierówno przeskalowane koło - przybliżenie ośmiokątem     |
  *
  * Przebieg kroku stałego sceny:
  * 1. BeginStep() - zapamiętuje krok, uzgadnia ciała i kształty Box2D z drzewem sceny,
@@ -99,21 +99,21 @@ class PhysicsWorld {
         Vector2 from,
         Vector2 to,
         std::uint32_t mask = kAllLayers,
-        const CollisionObject* exclude = nullptr
+        const node::physics::CollisionObject* exclude = nullptr
     ) const;
 
     /** @brief Ciała nachodzące na figurę w układzie sceny (patrz Scene::Overlap()). */
-    std::vector<PhysicsBody*> Overlap(
+    std::vector<node::physics::PhysicsBody*> Overlap(
         const ConvexPart& part,
         std::uint32_t mask = kAllLayers,
-        const CollisionObject* exclude = nullptr
+        const node::physics::CollisionObject* exclude = nullptr
     ) const;
 
   private:
-    friend class Scene;           // prowadzi kroki, klatki i rysowanie colliderów
-    friend class CollisionObject; // interpolacja rysowania i lista colliderów
-    friend class CharacterBody;   // MoveAndSlide()
-    friend class Area;            // OverlappingBodies() i OverlappingAreas()
+    friend class Scene;                          // prowadzi kroki, klatki i rysowanie colliderów
+    friend class node::physics::CollisionObject; // interpolacja rysowania i lista colliderów
+    friend class node::physics::CharacterBody;   // MoveAndSlide()
+    friend class node::physics::Area;            // OverlappingBodies() i OverlappingAreas()
 
     /** @brief Ustawia ułamek drogi do następnego kroku stałego (Engine::FixedAlpha()). */
     PhysicsWorld& Alpha(float alpha) {
@@ -146,13 +146,13 @@ class PhysicsWorld {
      * @brief Przesuwa postać z wypychaniem i ślizganiem (patrz CharacterBody::MoveAndSlide()).
      * @return true, gdy postać na coś wpadła.
      */
-    bool MoveAndSlide(CharacterBody& body);
+    bool MoveAndSlide(node::physics::CharacterBody& body);
 
     /** @brief Ciała nachodzące na obszar (stan z ostatniego kroku). */
-    std::vector<PhysicsBody*> OverlappingBodies(const Area& area);
+    std::vector<node::physics::PhysicsBody*> OverlappingBodies(const node::physics::Area& area);
 
     /** @brief Obszary nachodzące na obszar (stan z ostatniego kroku). */
-    std::vector<Area*> OverlappingAreas(const Area& area);
+    std::vector<node::physics::Area*> OverlappingAreas(const node::physics::Area& area);
 
     /**
      * @brief Rysuje collidery wszystkich obiektów (w układzie świata, przez kamerę).
@@ -168,27 +168,31 @@ class PhysicsWorld {
      * @param object Obiekt kolizji.
      * @param shapes Lista, do której dopisywane są collidery.
      */
-    static void CollectShapes(const Entity& object, std::vector<const CollisionShape*>& shapes);
+    static void CollectShapes(
+        const Entity& object,
+        std::vector<const node::collider::CollisionShape*>& shapes
+    );
 
     struct Impl; /**< Stan Box2D (świat, ciała, kształty) - zdefiniowany w PhysicsWorld.cpp. */
 
     /** @brief Para obiektów (zawsze w tej samej kolejności) - klucz zderzeń i nakładania. */
-    using Pair = std::pair<const CollisionObject*, const CollisionObject*>;
+    using Pair =
+        std::pair<const node::physics::CollisionObject*, const node::physics::CollisionObject*>;
 
     /** @brief Zderzenie zapisane dla obu ciał. */
     struct Contact {
-        PhysicsBody* first = nullptr;
-        PhysicsBody* second = nullptr;
-        Collision forFirst;
-        Collision forSecond;
+        node::physics::PhysicsBody* first = nullptr;
+        node::physics::PhysicsBody* second = nullptr;
+        node::physics::Collision forFirst;
+        node::physics::Collision forSecond;
     };
 
     /** @brief Styk pary colliderów: (obszar, jego collider, ciało, collider ciała). */
     using ShapePair = std::tuple<
-        const CollisionObject*,
-        const CollisionShape*,
-        const CollisionObject*,
-        const CollisionShape*>;
+        const node::physics::CollisionObject*,
+        const node::collider::CollisionShape*,
+        const node::physics::CollisionObject*,
+        const node::collider::CollisionShape*>;
 
     /**
      * @brief Uzgadnia ciała i kształty Box2D z drzewem sceny (gdy dirty_).
@@ -216,7 +220,7 @@ class PhysicsWorld {
     void ReadBack();
 
     /** @brief Zapisuje zderzenie ciała z ciałem do zdarzeń na końcu kroku. */
-    void Record(PhysicsBody& body, const Collision& hit);
+    void Record(node::physics::PhysicsBody& body, const node::physics::Collision& hit);
 
     const std::vector<std::unique_ptr<Entity>>& roots_; /**< Obiekty sceny. */
     std::unique_ptr<Impl> impl_;                        /**< Świat Box2D. */

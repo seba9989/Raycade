@@ -9,7 +9,7 @@
 
 #include <raycade/node/shapes/Shape.hpp>
 
-namespace shapes {
+namespace node::shapes {
 
 /** @brief Zbiór niezależnych odcinków tworzonych z kolejnych par wierzchołków. */
 class Lines : public Shape {
@@ -41,4 +41,4 @@ class Lines : public Shape {
     std::vector<Point2D> vertices_; /**< Pary końców odcinków. */
 };
 
-} // namespace shapes
+} // namespace node::shapes

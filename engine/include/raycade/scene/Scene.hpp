@@ -32,8 +32,8 @@ class Scene : public Contextable {
   public:
     /**
      * @brief Dodaje obiekt do sceny.
-     * @tparam T Kształt z przestrzeni nazw @ref shapes albo własna klasa dziedzicząca
-     * po Entity, np. `Spawn<shapes::Rect>()`.
+     * @tparam T Kształt z przestrzeni nazw @ref node::shapes albo własna klasa dziedzicząca
+     * po Entity, np. `Spawn<node::shapes::Rect>()`.
      * @return Referencja do nowego obiektu, ważna przez cały czas życia sceny.
      */
     template <typename T> T& Spawn() {
@@ -211,7 +211,7 @@ class Scene : public Contextable {
         Vector2 from,
         Vector2 to,
         std::uint32_t mask = kAllLayers,
-        const CollisionObject* exclude = nullptr
+        const node::physics::CollisionObject* exclude = nullptr
     ) const {
         return physics_.Raycast(from, to, mask, exclude);
     }
@@ -222,10 +222,10 @@ class Scene : public Contextable {
      * @param mask Warstwy, które są sprawdzane (domyślnie wszystkie).
      * @param exclude Obiekt pomijany.
      */
-    std::vector<PhysicsBody*> Overlap(
+    std::vector<node::physics::PhysicsBody*> Overlap(
         Rectangle area,
         std::uint32_t mask = kAllLayers,
-        const CollisionObject* exclude = nullptr
+        const node::physics::CollisionObject* exclude = nullptr
     ) const {
         const ConvexPart part = ConvexPart::Polygon(
             {{area.x, area.y},
@@ -243,11 +243,11 @@ class Scene : public Contextable {
      * @param mask Warstwy, które są sprawdzane (domyślnie wszystkie).
      * @param exclude Obiekt pomijany.
      */
-    std::vector<PhysicsBody*> Overlap(
+    std::vector<node::physics::PhysicsBody*> Overlap(
         Vector2 center,
         float radius,
         std::uint32_t mask = kAllLayers,
-        const CollisionObject* exclude = nullptr
+        const node::physics::CollisionObject* exclude = nullptr
     ) const {
         return physics_.Overlap(ConvexPart::Ellipse(center, {radius, radius}), mask, exclude);
     }

@@ -1,25 +1,27 @@
 /**
  * @file FormScene.cpp
- * @brief Przykład ui::TextField: formularz z dwoma polami, walidacją i listą wpisów.
+ * @brief Przykład node::ui::TextField: formularz z dwoma polami, walidacją i listą wpisów.
  */
 #include <raycade>
 
 #include <string>
 
 SCENE("formularz") {
-    scene.Spawn<visual::Text>().Content("Zapisy na turniej").FontSize(28).Position({40, 30});
+    scene.Spawn<node::visual::Text>().Content("Zapisy na turniej").FontSize(28).Position({40, 30});
 
     // ---------------- etykiety i pola ----------------
-    scene.Spawn<visual::Text>().Content("Imię").FontSize(16).Paint(GRAY).Position({40, 90});
-    auto& name = scene.Spawn<ui::TextField>()
+    scene.Spawn<node::visual::Text>().Content("Imię").FontSize(16).Paint(GRAY).Position({40, 90});
+    auto& name = scene.Spawn<node::ui::TextField>()
                      .Placeholder("np. Zażółć")
                      .MaxLength(24)
                      .Size({300, 40})
                      .FontSize(20)
                      .Position({40, 112});
 
-    scene.Spawn<visual::Text>().Content("E-mail").FontSize(16).Paint(GRAY).Position({40, 170});
-    auto& email = scene.Spawn<ui::TextField>()
+    scene.Spawn<node::visual::Text>().Content("E-mail").FontSize(16).Paint(GRAY).Position(
+        {40, 170}
+    );
+    auto& email = scene.Spawn<node::ui::TextField>()
                       .Placeholder("adres@example.com")
                       .MaxLength(40)
                       .Size({300, 40})
@@ -27,21 +29,21 @@ SCENE("formularz") {
                       .Position({40, 192});
 
     // komunikat pod polami i lista zapisanych osób
-    auto& status = scene.Spawn<visual::Text>().FontSize(16).Position({40, 250});
-    auto& list = scene.Spawn<visual::Text>()
+    auto& status = scene.Spawn<node::visual::Text>().FontSize(16).Position({40, 250});
+    auto& list = scene.Spawn<node::visual::Text>()
                      .Content("Zapisani:")
                      .FontSize(18)
                      .LineHeight(1.4f)
                      .Position({400, 90});
 
     // licznik znaków aktualizowany przy każdej zmianie treści
-    auto& counter = scene.Spawn<visual::Text>()
+    auto& counter = scene.Spawn<node::visual::Text>()
                         .Content("0/24")
                         .FontSize(14)
                         .Paint(GRAY)
                         .Anchor({1, 0}) // prawy górny róg napisu w pozycji
                         .Position({340, 90});
-    name.OnChange([&counter](ui::TextField&, const std::string& text) {
+    name.OnChange([&counter](node::ui::TextField&, const std::string& text) {
         // MaxLength liczy znaki, nie bajty - "ż" to 2 bajty UTF-8
         counter.Content("{}/24", ::TextLength(text.c_str()));
     });
@@ -69,17 +71,17 @@ SCENE("formularz") {
     };
 
     // Enter w imieniu przechodzi do e-maila, Enter w e-mailu zapisuje
-    name.OnSubmit([&email](ui::TextField&, const std::string&) { email.Focus(); });
-    email.OnSubmit([submit](ui::TextField&, const std::string&) { submit(); });
+    name.OnSubmit([&email](node::ui::TextField&, const std::string&) { email.Focus(); });
+    email.OnSubmit([submit](node::ui::TextField&, const std::string&) { submit(); });
 
     // ---------------- przycisk ----------------
-    auto& button = scene.Spawn<shapes::Rect>()
+    auto& button = scene.Spawn<node::shapes::Rect>()
                        .Size({140, 40})
                        .Paint(SKYBLUE)
                        .Filled()
                        .Position({40, 290})
-                       .OnClick([submit](shapes::Rect&) { submit(); });
-    button.Spawn<visual::Text>()
+                       .OnClick([submit](node::shapes::Rect&) { submit(); });
+    button.Spawn<node::visual::Text>()
         .Content("Zapisz")
         .FontSize(20)
         .Paint(WHITE)

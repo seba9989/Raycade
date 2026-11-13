@@ -25,7 +25,7 @@ class Button : public Entity {
   public:
     /** @brief Tworzy napis - dziecko bez zdarzeń, więc kliknięcie trafia w przycisk. */
     Button() {
-        label_ = &Spawn<visual::Text>().FontSize(18).Paint(WHITE).Anchor({0, 0.5f});
+        label_ = &Spawn<node::visual::Text>().FontSize(18).Paint(WHITE).Anchor({0, 0.5f});
         Size(size_);
     }
 
@@ -65,16 +65,16 @@ class Button : public Entity {
     }
 
   private:
-    visual::Text* label_ = nullptr; /**< Napis (dziecko). */
-    Vector2 size_{200, 50};         /**< Rozmiar. */
+    node::visual::Text* label_ = nullptr; /**< Napis (dziecko). */
+    Vector2 size_{200, 50};               /**< Rozmiar. */
 };
 
 /** @brief Karta do przeciągania; chwycona wychodzi na wierzch. */
 class Card : public Entity {
   public:
     Card() {
-        title_ = &Spawn<visual::Text>().FontSize(20).Paint(WHITE).Position({10, 10});
-        auto* state = &Spawn<visual::Text>().FontSize(16).Paint(WHITE).Position({10, 60});
+        title_ = &Spawn<node::visual::Text>().FontSize(20).Paint(WHITE).Position({10, 10});
+        auto* state = &Spawn<node::visual::Text>().FontSize(16).Paint(WHITE).Position({10, 60});
         OnDragStart([state](Card& self) {
             self.Layer(++topLayer);
             state->Content("przeciągana");
@@ -106,7 +106,7 @@ class Card : public Entity {
 
   private:
     static constexpr Vector2 kSize{150, 95}; /**< Rozmiar karty. */
-    visual::Text* title_ = nullptr;          /**< Napis na karcie (dziecko). */
+    node::visual::Text* title_ = nullptr;    /**< Napis na karcie (dziecko). */
 };
 
 /**
@@ -115,15 +115,15 @@ class Card : public Entity {
  * OnClick ani OnDrag, zdarzenie idzie do rodzica - robota. IsHovered() robota jest prawdą,
  * gdy kursor jest nad którąkolwiek częścią.
  */
-class Robot : public Group {
+class Robot : public node::Group {
   public:
     Robot() {
-        body_ = &Spawn<shapes::Rect>().Position({-40, 0}).Size({80, 90}).Paint(GRAY).Filled();
-        Spawn<shapes::Circle>().Position({0, -30}).Radius(28).Paint(LIGHTGRAY).Filled();
-        Spawn<shapes::Circle>().Position({-10, -34}).Radius(5).Paint(DARKBLUE).Filled();
-        Spawn<shapes::Circle>().Position({10, -34}).Radius(5).Paint(DARKBLUE).Filled();
-        Spawn<shapes::Rect>().Position({-60, 10}).Size({18, 60}).Paint(GRAY).Filled();
-        Spawn<shapes::Rect>().Position({42, 10}).Size({18, 60}).Paint(GRAY).Filled();
+        body_ = &Spawn<node::shapes::Rect>().Position({-40, 0}).Size({80, 90}).Paint(GRAY).Filled();
+        Spawn<node::shapes::Circle>().Position({0, -30}).Radius(28).Paint(LIGHTGRAY).Filled();
+        Spawn<node::shapes::Circle>().Position({-10, -34}).Radius(5).Paint(DARKBLUE).Filled();
+        Spawn<node::shapes::Circle>().Position({10, -34}).Radius(5).Paint(DARKBLUE).Filled();
+        Spawn<node::shapes::Rect>().Position({-60, 10}).Size({18, 60}).Paint(GRAY).Filled();
+        Spawn<node::shapes::Rect>().Position({42, 10}).Size({18, 60}).Paint(GRAY).Filled();
         OnDrag([](Robot& self, Vector2 delta) { self.Translate(delta); });
     }
 
@@ -131,7 +131,7 @@ class Robot : public Group {
     void Tick(float, const Input&) override { body_->Paint(IsHovered() ? ORANGE : GRAY); }
 
   private:
-    shapes::Rect* body_ = nullptr; /**< Tułów - zmienia kolor pod kursorem. */
+    node::shapes::Rect* body_ = nullptr; /**< Tułów - zmienia kolor pod kursorem. */
 };
 
 } // namespace
@@ -150,7 +150,7 @@ SCENE("trafienia") {
         .Paint(DARKGREEN)
         .OnClick([count = 0](Button& self) mutable { self.Label("Klik: {}", ++count); });
     // ozdobna ramka bez zdarzeń nad przyciskiem - przepuszcza kliknięcia
-    scene.Spawn<shapes::Rect>().Position({370, 100}).Size({220, 70}).Paint(GOLD).Layer(1);
+    scene.Spawn<node::shapes::Rect>().Position({370, 100}).Size({220, 70}).Paint(GOLD).Layer(1);
 
     scene.Spawn<Button>()
         .Label("Lewy: 0")
@@ -180,7 +180,7 @@ SCENE("trafienia") {
     // ---------------- podpisy ----------------
     const auto label =
         [&scene](Vector2 position, std::string text, float size, Color color = GRAY) {
-            scene.Spawn<visual::Text>()
+            scene.Spawn<node::visual::Text>()
                 .Content(std::move(text))
                 .FontSize(size)
                 .Paint(color)

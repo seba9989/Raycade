@@ -7,12 +7,12 @@ Nazwa: **ray**lib + cas**cade** (łańcuch metod) + **arcade**.
 #include <raycade>
 
 SCENE("menu") {
-    scene.Spawn<shapes::Circle>()
+    scene.Spawn<node::shapes::Circle>()
         .Position({400, 300})
         .Radius(20)
         .Paint(ORANGE)
         .Filled()
-        .OnClick([](shapes::Circle& self) { self.Paint(RED); });
+        .OnClick([](node::shapes::Circle& self) { self.Paint(RED); });
 }
 
 int main() { return Engine::Get().StartScene("menu").Run(); }
@@ -67,16 +67,18 @@ engine/
     assets/                 Assets; image/ font/ shader/ sound/ - zasoby z plików
     render/                 RenderTarget, ClipStack, primitives/ PrimitiveRenderer
     input/                  klawiatura, mysz, pad, akcje i osie
-    audio/   audio.hpp      mikser: Audio (fasada), playback/ Sound, Music, Voice, mixing/ Bus
+    audio/   audio.hpp      mikser (namespace audio): Audio (fasada), playback/ Sound, Music,
+                              Voice, mixing/ Bus
     entity/                 Entity i traits/ - klasy bazowe
-    node/                   wszystko, co tworzy Spawn<T>():
-      Group.hpp               pusty węzeł grupujący
-      shapes/  shapes.hpp     figury geometryczne (namespace shapes)
-      visual/  visual.hpp     obrazy, tekst, płótno, RenderGroup (namespace visual)
-      ui/      ui.hpp         interfejs (namespace ui)
-      sound/   sound.hpp      dźwięk w scenie: Emitter, Listener (namespace audio)
-      collider/               Collider<S> (namespace collider)
+    node/    node.hpp       wszystko, co tworzy Spawn<T>() (namespace node):
+      Group.hpp               node::Group - pusty węzeł grupujący
+      shapes/  shapes.hpp     figury geometryczne (node::shapes)
+      visual/  visual.hpp     obrazy, tekst, płótno, RenderGroup (node::visual)
+      ui/      ui.hpp         interfejs (node::ui)
+      sound/   sound.hpp      dźwięk w scenie: Emitter, Listener (node::sound)
+      collider/ collider.hpp  Collider<S> i aliasy: collider::Rect... (node::collider)
       physics/ physics.hpp    ciała i obszary: StaticBody, CharacterBody, RigidBody, Area
+                              (node::physics)
     scene/                  Scene, camera/, pointer/ (trafienia myszą), physics/ (PhysicsWorld)
     engine/                 Engine (okno, pętla, sceny, dźwięk), makro SCENE
   src/                    implementacja w tym samym układzie

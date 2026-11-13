@@ -8,7 +8,7 @@
 
 #include <raycade/node/shapes/Shape.hpp>
 
-namespace shapes {
+namespace node::shapes {
 
 /**
  * @brief Otwarta lub zamknięta łamana o lokalnych współrzędnych wierzchołków.
@@ -60,4 +60,4 @@ class Polyline : public Shape {
     bool closed_ = false;           /**< Czy łamana jest zamknięta. */
 };
 
-} // namespace shapes
+} // namespace node::shapes

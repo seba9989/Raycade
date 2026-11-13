@@ -21,7 +21,7 @@
 #include <vector>
 
 /** @brief Elementy interfejsu użytkownika. */
-namespace ui {
+namespace node::ui {
 
 /**
  * @brief Jednowierszowe pole tekstowe.
@@ -37,11 +37,12 @@ namespace ui {
  * Domyślna czcionka raylib nie ma polskich liter - wpisują się poprawnie (Content() zwraca UTF-8),
  * ale są wyświetlane jako "?".
  * @code{.cpp}
- * scene.Spawn<ui::TextField>()
+ * scene.Spawn<node::ui::TextField>()
  *     .Placeholder("Twoje imie")
  *     .MaxLength(20)
  *     .Position({100, 100})
- *     .OnSubmit([](ui::TextField& self, const std::string& text) { Save(text); self.Content("");
+ *     .OnSubmit([](node::ui::TextField& self, const std::string& text) { Save(text);
+ * self.Content("");
  * });
  * @endcode
  */
@@ -93,7 +94,7 @@ class TextField : public Entity, public Focusable {
     }
 
     /**
-     * @brief Ustawia czcionkę z pliku - tak jak visual::Sprite::Sheet() z nazwą pliku.
+     * @brief Ustawia czcionkę z pliku - tak jak node::visual::Sprite::Sheet() z nazwą pliku.
      * @details Plik pobiera Assets z kontekstu (`Context<Assets>()`, domyślnie Engine::Assets()),
      * więc wczytuje się raz i jest współdzielony, a brakujący daje font domyślny raylib z wpisem
      * w logu. Bez Assets w kontekście - Assets::Local() (nazwa względem katalogu roboczego).
@@ -122,7 +123,7 @@ class TextField : public Entity, public Focusable {
     }
 
     /**
-     * @brief Ustawia odstęp między znakami, jak visual::Text::Spacing().
+     * @brief Ustawia odstęp między znakami, jak node::visual::Text::Spacing().
      * @param spacing Odstęp w pikselach; ujemna wartość - domyślny
      * (Typeface::DefaultSpacing(): 0 dla TTF/OTF, FontSize() / 10 dla fontu raylib).
      * @return Ten sam obiekt.
@@ -244,4 +245,4 @@ class TextField : public Entity, public Focusable {
     std::function<void(const std::string&)> submit_; /**< Enter. */
 };
 
-} // namespace ui
+} // namespace node::ui

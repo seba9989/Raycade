@@ -9,7 +9,7 @@
 
 #include <raycade/node/shapes/polygon/Polygon.hpp>
 
-namespace shapes {
+namespace node::shapes {
 
 /**
  * @brief Trójkąt z wierzchołkami lokalnymi względem pozycji obiektu.
@@ -42,4 +42,4 @@ class Triangle : public Polygon {
     void Draw(PrimitiveRenderer& renderer) const override;
 };
 
-} // namespace shapes
+} // namespace node::shapes

@@ -6,6 +6,8 @@
 
 #include <raycade/scene/physics/PhysicsWorld.hpp>
 
+namespace node::physics {
+
 bool CharacterBody::MoveAndSlide() {
     if (PhysicsWorld* world = Physics()) return world->MoveAndSlide(*this);
     // obiekt spoza sceny nie ma z czym się zderzyć ani znanego kroku czasu
@@ -13,3 +15,5 @@ bool CharacterBody::MoveAndSlide() {
     onFloor_ = onWall_ = onCeiling_ = false;
     return false;
 }
+
+} // namespace node::physics

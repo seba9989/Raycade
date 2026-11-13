@@ -6,7 +6,7 @@
 
 #include <cmath>
 
-namespace ui {
+namespace node::ui {
 
 bool TextField::Contains(Vector2 point) const {
     const auto local = TryToLocal(point);
@@ -151,4 +151,4 @@ std::string TextField::Encode(
     return result;
 }
 
-} // namespace ui
+} // namespace node::ui

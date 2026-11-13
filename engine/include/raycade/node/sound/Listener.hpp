@@ -1,21 +1,21 @@
 /**
  * @file Listener.hpp
- * @brief Klasa audio::Listener - „uszy” dla emiterów dźwięku w scenie.
+ * @brief Klasa node::sound::Listener - „uszy” dla emiterów dźwięku w scenie.
  */
 #pragma once
 
 #include <raycade/entity/Entity.hpp>
 
-namespace audio {
+namespace node::sound {
 
 /**
- * @brief Punkt, z którego słychać emitery (audio::Emitter) tej samej sceny.
+ * @brief Punkt, z którego słychać emitery (node::sound::Emitter) tej samej sceny.
  * @details Zwykle dziecko postaci gracza - wtedy dźwięki są głośniejsze, gdy gracz podejdzie
  * do źródła, niezależnie od kamery. Bez słuchacza emitery liczą odległość od środka kamery
  * sceny (SceneCamera::Target()). Działa jeden słuchacz naraz - ostatnio zaktualizowany.
  * @code{.cpp}
  * Player& player = scene.Spawn<Player>();
- * player.Spawn<audio::Listener>();
+ * player.Spawn<node::sound::Listener>();
  * @endcode
  * Słuchacz jest niewidoczny i nie przyjmuje kliknięć.
  */
@@ -35,4 +35,4 @@ class Listener : public Entity {
     void Tick(float dt, const Input& input) override;
 };
 
-} // namespace audio
+} // namespace node::sound

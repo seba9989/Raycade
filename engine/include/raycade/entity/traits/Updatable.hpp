@@ -59,7 +59,7 @@ class Updatable {
 
     /**
      * @name Zdarzenia
-     * Callback otrzymuje obiekt jako jego konkretny typ (np. `shapes::Circle&`), bo metody
+     * Callback otrzymuje obiekt jako jego konkretny typ (np. `node::shapes::Circle&`), bo metody
      * używają jawnego parametru obiektu z C++23 (`this Self& self`). Obiekty sceny nie są
      * przenoszone w pamięci, więc callback może bezpiecznie trzymać referencję do obiektu.
      */
@@ -182,8 +182,8 @@ class Updatable {
      * także gdy kursor wyjdzie poza obiekt. Przesunięcie jest w układzie rodzica, więc
      * `self.Translate(delta)` przesuwa obiekt dokładnie za kursorem, nawet w obróconej grupie.
      * @code{.cpp}
-     * scene.Spawn<shapes::Rect>().Size({80, 50}).Filled()
-     *     .OnDrag([](shapes::Rect& self, Vector2 delta) { self.Translate(delta); });
+     * scene.Spawn<node::shapes::Rect>().Size({80, 50}).Filled()
+     *     .OnDrag([](node::shapes::Rect& self, Vector2 delta) { self.Translate(delta); });
      * @endcode
      * @param callback Funkcja otrzymująca obiekt i przesunięcie kursora od poprzedniej klatki.
      * @return Ten sam obiekt.

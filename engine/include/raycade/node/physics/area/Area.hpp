@@ -10,14 +10,16 @@
 
 #include <raycade/node/physics/PhysicsBody.hpp>
 
+namespace node::physics {
+
 /**
  * @brief Styk jednego collidera ciała z jednym colliderem obszaru.
  * @details Wskaźniki są ważne w trakcie zdarzenia - nie należy ich przechowywać.
  */
 struct AreaShapeContact {
-    PhysicsBody* body = nullptr;               /**< Ciało. */
-    const CollisionShape* bodyShape = nullptr; /**< Collider ciała. */
-    const CollisionShape* areaShape = nullptr; /**< Collider obszaru. */
+    PhysicsBody* body = nullptr;                         /**< Ciało. */
+    const collider::CollisionShape* bodyShape = nullptr; /**< Collider ciała. */
+    const collider::CollisionShape* areaShape = nullptr; /**< Collider obszaru. */
 };
 
 /**
@@ -26,12 +28,12 @@ struct AreaShapeContact {
  * wysyłane na końcu kroku stałego. Area wykrywa obiekty, których warstwy pasują do jej
  * CollisionMask().
  * @code{.cpp}
- * scene.Spawn<Area>()
+ * scene.Spawn<node::physics::Area>()
  *     .Position({500, 600})
- *     .Children([](Area& coin) {
- *         coin.Spawn<collider::Circle>().Radius(10).Paint(GOLD).Filled().Visible();
+ *     .Children([](node::physics::Area& coin) {
+ *         coin.Spawn<node::collider::Circle>().Radius(10).Paint(GOLD).Filled().Visible();
  *     })
- *     .OnBodyEnter([](Area& coin, PhysicsBody& body) {
+ *     .OnBodyEnter([](node::physics::Area& coin, PhysicsBody& body) {
  *         if (dynamic_cast<Player*>(&body)) coin.Destroy();
  *     });
  * @endcode
@@ -65,7 +67,7 @@ class Area : public CollisionObject {
      * @details Dokładniejsza wersja OnBodyEnter(): ciało z kilkoma colliderami (np. osobno stopy
      * i głowa) wywołuje ją raz dla każdej pary colliderów, które zaczęły na siebie nachodzić.
      * @code{.cpp}
-     * spikes.OnBodyShapeEnter([&feet](Area&, const AreaShapeContact& contact) {
+     * spikes.OnBodyShapeEnter([&feet](node::physics::Area&, const AreaShapeContact& contact) {
      *     if (contact.bodyShape == &feet) ... // nadepnięcie, a nie dotknięcie głową
      * });
      * @endcode
@@ -120,7 +122,7 @@ class Area : public CollisionObject {
     std::vector<Area*> OverlappingAreas() const;
 
   private:
-    friend class PhysicsWorld;
+    friend class ::PhysicsWorld;
 
     std::function<void(PhysicsBody&)> bodyEnter_;             /**< Wejście ciała. */
     std::function<void(PhysicsBody&)> bodyExit_;              /**< Wyjście ciała. */
@@ -129,3 +131,5 @@ class Area : public CollisionObject {
     std::function<void(const AreaShapeContact&)> shapeEnter_; /**< Styk pary colliderów. */
     std::function<void(const AreaShapeContact&)> shapeExit_;  /**< Koniec styku pary. */
 };
+
+} // namespace node::physics

@@ -127,7 +127,7 @@ class AudioMixer {
     void Owner(const void* scene) { owner_ = scene; }
     /** @brief Zatrzymuje od razu (bez zdarzeń) głosy zwalnianej sceny. */
     void StopOwner(const void* scene);
-    /** @brief Zapisuje położenie słuchacza (audio::Listener) w scenie. */
+    /** @brief Zapisuje położenie słuchacza (node::sound::Listener) w scenie. */
     void Listen(const void* listener, const void* scene, Vector2 position);
     /** @brief Usuwa słuchacza (gdy to on jest zapisany). */
     void Unlisten(const void* listener);
@@ -161,8 +161,8 @@ class AudioMixer {
         std::uint64_t order = 0;      /**< Numer Play() - najstarszy głos ma najmniejszy. */
         std::function<void(audio::Voice&)> onFinish; /**< Zdarzenie końca (Voice::OnFinish()). */
         const void* owner = nullptr;  /**< Scena, do której należy głos (nullptr - żadna). */
-        float spatialGain = 1.0f;     /**< Tłumienie z odległości (audio::Emitter). */
-        float spatialPan = 0.0f;      /**< Panorama z położenia (audio::Emitter). */
+        float spatialGain = 1.0f;     /**< Tłumienie z odległości (node::sound::Emitter). */
+        float spatialPan = 0.0f;      /**< Panorama z położenia (node::sound::Emitter). */
         float volume = 1.0f;          /**< Głośność głosu (Voice::Volume()). */
         float pitch = 1.0f;           /**< Wysokość głosu (Voice::Pitch()). */
         float pan = 0.0f;             /**< Panorama głosu (Voice::Pan()). */
@@ -234,7 +234,7 @@ class AudioMixer {
     std::vector<Slot> slots_;                     /**< Pula głosów (stały rozmiar). */
     std::uint64_t order_ = 0;                     /**< Licznik Play(). */
     const void* owner_ = nullptr;                 /**< Scena dla nowych głosów. */
-    const void* listener_ = nullptr;              /**< Słuchacz (audio::Listener). */
+    const void* listener_ = nullptr;              /**< Słuchacz (node::sound::Listener). */
     const void* listenerScene_ = nullptr;         /**< Scena słuchacza. */
     Vector2 listenerPosition_{};                  /**< Położenie słuchacza w świecie. */
     bool warnedSeek_ = false;                     /**< Czy zapisano brak przewijania aliasu. */

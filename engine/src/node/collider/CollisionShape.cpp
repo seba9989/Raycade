@@ -6,8 +6,12 @@
 
 #include <raycade/node/physics/CollisionObject.hpp>
 
-CollisionObject* CollisionShape::Object() const {
+namespace node::collider {
+
+physics::CollisionObject* CollisionShape::Object() const {
     for (Entity* entity = Node().Parent(); entity; entity = entity->Parent())
-        if (auto* object = dynamic_cast<CollisionObject*>(entity)) return object;
+        if (auto* object = dynamic_cast<physics::CollisionObject*>(entity)) return object;
     return nullptr;
 }
+
+} // namespace node::collider

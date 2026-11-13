@@ -1,13 +1,13 @@
 /**
  * @file Listener.cpp
- * @brief audio::Listener - zapis położenia słuchacza w mikserze.
+ * @brief node::sound::Listener - zapis położenia słuchacza w mikserze.
  */
 
 #include <raycade/node/sound/Listener.hpp>
 
 #include "../../audio/AudioMixer.hpp"
 
-namespace audio {
+namespace node::sound {
 
 Listener::~Listener() {
     if (AudioMixer* mixer = AudioMixer::Current()) mixer->Unlisten(this);
@@ -23,4 +23,4 @@ void Listener::Tick(float, const Input&) {
         mixer->Listen(this, OwnerScene(), WorldPosition());
 }
 
-} // namespace audio
+} // namespace node::sound

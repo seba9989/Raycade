@@ -14,73 +14,73 @@
 /** @brief Konfiguruje scenę porównania algorytmów z raylib. */
 SCENE("figury") {
     // ---------------- okrąg: 8-krotna symetria vs raylib ----------------
-    scene.Spawn<shapes::Circle>()
+    scene.Spawn<node::shapes::Circle>()
         .Position({90, 110})
         .Radius(55)
         .Raster(Rasterizer::Custom)
         .Paint(RED);
-    scene.Spawn<shapes::Circle>().Position({230, 110}).Radius(55).Paint(BLUE);
+    scene.Spawn<node::shapes::Circle>().Position({230, 110}).Radius(55).Paint(BLUE);
     // nałożone na siebie - widać różnice pojedynczych pikseli
-    scene.Spawn<shapes::Circle>().Position({370, 110}).Radius(55).Paint(BLUE);
-    scene.Spawn<shapes::Circle>()
+    scene.Spawn<node::shapes::Circle>().Position({370, 110}).Radius(55).Paint(BLUE);
+    scene.Spawn<node::shapes::Circle>()
         .Position({370, 110})
         .Radius(55)
         .Raster(Rasterizer::Custom)
         .Paint(RED)
         .Layer(1);
 
-    scene.Spawn<shapes::Circle>()
+    scene.Spawn<node::shapes::Circle>()
         .Position({90, 245})
         .Radius(45)
         .Raster(Rasterizer::Custom)
         .Paint(RED)
         .Filled();
-    scene.Spawn<shapes::Circle>().Position({230, 245}).Radius(45).Paint(BLUE).Filled();
+    scene.Spawn<node::shapes::Circle>().Position({230, 245}).Radius(45).Paint(BLUE).Filled();
 
     // ---------------- elipsa: 4-krotna symetria vs raylib ----------------
-    scene.Spawn<shapes::Ellipse>()
+    scene.Spawn<node::shapes::Ellipse>()
         .Position({600, 110})
         .Radius({75, 40})
         .Raster(Rasterizer::Custom)
         .Paint(RED);
-    scene.Spawn<shapes::Ellipse>().Position({760, 110}).Radius({75, 40}).Paint(BLUE);
-    scene.Spawn<shapes::Ellipse>().Position({910, 110}).Radius({75, 40}).Paint(BLUE);
-    scene.Spawn<shapes::Ellipse>()
+    scene.Spawn<node::shapes::Ellipse>().Position({760, 110}).Radius({75, 40}).Paint(BLUE);
+    scene.Spawn<node::shapes::Ellipse>().Position({910, 110}).Radius({75, 40}).Paint(BLUE);
+    scene.Spawn<node::shapes::Ellipse>()
         .Position({910, 110})
         .Radius({75, 40})
         .Raster(Rasterizer::Custom)
         .Paint(RED)
         .Layer(1);
 
-    scene.Spawn<shapes::Ellipse>()
+    scene.Spawn<node::shapes::Ellipse>()
         .Position({600, 245})
         .Radius({40, 48})
         .Raster(Rasterizer::Custom)
         .Paint(RED)
         .Filled();
-    scene.Spawn<shapes::Ellipse>().Position({760, 245}).Radius({40, 48}).Paint(BLUE).Filled();
+    scene.Spawn<node::shapes::Ellipse>().Position({760, 245}).Radius({40, 48}).Paint(BLUE).Filled();
 
     // ---------------- wielokąty ----------------
     const std::vector<Point2D> arrow{{0, 0}, {120, 50}, {60, 60}, {50, 120}};
 
     // kontur algorytmem przyrostowym; najechanie wypełnia go (scanline z parzystością)
-    scene.Spawn<shapes::Polygon>()
+    scene.Spawn<node::shapes::Polygon>()
         .Position({30, 360})
         .Vertices(arrow)
         .Raster(Rasterizer::Custom)
         .Paint(RED)
-        .OnMouseEnter([](shapes::Polygon& self) { self.Filled(); })
-        .OnMouseLeave([](shapes::Polygon& self) { self.Filled(false); });
+        .OnMouseEnter([](node::shapes::Polygon& self) { self.Filled(); })
+        .OnMouseLeave([](node::shapes::Polygon& self) { self.Filled(false); });
 
     // wielokąt wklęsły wypełniony z kontrolą parzystości - wcięcie zostaje puste
-    scene.Spawn<shapes::Polygon>()
+    scene.Spawn<node::shapes::Polygon>()
         .Position({180, 360})
         .Vertices({{0, 0}, {130, 0}, {130, 120}, {65, 40}, {0, 120}})
         .Paint(RED)
         .Filled();
 
     // wielokąt zbudowany ze zbioru odcinków (LineSegment)
-    scene.Spawn<shapes::Polygon>()
+    scene.Spawn<node::shapes::Polygon>()
         .Position({340, 360})
         .Edges(
             {{{0, 50}, {60, 0}},
@@ -95,18 +95,18 @@ SCENE("figury") {
     // łamana wiązana (krawędzie się przecinają) - metoda nic nie rysuje;
     // szare punkty pokazują tylko, gdzie leżą jej wierzchołki
     const std::vector<Point2D> bowTie{{0, 0}, {120, 90}, {120, 0}, {0, 90}};
-    scene.Spawn<shapes::Polygon>()
+    scene.Spawn<node::shapes::Polygon>()
         .Position({30, 520})
         .Vertices(bowTie)
         .Raster(Rasterizer::Custom)
         .Paint(RED);
-    scene.Spawn<shapes::Points>()
+    scene.Spawn<node::shapes::Points>()
         .Position({30, 520})
         .Positions({{0, 0}, {120, 90}, {120, 0}, {0, 90}})
         .Paint(GRAY)
-        .Children([](shapes::Points& self) {
+        .Children([](node::shapes::Points& self) {
             for (const Vector2 corner : {Vector2{0, 0}, {120, 90}, {120, 0}, {0, 90}})
-                self.Spawn<shapes::Circle>().Position(corner).Radius(3).Paint(GRAY);
+                self.Spawn<node::shapes::Circle>().Position(corner).Radius(3).Paint(GRAY);
         });
 
     // ---------------- wypełnianie przez spójność ----------------
@@ -128,12 +128,12 @@ SCENE("figury") {
         r.Polygon(std::vector<Point2D>{{20, 160}, {180, 160}, {180, 260}, {100, 200}, {20, 260}});
     };
 
-    scene.Spawn<visual::Canvas>()
+    scene.Spawn<node::visual::Canvas>()
         .Position({560, 330})
         .Size({420, 280})
         .Background(WHITE)
         .Edit(paintContours)
-        .OnClick([&engine, colorIndex = 0](visual::Canvas& self) mutable {
+        .OnClick([&engine, colorIndex = 0](node::visual::Canvas& self) mutable {
             // inne niż kolory konturów i pasków - boundary fill traktuje piksel w kolorze
             // wypełnienia jako już wypełniony i na nim się zatrzymuje
             static constexpr std::array<Color, 6> kColors{LIME,   PINK,  VIOLET,
@@ -150,13 +150,13 @@ SCENE("figury") {
                     r.Paint(color).FloodFill(seed);
             });
         })
-        .OnKeyPressed(KEY_R, [paintContours](visual::Canvas& self) {
+        .OnKeyPressed(KEY_R, [paintContours](node::visual::Canvas& self) {
             self.Clear().Edit(paintContours);
         });
 
     // ---------------- podpisy ----------------
     const auto label = [&scene](Vector2 position, std::string text, float size, Color color) {
-        scene.Spawn<visual::Text>()
+        scene.Spawn<node::visual::Text>()
             .Content(std::move(text))
             .FontSize(size)
             .Paint(color)

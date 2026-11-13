@@ -12,7 +12,7 @@
  * @brief Obiekt z lokalną macierzą transformacji względem rodzica.
  * @details Metody zmieniające transformację używają jawnego parametru obiektu z C++23
  * (`this Self& self`, tzw. deducing this). Self to typ, na którym metodę wywołano, więc
- * `rect.Rotate(...)` zwraca `shapes::Rect&` i łańcuch wywołań można kontynuować setterami
+ * `rect.Rotate(...)` zwraca `node::shapes::Rect&` i łańcuch wywołań można kontynuować setterami
  * konkretnego kształtu.
  *
  * Każda z trzech składowych ma parę metod: rzeczownik ustawia albo podaje wartość

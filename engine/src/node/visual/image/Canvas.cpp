@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <utility>
 
-namespace visual {
+namespace node::visual {
 
 void Canvas::EditPixels(const std::function<void(PrimitiveRenderer&)>& paint) {
     PrimitiveRenderer renderer;
@@ -37,4 +37,4 @@ void Canvas::Draw(PrimitiveRenderer& renderer) const {
     if (bitmap_.Width() > 0) renderer.Blit(bitmap_, {0.0f, 0.0f}, color_);
 }
 
-} // namespace visual
+} // namespace node::visual

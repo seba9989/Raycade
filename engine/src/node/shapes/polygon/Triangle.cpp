@@ -1,10 +1,10 @@
 /**
  * @file Triangle.cpp
- * @brief Rysowanie kształtu shapes::Triangle.
+ * @brief Rysowanie kształtu node::shapes::Triangle.
  */
 #include <raycade/node/shapes/polygon/Triangle.hpp>
 
-namespace shapes {
+namespace node::shapes {
 
 std::array<Point2D, 3> Triangle::Vertices() const {
     const std::vector<Point2D>& vertices = Polygon::Vertices();
@@ -17,4 +17,4 @@ void Triangle::Draw(PrimitiveRenderer& renderer) const {
     Brush(renderer).Triangle(v[0], v[1], v[2]);
 }
 
-} // namespace shapes
+} // namespace node::shapes

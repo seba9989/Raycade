@@ -4,8 +4,8 @@
  * @details
  * - postać (CharacterBody) chodzi A/D albo strzałkami i skacze spacją, W albo strzałką w górę;
  *   ruch liczy MoveAndSlide() w kroku stałym (FixedTick()),
- * - podłoże to collidery o różnych kształtach z @ref shapes - prostokąty, trójkątna pochylnia,
- *   koło i obrócona platforma - wszystkie widoczne (Visible()), więc są też grafiką,
+ * - podłoże to collidery o różnych kształtach z @ref node::shapes - prostokąty, trójkątna
+ *   pochylnia, koło i obrócona platforma - wszystkie widoczne (Visible()), więc są też grafiką,
  * - ruchoma platforma to StaticBody przesuwany w OnFixedUpdate(),
  * - szary blok zmienia kolor w OnCollisionEnter() / OnCollisionExit(),
  * - monety i lawa to obszary (Area) z OnBodyEnter(),
@@ -32,12 +32,13 @@ int coins = 0;
 constexpr int kCoins = 5;
 
 /** @brief Postać gracza: prostokąt z colliderem tego samego kształtu. */
-class Player : public CharacterBody {
+class Player : public node::physics::CharacterBody {
   public:
     /** @brief Buduje grafikę i collider (punkt zaczepienia - środek dolnej krawędzi). */
     Player() {
-        body_ = &Spawn<shapes::Rect>().Position({-12, -32}).Size({24, 32}).Paint(BLUE).Filled();
-        Spawn<collider::Rect>().Position({-12, -32}).Size({24, 32});
+        body_ =
+            &Spawn<node::shapes::Rect>().Position({-12, -32}).Size({24, 32}).Paint(BLUE).Filled();
+        Spawn<node::collider::Rect>().Position({-12, -32}).Size({24, 32});
     }
 
     /** @brief Wraca na start (lawa, upadek poza scenę). */
@@ -65,52 +66,55 @@ class Player : public CharacterBody {
         jump_ = false;
         Velocity(velocity).MoveAndSlide();
         // pchanie skrzyń: postać ma dla brył nieskończoną masę, więc pcha je sama - siłą w bok
-        for (const Collision& hit : SlideCollisions())
-            if (auto* crate = dynamic_cast<RigidBody*>(hit.other))
+        for (const node::physics::Collision& hit : SlideCollisions())
+            if (auto* crate = dynamic_cast<node::physics::RigidBody*>(hit.other))
                 crate->ApplyCentralForce({-hit.normal.x * 2500.0f, 0.0f});
         if (Position().y > 900) Respawn();
     }
 
   private:
     static constexpr Vector2 kSpawn{60, 560}; /**< Punkt startowy. */
-    shapes::Rect* body_ = nullptr;            /**< Grafika (kolor zależy od IsOnFloor()). */
+    node::shapes::Rect* body_ = nullptr;      /**< Grafika (kolor zależy od IsOnFloor()). */
     bool jump_ = false;                       /**< Skok zgłoszony w Tick(). */
 };
 
 /** @brief Dodaje nieruchomy prostokąt (widoczny collider). */
-StaticBody& Block(Scene& scene, Vector2 position, Vector2 size, Color color) {
-    StaticBody& body = scene.Spawn<StaticBody>().Position(position);
-    body.Spawn<collider::Rect>().Size(size).Paint(color).Filled().Visible();
+node::physics::StaticBody& Block(Scene& scene, Vector2 position, Vector2 size, Color color) {
+    node::physics::StaticBody& body = scene.Spawn<node::physics::StaticBody>().Position(position);
+    body.Spawn<node::collider::Rect>().Size(size).Paint(color).Filled().Visible();
     return body;
 }
 
 /** @brief Dodaje skrzynię - bryłę sztywną, którą gracz może pchać. */
 void Crate(Scene& scene, Vector2 center) {
-    auto& crate = scene.Spawn<RigidBody>().Position(center).Mass(1).Friction(0.7f);
-    crate.Spawn<collider::Rect>()
+    auto& crate = scene.Spawn<node::physics::RigidBody>().Position(center).Mass(1).Friction(0.7f);
+    crate.Spawn<node::collider::Rect>()
         .Position({-15, -15})
         .Size({30, 30})
         .Paint(BROWN)
         .Filled()
         .Visible();
-    crate.Spawn<shapes::Rect>().Position({-15, -15}).Size({30, 30}).Paint(DARKBROWN);
+    crate.Spawn<node::shapes::Rect>().Position({-15, -15}).Size({30, 30}).Paint(DARKBROWN);
 }
 
 /** @brief Dodaje sprężystą piłkę - bryłę sztywną w kształcie koła. */
 void Ball(Scene& scene, Vector2 center) {
-    auto& ball = scene.Spawn<RigidBody>().Position(center).Mass(0.5f).Bounce(0.6f).Friction(0.4f);
-    ball.Spawn<collider::Circle>().Radius(10).Paint(MAROON).Filled().Visible();
-    ball.Spawn<shapes::Line>().From({0, 0}).To({10, 0}).Paint(WHITE); // widać obrót
+    auto& ball =
+        scene.Spawn<node::physics::RigidBody>().Position(center).Mass(0.5f).Bounce(0.6f).Friction(
+            0.4f
+        );
+    ball.Spawn<node::collider::Circle>().Radius(10).Paint(MAROON).Filled().Visible();
+    ball.Spawn<node::shapes::Line>().From({0, 0}).To({10, 0}).Paint(WHITE); // widać obrót
 }
 
 /** @brief Dodaje monetę - obszar, który znika po wejściu gracza. */
 void Coin(Scene& scene, Vector2 position) {
-    scene.Spawn<Area>()
+    scene.Spawn<node::physics::Area>()
         .Position(position)
-        .Children([](Area& coin) {
-            coin.Spawn<collider::Circle>().Radius(10).Paint(GOLD).Filled().Visible();
+        .Children([](node::physics::Area& coin) {
+            coin.Spawn<node::collider::Circle>().Radius(10).Paint(GOLD).Filled().Visible();
         })
-        .OnBodyEnter([](Area& coin, PhysicsBody& body) {
+        .OnBodyEnter([](node::physics::Area& coin, node::physics::PhysicsBody& body) {
             if (!dynamic_cast<Player*>(&body)) return;
             ++coins;
             coin.Destroy();
@@ -126,66 +130,77 @@ SCENE("fizyka") {
 
     // podłoga i niewidoczne ściany na brzegach okna (widać je po F1)
     Block(scene, {0, 620}, {1000, 80}, DARKGRAY);
-    scene.Spawn<StaticBody>().Position({-20, 0}).Children([](StaticBody& wall) {
-        wall.Spawn<collider::Rect>().Size({20, 700});
-    });
-    scene.Spawn<StaticBody>().Position({1000, 0}).Children([](StaticBody& wall) {
-        wall.Spawn<collider::Rect>().Size({20, 700});
-    });
+    scene.Spawn<node::physics::StaticBody>().Position({-20, 0}).Children(
+        [](node::physics::StaticBody& wall) { wall.Spawn<node::collider::Rect>().Size({20, 700}); }
+    );
+    scene.Spawn<node::physics::StaticBody>().Position({1000, 0}).Children(
+        [](node::physics::StaticBody& wall) { wall.Spawn<node::collider::Rect>().Size({20, 700}); }
+    );
 
     // różne kształty colliderów jako podłoże
     Block(scene, {120, 480}, {180, 20}, GRAY);
-    scene.Spawn<StaticBody>().Children([](StaticBody& hill) {
+    scene.Spawn<node::physics::StaticBody>().Children([](node::physics::StaticBody& hill) {
         // pochylnia ~34° - łagodniejsza niż FloorMaxAngle(), więc to podłoga, a nie ściana
-        hill.Spawn<collider::Triangle>()
+        hill.Spawn<node::collider::Triangle>()
             .Vertices({380, 620}, {560, 620}, {560, 500})
             .Paint(GRAY)
             .Filled()
             .Visible();
     });
     Block(scene, {560, 500}, {160, 120}, GRAY);
-    scene.Spawn<StaticBody>().Position({300, 620}).Children([](StaticBody& bump) {
-        bump.Spawn<collider::Circle>().Radius(40).Paint(GRAY).Filled().Visible();
-    });
+    scene.Spawn<node::physics::StaticBody>()
+        .Position({300, 620})
+        .Children([](node::physics::StaticBody& bump) {
+            bump.Spawn<node::collider::Circle>().Radius(40).Paint(GRAY).Filled().Visible();
+        });
     // obrócona platforma - collider obraca się razem z ciałem
-    scene.Spawn<StaticBody>().Position({830, 420}).Rotate(-0.3f).Children([](StaticBody& tilt) {
-        tilt.Spawn<collider::Rect>()
-            .Position({-70, -10})
-            .Size({140, 20})
-            .Paint(GRAY)
-            .Filled()
-            .Visible();
-    });
+    scene.Spawn<node::physics::StaticBody>()
+        .Position({830, 420})
+        .Rotate(-0.3f)
+        .Children([](node::physics::StaticBody& tilt) {
+            tilt.Spawn<node::collider::Rect>()
+                .Position({-70, -10})
+                .Size({140, 20})
+                .Paint(GRAY)
+                .Filled()
+                .Visible();
+        });
 
     // ruchoma platforma: StaticBody przesuwany w kodzie
     Block(scene, {420, 330}, {120, 16}, DARKBLUE)
-        .OnFixedUpdate([time = 0.0f](StaticBody& self, float step) mutable {
+        .OnFixedUpdate([time = 0.0f](node::physics::StaticBody& self, float step) mutable {
             time += step;
             self.Position({420 + 140 * std::sin(time), 330});
         });
 
     // platforma jednostronna nad blokiem - wskakuje się na nią od dołu
-    auto& ledge = scene.Spawn<StaticBody>().Position({580, 410}).Spawn<collider::Rect>();
+    auto& ledge =
+        scene.Spawn<node::physics::StaticBody>().Position({580, 410}).Spawn<node::collider::Rect>();
     ledge.Size({140, 8}).OneWay().Paint(BROWN).Filled().Visible();
 
     // blok reagujący na zderzenia (OnCollisionEnter / OnCollisionExit)
-    StaticBody& touch = scene.Spawn<StaticBody>().Position({140, 330});
-    auto& tile = touch.Spawn<collider::Rect>().Size({90, 20}).Paint(GRAY).Filled().Visible();
-    touch.OnCollisionEnter(
-             [&tile](StaticBody&, const Collision&) { tile.Paint(ORANGE); }
-    ).OnCollisionExit([&tile](StaticBody&, const Collision&) { tile.Paint(GRAY); });
+    node::physics::StaticBody& touch =
+        scene.Spawn<node::physics::StaticBody>().Position({140, 330});
+    auto& tile = touch.Spawn<node::collider::Rect>().Size({90, 20}).Paint(GRAY).Filled().Visible();
+    touch
+        .OnCollisionEnter([&tile](node::physics::StaticBody&, const node::physics::Collision&) {
+            tile.Paint(ORANGE);
+        })
+        .OnCollisionExit([&tile](node::physics::StaticBody&, const node::physics::Collision&) {
+            tile.Paint(GRAY);
+        });
 
     // obszary: monety i lawa
     for (const Vector2 position :
          {Vector2{210, 450}, Vector2{640, 470}, Vector2{830, 370}, Vector2{480, 290},
           Vector2{185, 295}})
         Coin(scene, position);
-    scene.Spawn<Area>()
+    scene.Spawn<node::physics::Area>()
         .Position({880, 604})
-        .Children([](Area& lava) {
-            lava.Spawn<collider::Rect>().Size({100, 16}).Paint(RED).Filled().Visible();
+        .Children([](node::physics::Area& lava) {
+            lava.Spawn<node::collider::Rect>().Size({100, 16}).Paint(RED).Filled().Visible();
         })
-        .OnBodyEnter([](Area&, PhysicsBody& body) {
+        .OnBodyEnter([](node::physics::Area&, node::physics::PhysicsBody& body) {
             if (auto* player = dynamic_cast<Player*>(&body)) player->Respawn();
         });
 
@@ -200,7 +215,7 @@ SCENE("fizyka") {
 
     // oko: promień do gracza - czy nic nie zasłania widoku
     constexpr Vector2 kEye{960, 90};
-    scene.Spawn<shapes::Circle>().Position(kEye).Radius(10).Paint(DARKPURPLE).Filled();
+    scene.Spawn<node::shapes::Circle>().Position(kEye).Radius(10).Paint(DARKPURPLE).Filled();
     scene.OnDrawWorld([&scene, &player, kEye](PrimitiveRenderer& renderer) {
         const Vector2 target{player.WorldPosition().x, player.WorldPosition().y - 16};
         const auto hit = scene.Raycast(kEye, target);
@@ -219,7 +234,7 @@ SCENE("fizyka") {
     });
 
     // ---------------- napisy ----------------
-    scene.Spawn<visual::Text>()
+    scene.Spawn<node::visual::Text>()
         .Content(
             "A/D lub strzałki - ruch   spacja/W - skok   S - zeskok z półki   B - piłka pod "
             "kursorem\nF1 - collidery   R - od nowa"
@@ -227,8 +242,8 @@ SCENE("fizyka") {
         .FontSize(18)
         .Paint(DARKGRAY)
         .Position({20, 20});
-    scene.Spawn<visual::Text>().FontSize(18).Paint(GRAY).Position({20, 66}).OnUpdate(
-        [&player](visual::Text& self, float) {
+    scene.Spawn<node::visual::Text>().FontSize(18).Paint(GRAY).Position({20, 66}).OnUpdate(
+        [&player](node::visual::Text& self, float) {
             const auto yes = [](bool value) { return value ? "tak" : "nie"; };
             self.Content(
                 "monety: {}/{}   podłoga: {}   ściana: {}   sufit: {}", coins, kCoins,
@@ -236,11 +251,11 @@ SCENE("fizyka") {
             );
         }
     );
-    scene.Spawn<visual::Text>()
+    scene.Spawn<node::visual::Text>()
         .Content("Wszystkie monety zebrane!")
         .FontSize(28)
         .Paint(GOLD)
         .Position({360, 120})
         .Visible(false)
-        .OnUpdate([](visual::Text& self, float) { self.Visible(coins == kCoins); });
+        .OnUpdate([](node::visual::Text& self, float) { self.Visible(coins == kCoins); });
 }

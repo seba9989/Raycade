@@ -52,11 +52,11 @@
  * auto hero = assets.Sheet("hero.json"); // Aseprite / TexturePacker
  * auto wave = assets.Shader("wave.fs");  // tylko shader fragmentów
  * for (int i = 0; i < 10; ++i)
- *     scene.Spawn<visual::Sprite>().Sheet(coin, {16, 16}).Play().Position({i * 40.0f, 0});
+ *     scene.Spawn<node::visual::Sprite>().Sheet(coin, {16, 16}).Play().Position({i * 40.0f, 0});
  * @endcode
  *
- * Silnik udostępnia swoje Assets w kontekście (Contextable), dlatego visual::Sprite::Sheet()
- * z nazwą pliku korzysta z tej samej pamięci podręcznej (tak samo visual::Text::Font()
+ * Silnik udostępnia swoje Assets w kontekście (Contextable), dlatego node::visual::Sprite::Sheet()
+ * z nazwą pliku korzysta z tej samej pamięci podręcznej (tak samo node::visual::Text::Font()
  * i Drawable::Shader()). Poddrzewo może podać własne: `menu.SetContext(menuAssets)`.
  * Bez Assets w kontekście te metody używają Local().
  */
@@ -67,9 +67,9 @@ class Assets {
 
     /**
      * @brief Podaje pamięć podręczną bez katalogu (nazwy względem katalogu roboczego).
-     * @details Używają jej settery z nazwą pliku (np. visual::Sprite::Sheet()), gdy w kontekście
-     * nie ma Assets - dzięki temu brakujący plik daje ten sam zasób zastępczy i wpis w logu.
-     * Nikt jej nie czyści - zasoby żyją do końca programu.
+     * @details Używają jej settery z nazwą pliku (np. node::visual::Sprite::Sheet()), gdy w
+     * kontekście nie ma Assets - dzięki temu brakujący plik daje ten sam zasób zastępczy i wpis w
+     * logu. Nikt jej nie czyści - zasoby żyją do końca programu.
      */
     static Assets& Local();
 

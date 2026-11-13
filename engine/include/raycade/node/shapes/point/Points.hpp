@@ -9,7 +9,7 @@
 
 #include <raycade/node/shapes/Shape.hpp>
 
-namespace shapes {
+namespace node::shapes {
 
 /** @brief Zbiór punktów, których pozycje są lokalne względem obiektu. */
 class Points : public Shape {
@@ -41,4 +41,4 @@ class Points : public Shape {
     std::vector<Point2D> positions_; /**< Pozycje punktów względem obiektu. */
 };
 
-} // namespace shapes
+} // namespace node::shapes

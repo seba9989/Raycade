@@ -8,8 +8,10 @@
 
 #include <cmath>
 
-std::vector<const CollisionShape*> CollisionObject::Shapes() const {
-    std::vector<const CollisionShape*> shapes;
+namespace node::physics {
+
+std::vector<const collider::CollisionShape*> CollisionObject::Shapes() const {
+    std::vector<const collider::CollisionShape*> shapes;
     PhysicsWorld::CollectShapes(*this, shapes);
     return shapes;
 }
@@ -46,3 +48,5 @@ AffineMatrix2D CollisionObject::DrawTransform() const {
             lerp(previous_.c, stepped_.c),   lerp(previous_.d, stepped_.d),
             lerp(previous_.tx, stepped_.tx), lerp(previous_.ty, stepped_.ty)};
 }
+
+} // namespace node::physics

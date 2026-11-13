@@ -9,7 +9,11 @@
 #include <raycade/entity/Entity.hpp>
 #include <raycade/math/geometry/Convex.hpp>
 
+namespace node::physics {
 class CollisionObject;
+} // namespace node::physics
+
+namespace node::collider {
 
 /**
  * @brief Wspólna, nieszablonowa część colliderów - patrz Collider.
@@ -43,8 +47,10 @@ class CollisionShape {
      * (Scene::Raycast()) trafia ją tylko od strony „góry”. Żeby postać zeskoczyła w dół przez
      * platformę, wystarczy na chwilę wyłączyć collider (Disabled()) albo zmienić maskę postaci.
      * @code{.cpp}
-     * scene.Spawn<StaticBody>().Position({300, 400}).Children([](StaticBody& ledge) {
-     *     ledge.Spawn<collider::Rect>().Size({120, 10}).OneWay().Paint(BROWN).Filled().Visible();
+     * scene.Spawn<node::physics::StaticBody>().Position({300,
+     * 400}).Children([](node::physics::StaticBody& ledge) {
+     *     ledge.Spawn<node::collider::Rect>().Size({120,
+     * 10}).OneWay().Paint(BROWN).Filled().Visible();
      * });
      * @endcode
      * @param value Czy collider jest jednostronny.
@@ -69,7 +75,7 @@ class CollisionShape {
      * @return Najbliższy przodek typu CollisionObject albo nullptr - collider bez takiego
      * przodka nie bierze udziału w kolizjach.
      */
-    CollisionObject* Object() const;
+    physics::CollisionObject* Object() const;
 
     /** @brief Collider jako obiekt sceny. */
     virtual const Entity& Node() const = 0;
@@ -84,3 +90,5 @@ class CollisionShape {
     bool disabled_ = false; /**< Czy collider jest wyłączony. */
     bool oneWay_ = false;   /**< Czy collider jest platformą jednostronną. */
 };
+
+} // namespace node::collider

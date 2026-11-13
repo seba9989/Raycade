@@ -7,7 +7,7 @@
 
 /**
  * @namespace audio
- * @brief Dźwięk: dźwięki, muzyka, szyny, odtworzenia i obiekty sceny (źródła i słuchacz).
+ * @brief Mikser dźwięku: dźwięki, muzyka, szyny i odtworzenia.
  * @details Dźwięki, muzykę i szyny miksera pobiera się po nazwie z fasady silnika
  * (Engine::Audio()):
  * - @ref audio::Sound - efekt grany wiele razy naraz (`Play()` zwraca @ref audio::Voice),
@@ -15,10 +15,8 @@
  * - @ref audio::Source - ustawienia wspólne dla obu,
  * - @ref audio::Bus - szyna miksera (grupa dźwięków ze wspólną głośnością).
  *
- * Obiekty sceny z tej przestrzeni nazw odtwarzają dźwięki w świecie gry:
- * - @ref audio::Emitter - źródło dźwięku: tłumienie z odległością i panorama (`Sound()`,
- *   `MaxDistance()`, `Attenuation()`, `Play()`, `Pause()`, `Stop()`, `OnFinish()`),
- * - @ref audio::Listener - punkt, z którego słychać emitery (zwykle dziecko postaci gracza).
+ * Obiekty sceny, które odtwarzają dźwięki w świecie gry (Emitter, Listener), są w przestrzeni
+ * nazw @ref node::sound.
  */
 
 // IWYU pragma: begin_exports

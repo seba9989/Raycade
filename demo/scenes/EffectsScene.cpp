@@ -11,7 +11,7 @@
  * - usuwanie i krok stały: piłki odbijają się z fizyką liczoną w OnFixedUpdate(); LPM na piłce
  *   usuwa ją (Destroy()), B albo podwójne kliknięcie w boisko (gest GESTURE_DOUBLETAP) dodaje
  *   nową,
- * - tekst: napisy to obiekty visual::Text rysowane czcionką z polskimi znakami z pliku
+ * - tekst: napisy to obiekty node::visual::Text rysowane czcionką z polskimi znakami z pliku
  *   `assets/font.ttf` (w repozytorium DejaVu Sans; bez niego - font raylib).
  */
 
@@ -67,7 +67,7 @@ struct Balls {
 };
 
 /** @brief Piłka z prędkością; LPM ją usuwa. */
-class Ball : public shapes::Circle {
+class Ball : public node::shapes::Circle {
   public:
     Ball() {
         Radius(18).Filled().OnClick([](Ball& self) {
@@ -130,8 +130,8 @@ SCENE("efekty") {
     // "?", a dolny napis (bez polskich liter) wyjaśnia dlaczego.
     const DefaultTypeface* font = engine.Context<DefaultTypeface>();
     const bool hasFont = font && font->typeface && !font->typeface->IsDefault();
-    const auto title = [&scene](Vector2 position, std::string content) -> visual::Text& {
-        return scene.Spawn<visual::Text>()
+    const auto title = [&scene](Vector2 position, std::string content) -> node::visual::Text& {
+        return scene.Spawn<node::visual::Text>()
             .Content(std::move(content))
             .FontSize(18)
             .Paint(DARKGRAY)
@@ -147,45 +147,45 @@ SCENE("efekty") {
     // każde przejście szprychy przez poziom (klatki 0 i 4) - zdarzenie klatki
     wheel->Event("kreci", 0, "poziomo").Event("kreci", 4, "poziomo");
     auto& turns = title({40, 250}, "obroty: 0").FontSize(16);
-    scene.Spawn<visual::Sprite>()
+    scene.Spawn<node::visual::Sprite>()
         .Sheet(wheel)
         .Play("kreci")
         .Origin({kFrame / 2, kFrame / 2})
         .Position({100, 140})
         .Scale({2, 2})
-        .OnClick([](visual::Sprite& self) {
+        .OnClick([](node::visual::Sprite& self) {
             if (self.IsPlaying())
                 self.Pause();
             else
                 self.Play();
         })
-        .OnFrameEvent([&turns, count = 0](visual::Sprite&, const std::string&) mutable {
+        .OnFrameEvent([&turns, count = 0](node::visual::Sprite&, const std::string&) mutable {
             turns.Content("obroty: {}", ++count / 2);
         });
-    scene.Spawn<visual::Sprite>()
+    scene.Spawn<node::visual::Sprite>()
         .Sheet(wheel)
         .Play("waha")
         .Speed(0.5f)
         .Origin({kFrame / 2, kFrame / 2})
         .Position({230, 140})
         .Paint(SKYBLUE)
-        .OnKeyPressed(KEY_X, [](visual::Sprite& self) { self.FlippedX(!self.IsFlippedX()); });
+        .OnKeyPressed(KEY_X, [](node::visual::Sprite& self) { self.FlippedX(!self.IsFlippedX()); });
     title({40, 230}, "drugie: PingPong, Speed(0.5), Paint(SKYBLUE)").FontSize(16);
 
     // ---------------- przycinanie ----------------
     title({370, 30}, "ClipRect(): kółko myszy przewija");
-    auto& panel = scene.Spawn<Group>().Position({370, 70}).ClipRect({0, 0, 260, 200});
-    panel.Spawn<shapes::Rect>().Size({260, 200}).Paint(LIGHTGRAY);
-    auto& list = panel.Spawn<Group>();
+    auto& panel = scene.Spawn<node::Group>().Position({370, 70}).ClipRect({0, 0, 260, 200});
+    panel.Spawn<node::shapes::Rect>().Size({260, 200}).Paint(LIGHTGRAY);
+    auto& list = panel.Spawn<node::Group>();
     for (int i = 0; i < 12; ++i) {
-        list.Spawn<shapes::Rect>()
+        list.Spawn<node::shapes::Rect>()
             .Position({10, 10.0f + static_cast<float>(i) * 40})
             .Size({240, 32})
             .Paint(i % 2 ? BEIGE : Color{245, 222, 179, 255})
             .Filled()
-            .OnClick([](shapes::Rect& self) { self.Paint(GOLD); })
-            .Children([i](shapes::Rect& row) {
-                row.Spawn<visual::Text>()
+            .OnClick([](node::shapes::Rect& self) { self.Paint(GOLD); })
+            .Children([i](node::shapes::Rect& row) {
+                row.Spawn<node::visual::Text>()
                     .Content("Wiersz {} (LPM)", i + 1)
                     .FontSize(18)
                     .Paint(DARKBROWN)
@@ -193,39 +193,43 @@ SCENE("efekty") {
             });
     }
     // zdarzenie na tle panelu: przewijanie listy w granicach
-    panel.OnScroll([&list](Group&, float wheelMove) {
+    panel.OnScroll([&list](node::Group&, float wheelMove) {
         Vector2 position = list.Position();
         position.y = std::clamp(position.y + wheelMove * 30, -290.0f, 0.0f);
         list.Position(position);
     });
-    panel.Spawn<shapes::Rect>().Size({260, 200}).Paint(DARKGRAY).Layer(1); // ramka nad listą
+    panel.Spawn<node::shapes::Rect>().Size({260, 200}).Paint(DARKGRAY).Layer(1); // ramka nad listą
 
     // ---------------- shadery ----------------
     title({690, 30}, "Shader na RenderGroup, G - szarość");
     auto wave = Shared(ShaderProgram::FromCode("", kWaveShader));
     auto gray = Shared(ShaderProgram::FromCode("", kGrayShader));
     if (!wave || !gray) engine.Log(LogLevel::Warning, "shader demo nie dziala");
-    scene.Spawn<visual::RenderGroup>()
+    scene.Spawn<node::visual::RenderGroup>()
         .Size({260, 200})
         .Background(::Fade(SKYBLUE, 0.4f))
         .Position({690, 70})
         .Shader(wave)
-        .Children([](visual::RenderGroup& surface) {
-            surface.Spawn<shapes::Circle>().Position({70, 100}).Radius(50).Paint(RED).Filled();
-            surface.Spawn<shapes::Rect>()
+        .Children([](node::visual::RenderGroup& surface) {
+            surface.Spawn<node::shapes::Circle>()
+                .Position({70, 100})
+                .Radius(50)
+                .Paint(RED)
+                .Filled();
+            surface.Spawn<node::shapes::Rect>()
                 .Position({130, 40})
                 .Size({100, 120})
                 .Paint(DARKBLUE)
                 .Filled();
             for (int x = 0; x < 260; x += 20)
-                surface.Spawn<shapes::Line>()
+                surface.Spawn<node::shapes::Line>()
                     .From({static_cast<float>(x), 0})
                     .To({static_cast<float>(x), 200});
         });
 
     // ---------------- usuwanie obiektów i krok stały ----------------
     title({40, 300}, "Krok stały + Destroy(): LPM usuwa piłkę, B / podwójne kliknięcie dodaje");
-    scene.Spawn<shapes::Rect>()
+    scene.Spawn<node::shapes::Rect>()
         .Position({kField.x, kField.y})
         .Size({kField.width, kField.height})
         .Paint(DARKGRAY);
@@ -244,13 +248,13 @@ SCENE("efekty") {
 
     // tekst powiększany Scale() zostaje ostry (atlas w rozmiarze na ekranie), a znaki spoza
     // przygotowanego zestawu (×, ·, €) czcionka dokłada sama przy pierwszym użyciu
-    scene.Spawn<visual::Text>()
+    scene.Spawn<node::visual::Text>()
         .Content("Skala ×2 · 50 €")
         .FontSize(18)
         .Anchor({0.5f, 0.5f})
         .Paint(DARKBLUE)
         .Position({870, 660})
-        .OnUpdate([&engine](visual::Text& self, float) {
+        .OnUpdate([&engine](node::visual::Text& self, float) {
             const float time = static_cast<float>(engine.Time());
             const float scale = 1.4f + 0.4f * std::sin(time * 2.0f);
             self.Scale({scale, scale}); // skala bezwzględna (ScaleBy() mnożyłby bieżącą)

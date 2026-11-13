@@ -77,11 +77,11 @@ struct PointerFrame {
  * jawnego parametru obiektu z C++23 (`this Self& self`). Zwracają więc konkretny typ, na którym
  * je wywołano, a callbacki zdarzeń dostają ten typ jako argument:
  * @code{.cpp}
- * scene.Spawn<shapes::Circle>()
+ * scene.Spawn<node::shapes::Circle>()
  *     .Position({400, 300})
- *     .Rotate(PI / 4)                   // nadal shapes::Circle&
+ *     .Rotate(PI / 4)                   // nadal node::shapes::Circle&
  *     .Radius(30)                       // setter samego okręgu
- *     .OnClick([](shapes::Circle& self) { self.Radius(50); });
+ *     .OnClick([](node::shapes::Circle& self) { self.Radius(50); });
  * @endcode
  *
  * @section entity_wlasne Własny kształt
@@ -98,7 +98,7 @@ struct PointerFrame {
  * };
  * } // namespace shapes
  *
- * scene.Spawn<shapes::Star>().Position({100, 100}).Paint(GOLD);
+ * scene.Spawn<Star>().Position({100, 100}).Paint(GOLD);
  * @endcode
  *
  * @section entity_komponent Własny komponent wielokrotnego użytku
@@ -111,9 +111,9 @@ struct PointerFrame {
  * Update() nie jest wirtualna, a Render() jest `final` - zdarzenia, dzieci i macierz obsługuje
  * zawsze Entity.
  * @code{.cpp}
- * class Player : public Group {
+ * class Player : public node::Group {
  *   public:
- *     Player() { Spawn<shapes::Rect>().Position({-15, -20}).Size({30, 40}).Filled(); }
+ *     Player() { Spawn<node::shapes::Rect>().Position({-15, -20}).Size({30, 40}).Filled(); }
  *     template <typename Self> Self& Speed(this Self& self, float speed) {
  *         self.speed_ = speed;
  *         return self;
@@ -146,7 +146,7 @@ struct PointerFrame {
  * puste zdarzenie: `.OnClick([](auto&) {})`.
  *
  * @section entity_fokus Fokus klawiatury
- * Fokus mają tylko obiekty z cechą Focusable (np. ui::TextField) - patrz jej opis.
+ * Fokus mają tylko obiekty z cechą Focusable (np. node::ui::TextField) - patrz jej opis.
  *
  * @section entity_uklady Układy współrzędnych i kamera
  * - lokalny - względem pozycji obiektu (w nim rysuje Draw()),
@@ -165,9 +165,9 @@ struct PointerFrame {
  * @code{.cpp}
  * struct Theme { Color accent = RED; };
  *
- * scene.Spawn<Group>()
+ * scene.Spawn<node::Group>()
  *     .ProvideContext<Theme>(Theme{GOLD})                 // całe menu w złotym kolorze
- *     .Children([](Group& menu) { menu.Spawn<Button>(); });
+ *     .Children([](node::Group& menu) { menu.Spawn<Button>(); });
  *
  * // w Button::OnMount() albo Button::Tick():
  * if (const Theme* theme = Context<Theme>()) Paint(theme->accent);
@@ -182,8 +182,8 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
 
     /**
      * @brief Tworzy dziecko wybranego typu.
-     * @tparam T Kształt z przestrzeni nazw @ref shapes albo własna klasa dziedzicząca
-     * po Entity, np. `Spawn<shapes::Circle>()`.
+     * @tparam T Kształt z przestrzeni nazw @ref node::shapes albo własna klasa dziedzicząca
+     * po Entity, np. `Spawn<node::shapes::Circle>()`.
      * @return Referencja do nowego dziecka, do dalszej konfiguracji.
      */
     template <typename T> T& Spawn() {
@@ -358,7 +358,7 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
     /**
      * @brief Rysuje zawartość obiektu w jego układzie lokalnym (macierz jest już nałożona).
      * @details Domyślnie: własny kształt (Draw()), a nad nim dzieci według warstw. Klasa
-     * pochodna może to zmienić, np. visual::RenderGroup rysuje dzieci do tekstury.
+     * pochodna może to zmienić, np. node::visual::RenderGroup rysuje dzieci do tekstury.
      * @param renderer Renderer prymitywów.
      */
     virtual void RenderContent(PrimitiveRenderer& renderer) const {
@@ -374,8 +374,9 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
 
     /**
      * @brief Czy dzieci mogą zostać trafione myszą w tym punkcie.
-     * @details Domyślnie zawsze. Obiekt, który przycina rysunek dzieci (np. visual::RenderGroup),
-     * zwraca false poza swoim obszarem - niewidocznych części nie da się kliknąć.
+     * @details Domyślnie zawsze. Obiekt, który przycina rysunek dzieci (np.
+     * node::visual::RenderGroup), zwraca false poza swoim obszarem - niewidocznych części nie da
+     * się kliknąć.
      * @param point Punkt w układzie sceny.
      * @return Czy sprawdzać trafienia w dzieci.
      */

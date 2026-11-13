@@ -16,7 +16,7 @@
 
 /**
  * @brief Algorytm rasteryzacji figur: z raylib albo własny z laboratorium.
- * @details Wybiera go PrimitiveRenderer::Raster() oraz shapes::Shape::Raster() - opis, który
+ * @details Wybiera go PrimitiveRenderer::Raster() oraz node::shapes::Shape::Raster() - opis, który
  * algorytm włącza się w której figurze, jest przy PrimitiveRenderer::Raster().
  */
 enum class Rasterizer {

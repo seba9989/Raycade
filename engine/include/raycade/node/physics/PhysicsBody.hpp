@@ -9,6 +9,8 @@
 
 #include <raycade/node/physics/CollisionObject.hpp>
 
+namespace node::physics {
+
 class PhysicsBody;
 
 /**
@@ -17,11 +19,11 @@ class PhysicsBody;
  * i do następnego CharacterBody::MoveAndSlide() - nie należy ich przechowywać dłużej.
  */
 struct Collision {
-    PhysicsBody* other = nullptr;               /**< Drugie ciało. */
-    const CollisionShape* shape = nullptr;      /**< Mój collider, który się zderzył. */
-    const CollisionShape* otherShape = nullptr; /**< Collider drugiego ciała. */
-    Vector2 normal{};                           /**< Kierunek od drugiego ciała do mnie. */
-    float depth = 0.0f;                         /**< Głębokość wnikania przed rozsunięciem. */
+    PhysicsBody* other = nullptr;                         /**< Drugie ciało. */
+    const collider::CollisionShape* shape = nullptr;      /**< Mój collider, który się zderzył. */
+    const collider::CollisionShape* otherShape = nullptr; /**< Collider drugiego ciała. */
+    Vector2 normal{};   /**< Kierunek od drugiego ciała do mnie. */
+    float depth = 0.0f; /**< Głębokość wnikania przed rozsunięciem. */
 };
 
 /**
@@ -33,8 +35,8 @@ struct Collision {
  * - OnCollisionStay - każdy kolejny krok zderzenia (np. postać stoi na podłodze),
  * - OnCollisionExit - pierwszy krok bez zderzenia.
  * @code{.cpp}
- * scene.Spawn<StaticBody>().OnCollisionEnter([](StaticBody& self, const Collision& hit) {
- *     self.Destroy(); // np. kruszący się blok
+ * scene.Spawn<node::physics::StaticBody>().OnCollisionEnter([](node::physics::StaticBody& self,
+ * const node::physics::Collision& hit) { self.Destroy(); // np. kruszący się blok
  * });
  * @endcode
  */
@@ -105,7 +107,7 @@ class PhysicsBody : public CollisionObject {
     }
 
   private:
-    friend class PhysicsWorld;
+    friend class ::PhysicsWorld;
 
     std::function<void(const Collision&)> enter_; /**< Początek zderzenia. */
     std::function<void(const Collision&)> stay_;  /**< Trwające zderzenie. */
@@ -113,3 +115,5 @@ class PhysicsBody : public CollisionObject {
     float friction_ = 0.6f;                       /**< Tarcie powierzchni. */
     float bounce_ = 0.0f;                         /**< Sprężystość odbicia. */
 };
+
+} // namespace node::physics

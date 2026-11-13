@@ -7,7 +7,7 @@
 #include <raycade/entity/Entity.hpp>
 #include <raycade/render/RenderTarget.hpp>
 
-namespace visual {
+namespace node::visual {
 
 /**
  * @brief Grupa, której dzieci rysują się do własnej tekstury GPU.
@@ -24,13 +24,13 @@ namespace visual {
  *
  * Trafienia myszą w dzieci działają jak zwykle, ale tylko wewnątrz grupy.
  * @code{.cpp}
- * scene.Spawn<visual::RenderGroup>()
+ * scene.Spawn<node::visual::RenderGroup>()
  *     .Size({300, 200})
  *     .Background(Fade(BLACK, 0.2f))
  *     .Paint(Fade(WHITE, 0.7f)) // kolor mnożący teksturę
  *     .Position({50, 50})
- *     .Children([](visual::RenderGroup& panel) {
- *         panel.Spawn<shapes::Circle>().Position({290, 100}).Radius(40).Filled(); // ucięte
+ *     .Children([](node::visual::RenderGroup& panel) {
+ *         panel.Spawn<node::shapes::Circle>().Position({290, 100}).Radius(40).Filled(); // ucięte
  *     });
  * @endcode
  */
@@ -38,8 +38,8 @@ class RenderGroup : public Entity {
   public:
     /**
      * @brief Pusta grupa z kolorem mnożącym WHITE (tekstura bez zmian).
-     * @details Paint() działa tu jak w visual::Sprite i visual::Canvas: mnoży piksele gotowej
-     * tekstury, np. `Paint(Fade(WHITE, 0.5f))` daje półprzezroczystą grupę.
+     * @details Paint() działa tu jak w node::visual::Sprite i node::visual::Canvas: mnoży piksele
+     * gotowej tekstury, np. `Paint(Fade(WHITE, 0.5f))` daje półprzezroczystą grupę.
      */
     RenderGroup() { Paint(WHITE); }
 
@@ -112,4 +112,4 @@ class RenderGroup : public Entity {
     mutable RenderTarget target_; /**< Tekstura tworzona przy pierwszym rysowaniu. */
 };
 
-} // namespace visual
+} // namespace node::visual

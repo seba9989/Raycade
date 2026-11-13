@@ -14,12 +14,12 @@
 /** @brief Konfiguruje interaktywną scenę prymitywów. */
 SCENE("prymitywy") {
     // prostokąt sterowany strzałkami, L przenosi go nad / pod błękitny
-    scene.Spawn<shapes::Rect>()
+    scene.Spawn<node::shapes::Rect>()
         .Position({40, 60})
         .Size({120, 80})
         .Paint(DARKBLUE)
         .Filled()
-        .OnUpdate([&engine](shapes::Rect& self, float dt) {
+        .OnUpdate([&engine](node::shapes::Rect& self, float dt) {
             const Input& input = engine.Input();
             Vector2 position = self.Position();
             const float speed = 200 * dt;
@@ -29,81 +29,89 @@ SCENE("prymitywy") {
             if (input.KeyDown(KEY_UP)) position.y -= speed;
             self.Position(position);
         })
-        .OnKeyPressed(KEY_L, [](shapes::Rect& self) { self.Layer(self.Layer() == 0 ? 1 : 0); })
+        .OnKeyPressed(
+            KEY_L, [](node::shapes::Rect& self) { self.Layer(self.Layer() == 0 ? 1 : 0); }
+        )
         // dzieci jadą razem z prostokątem - ich pozycje są względem niego
-        .Children([](shapes::Rect& self) {
-            self.Spawn<shapes::Circle>().Position({30, 30}).Radius(10).Paint(WHITE).Filled();
-            self.Spawn<shapes::Rect>()
+        .Children([](node::shapes::Rect& self) {
+            self.Spawn<node::shapes::Circle>().Position({30, 30}).Radius(10).Paint(WHITE).Filled();
+            self.Spawn<node::shapes::Rect>()
                 .Position({70, 45})
                 .Size({40, 25})
                 .Paint(YELLOW)
                 .Filled()
-                .Children([](shapes::Rect& rect) { // wnuk: względem żółtego prostokąta
-                    rect.Spawn<shapes::Circle>().Position({20, 12}).Radius(5).Paint(RED).Filled();
+                .Children([](node::shapes::Rect& rect) { // wnuk: względem żółtego prostokąta
+                    rect.Spawn<node::shapes::Circle>()
+                        .Position({20, 12})
+                        .Radius(5)
+                        .Paint(RED)
+                        .Filled();
                 });
         });
 
-    scene.Spawn<shapes::Rect>().Position({190, 60}).Size({120, 80}).Paint(SKYBLUE).Filled();
+    scene.Spawn<node::shapes::Rect>().Position({190, 60}).Size({120, 80}).Paint(SKYBLUE).Filled();
 
     // okrąg zmienia kolor pod kursorem
-    scene.Spawn<shapes::Circle>()
+    scene.Spawn<node::shapes::Circle>()
         .Position({100, 260})
         .Radius(50)
         .Paint(ORANGE)
-        .OnMouseEnter([](shapes::Circle& self) { self.Paint(RED); })
-        .OnMouseLeave([](shapes::Circle& self) { self.Paint(ORANGE); });
+        .OnMouseEnter([](node::shapes::Circle& self) { self.Paint(RED); })
+        .OnMouseLeave([](node::shapes::Circle& self) { self.Paint(ORANGE); });
 
     // koło: kliknięcie przełącza wypełnienie
-    scene.Spawn<shapes::Circle>()
+    scene.Spawn<node::shapes::Circle>()
         .Position({250, 260})
         .Radius(50)
         .Paint(ORANGE)
         .Filled()
-        .OnClick([filled = true](shapes::Circle& self) mutable { self.Filled(filled = !filled); });
+        .OnClick([filled = true](node::shapes::Circle& self) mutable {
+            self.Filled(filled = !filled);
+        });
 
-    scene.Spawn<shapes::Triangle>()
+    scene.Spawn<node::shapes::Triangle>()
         .Vertices({600, 80}, {540, 200}, {680, 200})
         .Paint(DARKGREEN)
-        .OnClick([](shapes::Triangle& self) { self.Filled(); });
+        .OnClick([](node::shapes::Triangle& self) { self.Filled(); });
 
-    scene.Spawn<shapes::Triangle>()
+    scene.Spawn<node::shapes::Triangle>()
         .Vertices({740, 80}, {680, 200}, {800, 200})
         .Paint(LIME)
         .Filled();
 
-    scene.Spawn<shapes::Polyline>()
+    scene.Spawn<node::shapes::Polyline>()
         .Vertices({{450, 80}, {520, 130}, {495, 210}, {405, 210}, {380, 130}})
         .Closed()
         .Paint(PURPLE)
-        .OnMouseEnter([](shapes::Polyline& self) { self.Paint(MAGENTA); })
-        .OnMouseLeave([](shapes::Polyline& self) { self.Paint(PURPLE); });
+        .OnMouseEnter([](node::shapes::Polyline& self) { self.Paint(MAGENTA); })
+        .OnMouseLeave([](node::shapes::Polyline& self) { self.Paint(PURPLE); });
 
     // porównanie: algorytm przyrostowy (czerwony) i raylib (niebieski)
-    scene.Spawn<shapes::Line>()
+    scene.Spawn<node::shapes::Line>()
         .From({100, 400})
         .To({400, 550})
         .Raster(Rasterizer::Custom)
         .Paint(RED);
-    scene.Spawn<shapes::Line>().From({500, 400}).To({800, 550}).Paint(BLUE);
+    scene.Spawn<node::shapes::Line>().From({500, 400}).To({800, 550}).Paint(BLUE);
 
     // odcinek: PPM przesuwa koniec, SPACJA przełącza algorytm
-    scene.Spawn<shapes::Line>()
+    scene.Spawn<node::shapes::Line>()
         .From({500, 300})
         .To({700, 300})
         .Raster(Rasterizer::Custom)
         .Paint(RED)
-        .OnUpdate([&engine](shapes::Line& self, float) {
+        .OnUpdate([&engine](node::shapes::Line& self, float) {
             const Input& input = engine.Input();
             if (input.MouseDown(MOUSE_BUTTON_RIGHT)) self.To(input.MousePosition());
         })
-        .OnKeyPressed(KEY_SPACE, [incremental = true](shapes::Line& self) mutable {
+        .OnKeyPressed(KEY_SPACE, [incremental = true](node::shapes::Line& self) mutable {
             incremental = !incremental;
             self.Raster(incremental ? Rasterizer::Custom : Rasterizer::Raylib)
                 .Paint(incremental ? RED : BLUE);
         });
 
     // wersje tablicowe: chmura punktów i "gwiazda" z niezależnych odcinków
-    scene.Spawn<shapes::Points>()
+    scene.Spawn<node::shapes::Points>()
         .Position({830, 80})
         .Positions([] {
             std::vector<Point2D> positions;
@@ -116,7 +124,7 @@ SCENE("prymitywy") {
         }())
         .Paint(MAROON);
 
-    scene.Spawn<shapes::Lines>()
+    scene.Spawn<node::shapes::Lines>()
         .Position({900, 270})
         .Vertices([] {
             std::vector<Point2D> vertices;
@@ -131,20 +139,23 @@ SCENE("prymitywy") {
         .Paint(DARKPURPLE);
 
     // układ słoneczny: planeta krąży wokół słońca, księżyc (dziecko planety) wokół planety
-    scene.Spawn<Group>().Position({880, 420}).Children([](Group& system) {
-        system.Spawn<shapes::Circle>().Radius(18).Paint(ORANGE).Filled(); // słońce w środku grupy
+    scene.Spawn<node::Group>().Position({880, 420}).Children([](node::Group& system) {
+        system.Spawn<node::shapes::Circle>()
+            .Radius(18)
+            .Paint(ORANGE)
+            .Filled(); // słońce w środku grupy
 
-        system.Spawn<shapes::Circle>()
+        system.Spawn<node::shapes::Circle>()
             .Radius(10)
             .Paint(SKYBLUE)
             .Filled()
-            .OnUpdate([angle = 0.0f](shapes::Circle& self, float dt) mutable {
+            .OnUpdate([angle = 0.0f](node::shapes::Circle& self, float dt) mutable {
                 angle += dt;
                 self.Position({50 * std::cos(angle), 50 * std::sin(angle)});
             })
-            .Children([](shapes::Circle& planet) {
-                planet.Spawn<shapes::Circle>().Radius(4).Paint(GRAY).Filled().OnUpdate(
-                    [angle = 0.0f](shapes::Circle& self, float dt) mutable {
+            .Children([](node::shapes::Circle& planet) {
+                planet.Spawn<node::shapes::Circle>().Radius(4).Paint(GRAY).Filled().OnUpdate(
+                    [angle = 0.0f](node::shapes::Circle& self, float dt) mutable {
                         angle += 4 * dt;
                         self.Position({18 * std::cos(angle), 18 * std::sin(angle)});
                     }
@@ -188,7 +199,7 @@ SCENE("prymitywy") {
 
     // ---------------- podpisy ----------------
     const auto label = [&scene](Vector2 position, std::string text, float size) {
-        scene.Spawn<visual::Text>()
+        scene.Spawn<node::visual::Text>()
             .Content(std::move(text))
             .FontSize(size)
             .Paint(GRAY)

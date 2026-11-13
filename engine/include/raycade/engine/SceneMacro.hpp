@@ -45,8 +45,8 @@ struct SceneRegistration {
  * @code{.cpp}
  * SCENE("menu") {
  *     scene.ProvideContext<DefaultTypeface>(engine.Assets().Font("font.ttf"));
- *     scene.Spawn<shapes::Rect>().Position({300, 200}).Size({400, 300})
- *         .OnClick([&engine](shapes::Rect&) { engine.SwitchScene("gra"); });
+ *     scene.Spawn<node::shapes::Rect>().Position({300, 200}).Size({400, 300})
+ *         .OnClick([&engine](node::shapes::Rect&) { engine.SwitchScene("gra"); });
  * }
  * @endcode
  * @param name Nazwa sceny używana przez StartScene() i SwitchScene().

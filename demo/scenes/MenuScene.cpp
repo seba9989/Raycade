@@ -10,20 +10,20 @@
 
 /** @brief Konfiguruje scenę menu po otwarciu okna. */
 SCENE("menu") {
-    scene.Spawn<shapes::Rect>().Position({300, 200}).Size({400, 300}).Paint(DARKBLUE);
+    scene.Spawn<node::shapes::Rect>().Position({300, 200}).Size({400, 300}).Paint(DARKBLUE);
 
     // piłka z własną logiką ruchu
-    scene.Spawn<shapes::Circle>()
+    scene.Spawn<node::shapes::Circle>()
         .Position({500, 440})
         .Radius(20)
         .Paint(ORANGE)
         .Filled()
-        .OnUpdate([time = 0.0f](shapes::Circle& self, float dt) mutable {
+        .OnUpdate([time = 0.0f](node::shapes::Circle& self, float dt) mutable {
             time += dt;
             self.Position({500 + 150 * std::sin(time * 2), 440});
         });
 
-    scene.Spawn<visual::Text>()
+    scene.Spawn<node::visual::Text>()
         .Content("MENU")
         .FontSize(40)
         .Paint(DARKBLUE)
@@ -31,16 +31,16 @@ SCENE("menu") {
         .Position({500, 230});
 
     // przycisk: podświetla się pod kursorem, kliknięcie przełącza scenę
-    scene.Spawn<shapes::Rect>()
+    scene.Spawn<node::shapes::Rect>()
         .Position({400, 300})
         .Size({200, 60})
         .Paint(DARKBLUE)
-        .OnMouseEnter([](shapes::Rect& self) { self.Filled(); })
-        .OnMouseLeave([](shapes::Rect& self) { self.Filled(false); })
-        .OnClick([&engine](shapes::Rect&) { engine.SwitchScene("prymitywy"); })
-        .Children([](shapes::Rect& button) {
+        .OnMouseEnter([](node::shapes::Rect& self) { self.Filled(); })
+        .OnMouseLeave([](node::shapes::Rect& self) { self.Filled(false); })
+        .OnClick([&engine](node::shapes::Rect&) { engine.SwitchScene("prymitywy"); })
+        .Children([](node::shapes::Rect& button) {
             // napis bez zdarzeń - kliknięcie w niego trafia w przycisk
-            button.Spawn<visual::Text>()
+            button.Spawn<node::visual::Text>()
                 .Content("START")
                 .FontSize(24)
                 .Paint(GRAY)
@@ -48,12 +48,12 @@ SCENE("menu") {
                 .Position({100, 30});
         });
 
-    scene.Spawn<visual::Text>()
+    scene.Spawn<node::visual::Text>()
         .Content("Klawisze scen:")
         .FontSize(20)
         .Paint(DARKGRAY)
         .Position({240, 530});
-    scene.Spawn<visual::Text>()
+    scene.Spawn<node::visual::Text>()
         .Content(
             "1 menu     2 prymitywy     3 figury     4 transformacje\n"
             "5 kontekst     6 trafienia     7 kamera     8 efekty\n"

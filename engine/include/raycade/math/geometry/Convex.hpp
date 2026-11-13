@@ -14,7 +14,7 @@
 
 /**
  * @brief Figura wypukła opisana funkcją wsparcia - wspólny język wszystkich kolizji.
- * @details Każdy kształt z @ref shapes rozkłada się na jedną albo kilka takich części:
+ * @details Każdy kształt z @ref node::shapes rozkłada się na jedną albo kilka takich części:
  * - wielokąt wypukły (także odcinek - 2 punkty - i punkt - 1 punkt),
  * - elipsę (także okrąg) - środek i dwie półosie, które po obrocie i nierównej skali
  *   przestają być prostopadłe, a figura nadal jest elipsą.

@@ -87,7 +87,7 @@ class Tile : public Entity {
  * @brief Panel z trzema kafelkami, który udostępnia im własny Theme.
  * @details Domyślny Theme powstaje w konstruktorze; scena może go nadpisać po Spawn.
  */
-class Panel : public Group {
+class Panel : public node::Group {
   public:
     Panel() {
         ProvideContext<Theme>(Theme{0, "panel (domyslny)"});
@@ -97,7 +97,7 @@ class Panel : public Group {
 };
 
 /** @brief Gracz sterowany strzałkami w obrębie areny. */
-class Player : public shapes::Circle {
+class Player : public node::shapes::Circle {
   public:
     static constexpr Rectangle kArena{540, 110, 420, 300}; /**< Obszar ruchu. */
 
@@ -116,7 +116,7 @@ class Player : public shapes::Circle {
 };
 
 /** @brief Kółko goniące gracza znalezionego przez Context<Player>(). */
-class Follower : public shapes::Circle {
+class Follower : public node::shapes::Circle {
   public:
     template <typename Self> Self& Speed(this Self& self, float speed) {
         self.speed_ = speed;
@@ -181,14 +181,14 @@ SCENE("kontekst") {
     player.Position({750, 260}).Radius(16).Paint(DARKBLUE).Filled();
     scene.SetContext(player);
 
-    // Radius() z shapes::Circle zwraca Circle&, dlatego jest na końcu łańcucha
+    // Radius() z node::shapes::Circle zwraca Circle&, dlatego jest na końcu łańcucha
     scene.Spawn<Follower>().Speed(60).Position({560, 130}).Paint(RED).Filled().Radius(10);
     scene.Spawn<Follower>().Speed(90).Position({940, 130}).Paint(MAROON).Filled().Radius(10);
     scene.Spawn<Follower>().Speed(120).Position({940, 390}).Paint(PINK).Filled().Radius(10);
 
     scene.Spawn<ScoreBar>().Position({60, 520});
 
-    scene.Spawn<shapes::Rect>()
+    scene.Spawn<node::shapes::Rect>()
         .Position({Player::kArena.x, Player::kArena.y})
         .Size({Player::kArena.width, Player::kArena.height})
         .Paint(LIGHTGRAY);
@@ -196,8 +196,8 @@ SCENE("kontekst") {
     // ---------------- podpisy ----------------
     const auto label = [&scene](
                            Vector2 position, std::string text, float size, Color color = GRAY
-                       ) -> visual::Text& {
-        return scene.Spawn<visual::Text>()
+                       ) -> node::visual::Text& {
+        return scene.Spawn<node::visual::Text>()
             .Content(std::move(text))
             .FontSize(size)
             .Paint(color)

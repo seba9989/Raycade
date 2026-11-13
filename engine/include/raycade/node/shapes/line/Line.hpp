@@ -6,7 +6,7 @@
 
 #include <raycade/node/shapes/Shape.hpp>
 
-namespace shapes {
+namespace node::shapes {
 
 /** @brief Odcinek, którego końce są określone względem pozycji obiektu. */
 class Line : public Shape {
@@ -52,4 +52,4 @@ class Line : public Shape {
     Point2D to_;   /**< Koniec względem pozycji obiektu. */
 };
 
-} // namespace shapes
+} // namespace node::shapes

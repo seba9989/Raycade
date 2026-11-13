@@ -1,6 +1,6 @@
 /**
  * @file Collider.hpp
- * @brief Szablon Collider\<S\> - kształt kolizji o kształcie dowolnej figury z @ref shapes.
+ * @brief Szablon Collider\<S\> - kształt kolizji o kształcie dowolnej figury z @ref node::shapes.
  */
 #pragma once
 
@@ -13,6 +13,8 @@
 #include <raycade/node/shapes.hpp>
 #include <raycade/node/visual/image/Sprite.hpp>
 
+namespace node::collider {
+
 /**
  * @brief Kształt kolizji o kształcie figury S (odpowiednik CollisionShape2D z Godota).
  * @details Collider dziedziczy po figurze, więc ma wszystkie jej settery: `Size()` prostokąta,
@@ -24,25 +26,26 @@
  * kształt złożony. W odróżnieniu od innych obiektów collider jest domyślnie niewidoczny
  * i nie reaguje na mysz; Visible() (Drawable::Visible()) rysuje go jak zwykłą figurę.
  *
- * Krótsze nazwy są w przestrzeni nazw @ref collider (`collider::Rect` to
- * `Collider<shapes::Rect>`).
+ * Krótsze nazwy są w przestrzeni nazw @ref node::collider (`node::collider::Rect` to
+ * `Collider<node::shapes::Rect>`).
  * @code{.cpp}
- * class Player : public CharacterBody {
+ * class Player : public node::physics::CharacterBody {
  *   public:
  *     Player() {
  *         // grafika
- *         Spawn<shapes::Rect>().Position({-12, -32}).Size({24, 32}).Paint(BLUE).Filled();
+ *         Spawn<node::shapes::Rect>().Position({-12, -32}).Size({24, 32}).Paint(BLUE).Filled();
  *         // kolizja
- *         Spawn<collider::Rect>().Position({-12, -32}).Size({24, 32});
+ *         Spawn<node::collider::Rect>().Position({-12, -32}).Size({24, 32});
  *     }
  * };
  *
  * // platforma: widoczny collider to grafika i kolizja naraz
- * scene.Spawn<StaticBody>().Position({0, 650}).Children([](StaticBody& floor) {
- *     floor.Spawn<collider::Rect>().Size({1000, 50}).Paint(DARKGRAY).Filled().Visible();
+ * scene.Spawn<node::physics::StaticBody>().Position({0,
+ * 650}).Children([](node::physics::StaticBody& floor) {
+ *     floor.Spawn<node::collider::Rect>().Size({1000, 50}).Paint(DARKGRAY).Filled().Visible();
  * });
  * @endcode
- * @tparam S Figura z @ref shapes (dziedzicząca po shapes::Shape).
+ * @tparam S Figura z @ref node::shapes (dziedzicząca po node::shapes::Shape).
  */
 template <typename S>
     requires std::derived_from<S, shapes::Shape>
@@ -73,8 +76,8 @@ class Collider : public S, public CollisionShape {
      * samego rodzica co collider (zwykle oba są dziećmi ciała). Wymiary są kopiowane raz - collider
      * nie śledzi późniejszych zmian klatki ani obrotu i skali samego sprite'a.
      * @code{.cpp}
-     * auto& hero = Spawn<visual::Sprite>().Sheet(sheet).Origin({16, 32});
-     * Spawn<collider::Rect>().Fit(hero, 4); // o 4 px mniejszy z każdej strony niż klatka
+     * auto& hero = Spawn<node::visual::Sprite>().Sheet(sheet).Origin({16, 32});
+     * Spawn<node::collider::Rect>().Fit(hero, 4); // o 4 px mniejszy z każdej strony niż klatka
      * @endcode
      * @param sprite Sprite-rodzeństwo.
      * @param inset Ile pikseli odjąć z każdej strony (ujemne - powiększenie).
@@ -102,10 +105,9 @@ class Collider : public S, public CollisionShape {
 };
 
 /**
- * @namespace collider
- * @brief Krótsze nazwy colliderów: `collider::Rect` to `Collider<shapes::Rect>` itd.
+ * @namespace node::collider
+ * @brief Krótsze nazwy colliderów: `node::collider::Rect` to `Collider<node::shapes::Rect>` itd.
  */
-namespace collider {
 using Point = Collider<shapes::Point>;       /**< Collider w kształcie punktu. */
 using Points = Collider<shapes::Points>;     /**< Collider z kilku punktów. */
 using Line = Collider<shapes::Line>;         /**< Collider w kształcie odcinka. */
@@ -116,4 +118,5 @@ using Triangle = Collider<shapes::Triangle>; /**< Collider w kształcie trójką
 using Polygon = Collider<shapes::Polygon>;   /**< Collider w kształcie wielokąta. */
 using Circle = Collider<shapes::Circle>;     /**< Collider w kształcie koła. */
 using Ellipse = Collider<shapes::Ellipse>;   /**< Collider w kształcie elipsy. */
-} // namespace collider
+
+} // namespace node::collider

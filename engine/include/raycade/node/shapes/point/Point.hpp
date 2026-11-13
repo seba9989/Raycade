@@ -6,7 +6,7 @@
 
 #include <raycade/node/shapes/Shape.hpp>
 
-namespace shapes {
+namespace node::shapes {
 
 /** @brief Pojedynczy punkt rysowany w pozycji obiektu. */
 class Point : public Shape {
@@ -22,4 +22,4 @@ class Point : public Shape {
     void Draw(PrimitiveRenderer& renderer) const override;
 };
 
-} // namespace shapes
+} // namespace node::shapes

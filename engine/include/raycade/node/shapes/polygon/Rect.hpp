@@ -6,7 +6,7 @@
 
 #include <raycade/node/shapes/Shape.hpp>
 
-namespace shapes {
+namespace node::shapes {
 
 /** @brief Prostokąt, którego pozycja oznacza lewy górny róg. */
 class Rect : public Shape {
@@ -38,4 +38,4 @@ class Rect : public Shape {
     Vector2 size_{10, 10}; /**< Szerokość i wysokość w pikselach. */
 };
 
-} // namespace shapes
+} // namespace node::shapes

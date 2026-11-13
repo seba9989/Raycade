@@ -8,27 +8,27 @@
 // Tabela poniżej - formatter łamałby jej wiersze.
 // clang-format off
 /**
- * @namespace shapes
+ * @namespace node::shapes
  * @brief Figury geometryczne, które można tworzyć przez Scene::Spawn() i Entity::Spawn().
- * @details W kodzie wystarczy wpisać `Spawn<shapes::`, aby edytor podpowiedział typy. Wszystkie
- * dziedziczą po shapes::Shape (wypełnienie Filled() i algorytm Raster()).
+ * @details W kodzie wystarczy wpisać `Spawn<node::shapes::`, aby edytor podpowiedział typy.
+ * Wszystkie dziedziczą po node::shapes::Shape (wypełnienie Filled() i algorytm Raster()).
  *
- * | Typ                   | Co rysuje                             | Własne metody (settery i gettery)                 |
- * |-----------------------|---------------------------------------|---------------------------------------------------|
- * | @ref shapes::Point    | pojedynczy piksel                     | -                                                 |
- * | @ref shapes::Points   | chmurę punktów                        | `Positions()`                                     |
- * | @ref shapes::Line     | odcinek                               | `From()`, `To()`                                  |
- * | @ref shapes::Lines    | niezależne odcinki z par wierzchołków | `Vertices()`                                      |
- * | @ref shapes::Polyline | łamaną otwartą lub zamkniętą          | `Vertices()`, `Closed()`                          |
- * | @ref shapes::Rect     | prostokąt                             | `Size()`                                          |
- * | @ref shapes::Polygon  | wielokąt (wypełnianie scanline)       | `Vertices()`, `Edges()`, `IsSimple()`             |
- * | @ref shapes::Triangle | trójkąt (wielokąt z 3 wierzchołkami)  | `Vertices(a, b, c)`                               |
- * | @ref shapes::Circle   | okrąg / koło                          | `Radius()`                                        |
- * | @ref shapes::Ellipse  | elipsę                                | `Radius()`                                        |
+ * | Typ                         | Co rysuje                             | Własne metody (settery i gettery)     |
+ * |-----------------------------|---------------------------------------|---------------------------------------|
+ * | @ref node::shapes::Point    | pojedynczy piksel                     | -                                     |
+ * | @ref node::shapes::Points   | chmurę punktów                        | `Positions()`                         |
+ * | @ref node::shapes::Line     | odcinek                               | `From()`, `To()`                      |
+ * | @ref node::shapes::Lines    | niezależne odcinki z par wierzchołków | `Vertices()`                          |
+ * | @ref node::shapes::Polyline | łamaną otwartą lub zamkniętą          | `Vertices()`, `Closed()`              |
+ * | @ref node::shapes::Rect     | prostokąt                             | `Size()`                              |
+ * | @ref node::shapes::Polygon  | wielokąt (wypełnianie scanline)       | `Vertices()`, `Edges()`, `IsSimple()` |
+ * | @ref node::shapes::Triangle | trójkąt (wielokąt z 3 wierzchołkami)  | `Vertices(a, b, c)`                   |
+ * | @ref node::shapes::Circle   | okrąg / koło                          | `Radius()`                            |
+ * | @ref node::shapes::Ellipse  | elipsę                                | `Radius()`                            |
  *
  * Obiekty z obrazem i tekstem (Sprite, Text, Canvas, RenderGroup) są w przestrzeni nazw
- * @ref visual, pole tekstowe w @ref ui, a niewidoczny rodzic Group - obok Entity, bez
- * przestrzeni nazw. Nie są figurami, więc nie mają Filled() ani Raster().
+ * @ref node::visual, pole tekstowe w @ref node::ui, a niewidoczny rodzic node::Group - bezpośrednio
+ * w @ref node. Nie są figurami, więc nie mają Filled() ani Raster().
  *
  * Metody wspólne ma każda figura (z klas Shape, Transformable, Drawable, Updatable i Entity):
  * - przekształcenia: Position(), Translate(), Rotation(), Rotate(), Scale(), ScaleBy(),
@@ -42,9 +42,9 @@
  * logicznego ma prefiks `Is` (`IsFilled()`), a punkty i wierzchołki są typu Point2D.
  * Filled() działa w Rect, Triangle, Circle, Ellipse i Polygon, a Raster(Rasterizer::Custom)
  * (algorytmy z laboratorium) - w figurach z odcinków oraz w Circle i Ellipse; tabela jest
- * przy shapes::Shape. Wszystkie metody konfiguracji używają deducing this i zwracają typ
+ * przy node::shapes::Shape. Wszystkie metody konfiguracji używają deducing this i zwracają typ
  * obiektu, na którym je wywołano - także klasy pochodnej, np.
- * `class Ball : public shapes::Circle` - więc można je łączyć w dowolnej kolejności.
+ * `class Ball : public node::shapes::Circle` - więc można je łączyć w dowolnej kolejności.
  * Patrz @ref Entity.
  */
 // clang-format on

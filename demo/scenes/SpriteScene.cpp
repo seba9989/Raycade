@@ -1,6 +1,7 @@
 /**
  * @file SpriteScene.cpp
- * @brief Scena testowa visual::Sprite i SpriteSheet: animacje, tryby, sterowanie, współdzielenie.
+ * @brief Scena testowa node::visual::Sprite i SpriteSheet: animacje, tryby, sterowanie,
+ * współdzielenie.
  */
 #include <raycade>
 
@@ -52,8 +53,8 @@ const char* ModeName(const SpriteSheet& sheet, const std::string& clip) {
 
 SCENE("sprite") {
     const auto label =
-        [&scene](Vector2 position, std::string text, float size = 15) -> visual::Text& {
-        return scene.Spawn<visual::Text>()
+        [&scene](Vector2 position, std::string text, float size = 15) -> node::visual::Text& {
+        return scene.Spawn<node::visual::Text>()
             .Content(std::move(text))
             .FontSize(size)
             .Paint(DARKGRAY)
@@ -96,14 +97,14 @@ SCENE("sprite") {
         "Arkusz z pliku JSON (Aseprite: klatki, czasy, tagi) - ramka = SheetFrame()"
     );
     auto& sheetView =
-        scene.Spawn<visual::Sprite>().Sheet(bitmap).Position(preview).Scale({kZoom, kZoom});
-    auto& marker = scene.Spawn<shapes::Rect>()
+        scene.Spawn<node::visual::Sprite>().Sheet(bitmap).Position(preview).Scale({kZoom, kZoom});
+    auto& marker = scene.Spawn<node::shapes::Rect>()
                        .Size({kFrame * kZoom, kFrame * kZoom})
                        .Paint(RED)
                        .Position(preview)
                        .Layer(1);
     // druga ramka 1 px w głąb - grubsza, lepiej widoczna na każdym kolorze klatki
-    marker.Spawn<shapes::Rect>()
+    marker.Spawn<node::shapes::Rect>()
         .Size({kFrame * kZoom - 2, kFrame * kZoom - 2})
         .Paint(RED)
         .Position({1, 1});
@@ -121,21 +122,21 @@ SCENE("sprite") {
         events.Content(text);
     };
 
-    auto& hero = scene.Spawn<visual::Sprite>()
+    auto& hero = scene.Spawn<node::visual::Sprite>()
                      .Sheet(sheet)
                      .Origin({kFrame / 2.0f, kFrame / 2.0f})
                      .Position({150, 160})
                      .Scale({4, 4})
                      .Play("stoi");
-    hero.OnFinish([addEvent](visual::Sprite& self, const std::string& name) {
+    hero.OnFinish([addEvent](node::visual::Sprite& self, const std::string& name) {
             addEvent(std::format("koniec \"{}\" -> stoi", name));
             self.Play("stoi");
         })
-        .OnFrameEvent([addEvent](visual::Sprite& self, const std::string& event) {
+        .OnFrameEvent([addEvent](node::visual::Sprite& self, const std::string& event) {
             addEvent(std::format("{} (klatka {})", event, self.Frame()));
         })
         // trafienie myszą liczy się w obróconej i przeskalowanej klatce (Contains + Origin)
-        .OnClick([addEvent](visual::Sprite& self) {
+        .OnClick([addEvent](node::visual::Sprite& self) {
             const bool tinted = !::ColorIsEqual(self.Paint(), WHITE);
             self.Paint(tinted ? WHITE : Color{255, 160, 160, 255});
             addEvent("klik w sprite");
@@ -145,36 +146,44 @@ SCENE("sprite") {
                                                  {KEY_E, "waha"},  {KEY_R, "atak"},
                                                  {KEY_T, "lista"}, {KEY_C, "cofa"}};
     for (const auto& [key, name] : clips)
-        hero.OnKeyPressed(key, [clip = std::string{name}](visual::Sprite& self) {
+        hero.OnKeyPressed(key, [clip = std::string{name}](node::visual::Sprite& self) {
             self.Play(clip);
         });
     hero.OnKeyPressed(
             KEY_SPACE,
-            [](visual::Sprite& self) {
+            [](node::visual::Sprite& self) {
                 if (self.IsPlaying())
                     self.Pause();
                 else
                     self.Play();
             }
     )
-        .OnKeyPressed(KEY_S, [](visual::Sprite& self) { self.Stop(); })
-        .OnKeyPressed(KEY_LEFT, [](visual::Sprite& self) { self.Pause().Frame(self.Frame() - 1); })
-        .OnKeyPressed(KEY_RIGHT, [](visual::Sprite& self) { self.Pause().Frame(self.Frame() + 1); })
+        .OnKeyPressed(KEY_S, [](node::visual::Sprite& self) { self.Stop(); })
         .OnKeyPressed(
-            KEY_UP, [](visual::Sprite& self) { self.Speed(std::min(8.0f, self.Speed() * 2)); }
+            KEY_LEFT, [](node::visual::Sprite& self) { self.Pause().Frame(self.Frame() - 1); }
         )
         .OnKeyPressed(
-            KEY_DOWN, [](visual::Sprite& self) { self.Speed(std::max(0.125f, self.Speed() / 2)); }
+            KEY_RIGHT, [](node::visual::Sprite& self) { self.Pause().Frame(self.Frame() + 1); }
         )
-        .OnKeyPressed(KEY_X, [](visual::Sprite& self) { self.FlippedX(!self.IsFlippedX()); })
-        .OnKeyPressed(KEY_Y, [](visual::Sprite& self) { self.FlippedY(!self.IsFlippedY()); })
-        .OnKeyPressed(KEY_Z, [](visual::Sprite& self) { self.Rotate(PI / 12); })
-        .OnKeyPressed(KEY_P, [](visual::Sprite& self) { self.Play("nie-ma-takiej"); }) // log raz
+        .OnKeyPressed(
+            KEY_UP, [](node::visual::Sprite& self) { self.Speed(std::min(8.0f, self.Speed() * 2)); }
+        )
+        .OnKeyPressed(
+            KEY_DOWN,
+            [](node::visual::Sprite& self) { self.Speed(std::max(0.125f, self.Speed() / 2)); }
+        )
+        .OnKeyPressed(KEY_X, [](node::visual::Sprite& self) { self.FlippedX(!self.IsFlippedX()); })
+        .OnKeyPressed(KEY_Y, [](node::visual::Sprite& self) { self.FlippedY(!self.IsFlippedY()); })
+        .OnKeyPressed(KEY_Z, [](node::visual::Sprite& self) { self.Rotate(PI / 12); })
+        .OnKeyPressed(
+            KEY_P, [](node::visual::Sprite& self) { self.Play("nie-ma-takiej"); }
+        ) // log raz
         // L: plik od nowa z dysku (z pominięciem Assets) i podmiana bitmapy we wspólnym arkuszu -
         // wszystkie sprite'y z tym arkuszem od razu pokazują nową wersję
         .OnKeyPressed(
             KEY_L,
-            [&engine, sheet, &sheetView, describe, addEvent, reloads = 0](visual::Sprite&) mutable {
+            [&engine, sheet, &sheetView, describe, addEvent,
+             reloads = 0](node::visual::Sprite&) mutable {
                 auto fresh = Shared(Bitmap::Load(engine.Assets().Path(kFile)));
                 if (!fresh) {
                     addEvent("L: nie można wczytać pliku");
@@ -186,7 +195,7 @@ SCENE("sprite") {
                 addEvent(std::format("L: przeładowano ({}x{})", fresh->Width(), fresh->Height()));
             }
         )
-        .OnUpdate([&info, &marker, sheet, preview](visual::Sprite& self, float) {
+        .OnUpdate([&info, &marker, sheet, preview](node::visual::Sprite& self, float) {
             const Rectangle frame = sheet->Frame(self.SheetFrame());
             marker.Position({preview.x + frame.x * kZoom, preview.y + frame.y * kZoom});
             const Vector2 size = self.FrameSize();
@@ -218,14 +227,14 @@ SCENE("sprite") {
     // ---------------- wiele sprite'ów, jeden arkusz ----------------
     auto& shared = label({40, 478}, "");
     for (int i = 0; i < 16; ++i)
-        scene.Spawn<visual::Sprite>()
+        scene.Spawn<node::visual::Sprite>()
             .Sheet(sheet)
             .Play("biegnie")
             .Frame(i % 8) // przesunięte fazy
             .Speed(0.5f + 0.1f * static_cast<float>(i % 6))
             .Position({40.0f + static_cast<float>(i) * 40, 502});
     // odczyt licznika co klatkę: wszystkie sprite'y trzymają ten sam std::shared_ptr
-    shared.OnUpdate([sheet](visual::Text& self, float) {
+    shared.OnUpdate([sheet](node::visual::Text& self, float) {
         self.Content(
             "16 sprite'ów z jednym arkuszem (use_count arkusza: {}) - różne fazy Frame() i Speed()",
             sheet.use_count()
@@ -235,14 +244,14 @@ SCENE("sprite") {
     // ---------------- przypadki brzegowe ----------------
     const float row = 572;
     label({40, row}, "Animation() na wspólnym\narkuszu = prywatna kopia", 13);
-    scene.Spawn<visual::Sprite>()
+    scene.Spawn<node::visual::Sprite>()
         .Sheet(sheet)
         .Animation("stoi", 16, 4, 2) // tylko ten sprite: "stoi" z pomarańczowego wiersza
         .Play("stoi")
         .Position({220, row});
 
     // obraz po nazwie z siatką: ten sam plik co meta.image w JSON - Assets daje tę samą bitmapę
-    auto& byName = scene.Spawn<visual::Sprite>().Sheet(
+    auto& byName = scene.Spawn<node::visual::Sprite>().Sheet(
         kFile, {kFrame, kFrame}, {kMargin, kMargin}, {kSpacing, kSpacing}
     );
     label(
@@ -258,10 +267,13 @@ SCENE("sprite") {
         .Position({490, row});
 
     label({570, row}, "Brakujący plik:\nSheet(\"brak.png\")", 13);
-    scene.Spawn<visual::Sprite>().Sheet("brak.png", {16, 16}).Scale({2, 2}).Position({700, row});
+    scene.Spawn<node::visual::Sprite>()
+        .Sheet("brak.png", {16, 16})
+        .Scale({2, 2})
+        .Position({700, row});
 
     // JSON po nazwie: Sprite pobiera arkusz z Assets w kontekście - ten sam obiekt co fromFile
-    auto& jsonByName = scene.Spawn<visual::Sprite>().Sheet(kJson);
+    auto& jsonByName = scene.Spawn<node::visual::Sprite>().Sheet(kJson);
     label(
         {760, row},
         std::format(
@@ -273,5 +285,5 @@ SCENE("sprite") {
     jsonByName.Play("waha")
         .Origin({kFrame / 2.0f, kFrame / 2.0f})
         .Position({960, row + 16})
-        .OnUpdate([](visual::Sprite& self, float dt) { self.Rotate(dt * 1.5f); });
+        .OnUpdate([](node::visual::Sprite& self, float dt) { self.Rotate(dt * 1.5f); });
 }

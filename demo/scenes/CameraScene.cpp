@@ -8,7 +8,7 @@
  *   i obrocie, bo scena przelicza kursor przez kamerę,
  * - przyciski w rogu są obiektami ekranu (ScreenSpace()): kamera ich nie przesuwa i leżą
  *   nad światem, więc kliknięcie w nie nie trafia w świat pod spodem,
- * - siatka świata jest rysowana w OnDrawWorld(), a napisy to obiekty ekranu (visual::Text).
+ * - siatka świata jest rysowana w OnDrawWorld(), a napisy to obiekty ekranu (node::visual::Text).
  */
 
 #include <raycade>
@@ -26,7 +26,7 @@ constexpr float kWorld = 1200.0f;
 int coins = 0;
 
 /** @brief Gracz sterowany WASD/strzałkami, ograniczony do świata. */
-class Walker : public shapes::Circle {
+class Walker : public node::shapes::Circle {
   protected:
     void Tick(float dt, const Input& input) override {
         Vector2 direction{};
@@ -49,7 +49,9 @@ class Walker : public shapes::Circle {
 class HudButton : public Entity {
   public:
     /** @brief Tworzy napis - dziecko bez zdarzeń, więc kliknięcie trafia w przycisk. */
-    HudButton() { label_ = &Spawn<visual::Text>().FontSize(20).Paint(WHITE).Position({10, 8}); }
+    HudButton() {
+        label_ = &Spawn<node::visual::Text>().FontSize(20).Paint(WHITE).Position({10, 8});
+    }
 
     template <typename Self> Self& Label(this Self& self, std::string label) {
         self.label_->Content(std::move(label));
@@ -70,11 +72,11 @@ class HudButton : public Entity {
 
   private:
     static constexpr Vector2 kSize{110, 36}; /**< Rozmiar przycisku. */
-    visual::Text* label_ = nullptr;          /**< Napis (dziecko). */
+    node::visual::Text* label_ = nullptr;    /**< Napis (dziecko). */
 };
 
 /** @brief Skrzynia do przeciągania (z ramką pod kursorem). */
-class Crate : public shapes::Rect {
+class Crate : public node::shapes::Rect {
   public:
     Crate() {
         Size({60, 60}).Paint(BROWN).Filled();
@@ -83,13 +85,13 @@ class Crate : public shapes::Rect {
 
   protected:
     void Draw(PrimitiveRenderer& renderer) const override {
-        shapes::Rect::Draw(renderer);
+        node::shapes::Rect::Draw(renderer);
         if (IsHovered()) renderer.Paint(BLACK).Filled(false).Rect({-3, -3}, {66, 66});
     }
 };
 
 /** @brief Moneta: kliknięta przenosi się w losowe miejsce świata. */
-class Coin : public shapes::Circle {
+class Coin : public node::shapes::Circle {
   public:
     Coin() {
         Radius(14).Paint(GOLD).Filled();
@@ -177,13 +179,14 @@ SCENE("kamera") {
     });
 
     // --- napisy: obiekty ekranu, jak przyciski HUD ---
-    scene.Spawn<shapes::Rect>()
+    scene.Spawn<node::shapes::Rect>()
         .ScreenSpace()
         .Size({850, 70})
         .Paint(::Fade(RAYWHITE, 0.85f))
         .Filled();
-    const auto label = [&scene](Vector2 position, std::string text, float size) -> visual::Text& {
-        return scene.Spawn<visual::Text>()
+    const auto label =
+        [&scene](Vector2 position, std::string text, float size) -> node::visual::Text& {
+        return scene.Spawn<node::visual::Text>()
             .ScreenSpace()
             .Content(std::move(text))
             .FontSize(size)
@@ -192,7 +195,7 @@ SCENE("kamera") {
             .Layer(1);
     };
     label({20, 12}, "Kamera 2D", 22);
-    label({20, 42}, "", 16).OnUpdate([&engine, &camera](visual::Text& self, float) {
+    label({20, 42}, "", 16).OnUpdate([&engine, &camera](node::visual::Text& self, float) {
         const Vector2 mouse = camera.ScreenToWorld(engine.Input().MousePosition());
         self.Content(
             "zoom {:.2f}   obrót {:.0f}°   podążanie: {}   kursor w świecie: ({:.0f}, {:.0f})",
@@ -200,7 +203,7 @@ SCENE("kamera") {
             mouse.x, mouse.y
         );
     });
-    label({870, 160}, "", 20).OnUpdate([](visual::Text& self, float) {
+    label({870, 160}, "", 20).OnUpdate([](node::visual::Text& self, float) {
         self.Content("Monety: {}", coins);
     });
     label(

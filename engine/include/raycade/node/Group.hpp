@@ -6,6 +6,8 @@
 
 #include <raycade/entity/Entity.hpp>
 
+namespace node {
+
 /**
  * @brief Niewidoczny rodzic służący do grupowania i przesuwania dzieci.
  * @details Przydaje się np. dla postaci złożonej z kilku figur albo układu obiektów
@@ -17,3 +19,5 @@ class Group : public Entity {
     /** @brief Grupa nie rysuje niczego - widoczne są tylko jej dzieci. */
     void Draw(PrimitiveRenderer&) const override {}
 };
+
+} // namespace node

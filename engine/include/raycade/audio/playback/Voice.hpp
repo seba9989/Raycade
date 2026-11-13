@@ -23,7 +23,7 @@ class Sound;
  * if (hit.IsPlaying()) hit.Stop();
  * @endcode
  *
- * Dźwięk w konkretnym miejscu świata gra przez audio::Emitter - głos nie ma położenia, żeby
+ * Dźwięk w konkretnym miejscu świata gra przez node::sound::Emitter - głos nie ma położenia, żeby
  * nie dublować Transformable.
  *
  * Uchwyt jest lekki (numer miejsca w puli i numer generacji) i można go kopiować. Gdy głos się

@@ -75,7 +75,7 @@ class AudioMixer;
  * if (!engine.IsReady()) return 1;
  *
  * engine.CreateScene("menu", [&](Scene& scene) { // pierwsza scena staje się aktywna
- *     scene.Spawn<shapes::Circle>().Position({400, 300}).Radius(20).Paint(ORANGE).Filled();
+ *     scene.Spawn<node::shapes::Circle>().Position({400, 300}).Radius(20).Paint(ORANGE).Filled();
  * });
  *
  * return engine

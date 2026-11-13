@@ -14,6 +14,15 @@
 #include <optional>
 #include <unordered_map>
 
+using node::collider::CollisionShape;
+using node::physics::Area;
+using node::physics::AreaShapeContact;
+using node::physics::CharacterBody;
+using node::physics::Collision;
+using node::physics::CollisionObject;
+using node::physics::PhysicsBody;
+using node::physics::RigidBody;
+
 namespace {
 
 /** @brief Ile pikseli to jeden „metr” Box2D - jego tolerancje są strojone pod metry. */
@@ -119,7 +128,8 @@ struct BodyRecord {
     bool moved = false; /**< StaticBody przesunięty w kodzie - kinematyczny. */
     std::vector<const CollisionShape*> current; /**< Collidery z bieżącego zebrania. */
     std::vector<ShapeRecord> shapes;
-    ShapeRecord capsule; /**< Postać: kapsuła do fizyki (collidery są wtedy czujnikami dla Area). */
+    ShapeRecord capsule; /**< Postać: kapsuła do fizyki (collidery są wtedy czujnikami dla
+                            Area). */
     b2Transform stepStart = b2Transform_identity; /**< Położenie Box2D na początku kroku. */
     AffineMatrix2D written{};                     /**< Macierz bryły po ostatnim kroku. */
     bool hasWritten = false;

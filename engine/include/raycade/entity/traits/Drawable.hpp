@@ -60,12 +60,12 @@ class Drawable {
      * przesuwa się razem z obiektem, rodzicami i kamerą. Kliknięcia poza nim nie trafiają ani
      * w obiekt, ani w dzieci. Zagnieżdżone przycięcia się przecinają. Przy obrocie przycinana
      * jest obwiednia prostokąta na ekranie - do dokładnego przycinania obróconej grupy służy
-     * visual::RenderGroup. Przydaje się np. w przewijanym panelu, minimapie i polu tekstowym.
+     * node::visual::RenderGroup. Przydaje się np. w przewijanym panelu, minimapie i polu tekstowym.
      * @code{.cpp}
-     * scene.Spawn<Group>()
+     * scene.Spawn<node::Group>()
      *     .Position({50, 50})
      *     .ClipRect({0, 0, 300, 200}) // dzieci widać tylko w prostokącie 300x200
-     *     .Children([](Group& panel) { panel.Spawn<shapes::Circle>().Radius(250); });
+     *     .Children([](node::Group& panel) { panel.Spawn<node::shapes::Circle>().Radius(250); });
      * @endcode
      * @param area Prostokąt w układzie lokalnym.
      * @return Ten sam obiekt.
@@ -90,12 +90,12 @@ class Drawable {
     /**
      * @brief Rysuje obiekt przez shader GPU.
      * @details Jak Blend() - dotyczy tylko własnego rysunku obiektu, bez dzieci. Żeby nałożyć
-     * efekt na całą grupę, shader ustawia się na visual::RenderGroup (działa na teksturze z
+     * efekt na całą grupę, shader ustawia się na node::visual::RenderGroup (działa na teksturze z
      * rysunkiem dzieci). Shader niepoprawnie wczytany (ShaderProgram::IsLoaded() == false) jest
      * pomijany.
      * @code{.cpp}
      * auto glow = engine.Assets().Shader("glow.fs");
-     * scene.Spawn<shapes::Circle>().Radius(40).Filled().Shader(glow);
+     * scene.Spawn<node::shapes::Circle>().Radius(40).Filled().Shader(glow);
      * @endcode
      * @param shader Shader (współdzielony) albo nullptr - bez shadera.
      * @return Ten sam obiekt.
@@ -106,13 +106,13 @@ class Drawable {
     }
 
     /**
-     * @brief Ustawia shader z pliku - tak jak visual::Sprite::Sheet() z nazwą pliku.
+     * @brief Ustawia shader z pliku - tak jak node::visual::Sprite::Sheet() z nazwą pliku.
      * @details Plik pobiera Assets z kontekstu (Engine::Assets(), patrz Assets::Shader()), więc
      * obiekty z tym samym plikiem dzielą jeden program (i jego uniformy), a nazwa względna jest
      * liczona od katalogu assets/. Brakujący plik albo błąd kompilacji daje rysunek bez efektu
      * i wpis w logu. Bez Assets w kontekście - Assets::Local().
      * @code{.cpp}
-     * scene.Spawn<shapes::Circle>().Radius(40).Filled().Shader("glow.fs");
+     * scene.Spawn<node::shapes::Circle>().Radius(40).Filled().Shader("glow.fs");
      * @endcode
      * @param fragment Plik shadera fragmentów.
      * @return Ten sam obiekt.
@@ -180,7 +180,7 @@ class Drawable {
     /**
      * @brief Włącza tryb mieszania i shader obiektu (Blend(), Shader()).
      * @details Para z EndEffects(). Drawable::Render() otacza nimi Draw(); klasa, która rysuje
-     * inaczej (np. visual::RenderGroup - teksturę), otacza nimi własne rysowanie.
+     * inaczej (np. node::visual::RenderGroup - teksturę), otacza nimi własne rysowanie.
      */
     void BeginEffects() const;
 

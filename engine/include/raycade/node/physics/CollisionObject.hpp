@@ -10,6 +10,8 @@
 #include <raycade/entity/Entity.hpp>
 #include <raycade/node/collider/CollisionShape.hpp>
 
+namespace node::physics {
+
 /**
  * @brief Obiekt biorący udział w kolizjach: ma collidery-dzieci, warstwę i maskę.
  * @details Baza StaticBody, CharacterBody i Area (odpowiednik CollisionObject2D z Godota).
@@ -71,7 +73,7 @@ class CollisionObject : public Entity {
      * @brief Collidery obiektu: dzieci i dalsi potomkowie, którzy nie należą do innego obiektu.
      * @return Collidery, także wyłączone (IsDisabled()).
      */
-    std::vector<const CollisionShape*> Shapes() const;
+    std::vector<const collider::CollisionShape*> Shapes() const;
 
     /**
      * @brief Grawitacja sceny (Scene::Gravity()), domyślnie {0, 980} pikseli/s².
@@ -107,10 +109,12 @@ class CollisionObject : public Entity {
     std::uint32_t mask_ = 1;  /**< Warstwy, z którymi obiekt się zderza. */
 
   private:
-    friend class PhysicsWorld;
+    friend class ::PhysicsWorld;
 
     AffineMatrix2D previous_{}; /**< Przekształcenie przed ostatnim krokiem stałym. */
     AffineMatrix2D stepped_{};  /**< Przekształcenie po ostatnim kroku stałym. */
     bool inStep_ = false;       /**< Czy obiekt był na liście na początku kroku. */
     bool interpolated_ = false; /**< Czy previous_ i stepped_ opisują ostatni krok. */
 };
+
+} // namespace node::physics

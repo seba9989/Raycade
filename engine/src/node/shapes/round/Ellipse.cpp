@@ -1,10 +1,10 @@
 /**
  * @file Ellipse.cpp
- * @brief Rysowanie i test trafienia kształtu shapes::Ellipse.
+ * @brief Rysowanie i test trafienia kształtu node::shapes::Ellipse.
  */
 #include <raycade/node/shapes/round/Ellipse.hpp>
 
-namespace shapes {
+namespace node::shapes {
 
 bool Ellipse::Contains(Vector2 point) const {
     const auto local = TryToLocal(point);
@@ -22,4 +22,4 @@ void Ellipse::ConvexParts(std::vector<ConvexPart>& parts) const {
     parts.push_back(ConvexPart::Ellipse({0.0f, 0.0f}, radius_));
 }
 
-} // namespace shapes
+} // namespace node::shapes

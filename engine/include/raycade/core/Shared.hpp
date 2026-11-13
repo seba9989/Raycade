@@ -16,7 +16,7 @@
  * @code{.cpp}
  * auto wave = Shared(ShaderProgram::Load("", engine.AssetPath("wave.fs"))); // nullptr: błąd
  * if (!wave) engine.Log(LogLevel::Warning, "brak shadera fali");
- * scene.Spawn<visual::RenderGroup>().Shader(wave);
+ * scene.Spawn<node::visual::RenderGroup>().Shader(wave);
  * @endcode
  * Wynik konwertuje się niejawnie na `std::shared_ptr<const T>` (Typeface, Bitmap).
  * @tparam T Typ zasobu.

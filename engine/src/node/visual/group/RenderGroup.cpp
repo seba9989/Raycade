@@ -4,7 +4,7 @@
  */
 #include <raycade/node/visual/group/RenderGroup.hpp>
 
-namespace visual {
+namespace node::visual {
 
 bool RenderGroup::Contains(Vector2 point) const {
     const auto local = TryToLocal(point);
@@ -27,4 +27,4 @@ void RenderGroup::RenderContent(PrimitiveRenderer& renderer) const {
     EndEffects();
 }
 
-} // namespace visual
+} // namespace node::visual

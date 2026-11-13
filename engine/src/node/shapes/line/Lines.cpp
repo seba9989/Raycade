@@ -1,12 +1,12 @@
 /**
  * @file Lines.cpp
- * @brief Rysowanie i test trafienia kształtu shapes::Lines.
+ * @brief Rysowanie i test trafienia kształtu node::shapes::Lines.
  */
 #include <raycade/node/shapes/line/Lines.hpp>
 
 #include "../HitDistance.hpp"
 
-namespace shapes {
+namespace node::shapes {
 
 bool Lines::Contains(Vector2 point) const {
     for (std::size_t i = 0; i + 1 < vertices_.size(); i += 2)
@@ -26,4 +26,4 @@ void Lines::ConvexParts(std::vector<ConvexPart>& parts) const {
         parts.push_back(ConvexPart::Segment(vertices_[i], vertices_[i + 1]));
 }
 
-} // namespace shapes
+} // namespace node::shapes

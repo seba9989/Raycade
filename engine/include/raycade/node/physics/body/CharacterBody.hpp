@@ -9,6 +9,8 @@
 
 #include <raycade/node/physics/PhysicsBody.hpp>
 
+namespace node::physics {
+
 /**
  * @brief Ciało sterowane kodem: ruch przez Velocity() i MoveAndSlide() (CharacterBody2D z Godota).
  * @details Postać sama ustawia prędkość (sterowanie, skok, grawitacja), a MoveAndSlide()
@@ -20,7 +22,7 @@
  * Na podłodze (pochylonej mniej niż FloorMaxAngle()) postać jest wypychana pionowo w górę,
  * więc nie zsuwa się z pochylni i wchodzi na nią przy ruchu w bok.
  * @code{.cpp}
- * class Player : public CharacterBody {
+ * class Player : public node::physics::CharacterBody {
  *   protected:
  *     void Tick(float, const Input& input) override {
  *         if (input.KeyPressed(KEY_SPACE)) jump_ = true; // jednorazowe naciśnięcie - co klatkę
@@ -139,7 +141,7 @@ class CharacterBody : public PhysicsBody {
     const std::vector<Collision>& SlideCollisions() const { return collisions_; }
 
   private:
-    friend class PhysicsWorld;
+    friend class ::PhysicsWorld;
 
     Vector2 velocity_{};                /**< Prędkość w pikselach na sekundę. */
     Vector2 up_{0.0f, -1.0f};           /**< Kierunek „w górę”. */
@@ -157,3 +159,5 @@ class CharacterBody : public PhysicsBody {
     Vector2 floorWorld_{};                   /**< Ten punkt w układzie sceny przy zapisie. */
     Vector2 platformVelocity_{};             /**< Prędkość podłogi pod postacią. */
 };
+
+} // namespace node::physics

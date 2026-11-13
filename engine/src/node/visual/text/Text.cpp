@@ -4,7 +4,7 @@
  */
 #include <raycade/node/visual/text/Text.hpp>
 
-namespace visual {
+namespace node::visual {
 
 TextStyle Text::Style() const {
     TextStyle style;
@@ -49,4 +49,4 @@ void Text::Draw(PrimitiveRenderer&) const {
     Face().Draw(content_, TopLeft(), Style(), color_);
 }
 
-} // namespace visual
+} // namespace node::visual

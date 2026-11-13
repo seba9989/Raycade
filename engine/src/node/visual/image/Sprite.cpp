@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <cctype>
 
-namespace visual {
+namespace node::visual {
 
 bool Sprite::HasFrames() const {
     return sheet_ && sheet_->Bitmap() && !sheet_->Bitmap()->IsEmpty() && sheet_->FrameCount() > 0;
@@ -200,4 +200,4 @@ void Sprite::Draw(PrimitiveRenderer& renderer) const {
     renderer.Blit(*sheet_->Bitmap(), source, {offset.x - pivot.x, offset.y - pivot.y}, color_);
 }
 
-} // namespace visual
+} // namespace node::visual

@@ -19,7 +19,7 @@
  * urządzenie zachowuje się tak, jakby nic nie było wciśnięte: zapytania o wciśnięcie zwracają
  * false, zapytania „Up” - true, a pozycje i ruchy - {0, 0}.
  *
- * Gdy obiekt z fokusem przejmuje klawiaturę (np. ui::TextField), wszyscy inni widzą ją jak
+ * Gdy obiekt z fokusem przejmuje klawiaturę (np. node::ui::TextField), wszyscy inni widzą ją jak
  * wyłączoną - IsKeyboardCaptured() mówi, czy tak jest w tej klatce.
  *
  * Akcje i osie (ActionPressed(), Axis()) to nazwy zamiast konkretnych klawiszy - patrz

@@ -6,7 +6,7 @@
 
 #include <raycade/node/shapes/Shape.hpp>
 
-namespace shapes {
+namespace node::shapes {
 
 /** @brief Elipsa; pozycja obiektu oznacza środek, a promienie obie półosie. */
 class Ellipse : public Shape {
@@ -38,4 +38,4 @@ class Ellipse : public Shape {
     Vector2 radius_{20, 10}; /**< Promienie {poziomy, pionowy}. */
 };
 
-} // namespace shapes
+} // namespace node::shapes

@@ -1,10 +1,10 @@
 /**
  * @file Polygon.cpp
- * @brief Rysowanie i test trafienia kształtu shapes::Polygon.
+ * @brief Rysowanie i test trafienia kształtu node::shapes::Polygon.
  */
 #include <raycade/node/shapes/polygon/Polygon.hpp>
 
-namespace shapes {
+namespace node::shapes {
 
 bool Polygon::Contains(Vector2 point) const {
     if (!simple_) return false;
@@ -22,4 +22,4 @@ void Polygon::ConvexParts(std::vector<ConvexPart>& parts) const {
         parts.push_back(ConvexPart::Polygon({piece.begin(), piece.end()}));
 }
 
-} // namespace shapes
+} // namespace node::shapes

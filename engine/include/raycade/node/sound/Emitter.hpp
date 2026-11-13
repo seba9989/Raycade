@@ -1,6 +1,6 @@
 /**
  * @file Emitter.hpp
- * @brief Klasa audio::Emitter - dźwięk w przestrzeni 2D sceny.
+ * @brief Klasa node::sound::Emitter - dźwięk w przestrzeni 2D sceny.
  */
 #pragma once
 
@@ -12,7 +12,7 @@
 #include <raycade/audio/playback/Voice.hpp>
 #include <raycade/entity/Entity.hpp>
 
-namespace audio {
+namespace node::sound {
 
 /** @brief Krzywa tłumienia dźwięku z odległością (Emitter::Attenuation()). */
 enum class Falloff {
@@ -26,23 +26,23 @@ enum class Falloff {
  * w panoramie.
  * @details Emiter odtwarza dźwięk z Audio::Sound() (z jego plikami i ustawieniami) i co
  * klatkę liczy dla swoich głosów głośność i panoramę z położenia względem słuchacza.
- * Słuchaczem jest audio::Listener w tej samej scenie, a bez niego - środek kamery sceny
+ * Słuchaczem jest node::sound::Listener w tej samej scenie, a bez niego - środek kamery sceny
  * (SceneCamera::Target()). Emiter w układzie ekranu (ScreenSpace()) gra bez tłumienia.
  * @code{.cpp}
  * engine.Audio().Sound("ogien").Files({"fire.wav"}).Looped().Bus("efekty");
  *
- * scene.Spawn<audio::Emitter>()
+ * scene.Spawn<node::sound::Emitter>()
  *     .Sound("ogien")
  *     .MaxDistance(500)
- *     .Attenuation(audio::Falloff::Linear)
+ *     .Attenuation(node::sound::Falloff::Linear)
  *     .Position({750, 580})
  *     .Play();               // ruszy po dodaniu do sceny
  * @endcode
  *
  * Jednorazowy dźwięk w danym miejscu to emiter, który usuwa się po końcu odtwarzania:
  * @code{.cpp}
- * scene.Spawn<audio::Emitter>().Sound("wybuch").Position(where).Play()
- *     .OnFinish([](audio::Emitter& self) { self.Destroy(); });
+ * scene.Spawn<node::sound::Emitter>().Sound("wybuch").Position(where).Play()
+ *     .OnFinish([](node::sound::Emitter& self) { self.Destroy(); });
  * @endcode
  *
  * Usunięcie emitera zatrzymuje jego głosy (z wyciszeniem Source::FadeOutTime()). Emiter jest
@@ -158,9 +158,9 @@ class Emitter : public Entity {
     std::string sound_;                 /**< Nazwa dźwięku z Audio::Sound(). */
     float maxDistance_ = 600.0f;        /**< Zasięg słyszalności. */
     Falloff falloff_ = Falloff::Linear; /**< Krzywa tłumienia. */
-    std::vector<Voice> voices_;         /**< Głosy emitera (martwe usuwa Tick()). */
+    std::vector<audio::Voice> voices_;  /**< Głosy emitera (martwe usuwa Tick()). */
     int requests_ = 0;                  /**< Play() czekające na Tick(). */
     std::function<void()> finish_;      /**< Zdarzenie końca. */
 };
 
-} // namespace audio
+} // namespace node::sound

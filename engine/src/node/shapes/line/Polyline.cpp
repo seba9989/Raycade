@@ -1,12 +1,12 @@
 /**
  * @file Polyline.cpp
- * @brief Rysowanie i test trafienia kształtu shapes::Polyline.
+ * @brief Rysowanie i test trafienia kształtu node::shapes::Polyline.
  */
 #include <raycade/node/shapes/line/Polyline.hpp>
 
 #include "../HitDistance.hpp"
 
-namespace shapes {
+namespace node::shapes {
 
 bool Polyline::Contains(Vector2 point) const {
     const std::vector<Vector2> world = WorldVertices(vertices_);
@@ -30,4 +30,4 @@ void Polyline::ConvexParts(std::vector<ConvexPart>& parts) const {
         parts.push_back(ConvexPart::Segment(vertices_.back(), vertices_.front()));
 }
 
-} // namespace shapes
+} // namespace node::shapes

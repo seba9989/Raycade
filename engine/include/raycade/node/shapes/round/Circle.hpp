@@ -6,7 +6,7 @@
 
 #include <raycade/node/shapes/Shape.hpp>
 
-namespace shapes {
+namespace node::shapes {
 
 /** @brief Okrąg lub koło; pozycja obiektu oznacza środek. */
 class Circle : public Shape {
@@ -38,4 +38,4 @@ class Circle : public Shape {
     float radius_ = 10.0f; /**< Promień w pikselach. */
 };
 
-} // namespace shapes
+} // namespace node::shapes

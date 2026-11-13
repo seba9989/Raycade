@@ -8,6 +8,8 @@
 
 #include <raycade/node/physics/PhysicsBody.hpp>
 
+namespace node::physics {
+
 /**
  * @brief Bryła sztywna: ruch i obrót liczy fizyka (RigidBody2D z Godota, Rigidbody2D z Unity).
  * @details Ciało spada pod wpływem grawitacji, odbija się (Bounce()), trze o powierzchnie
@@ -22,16 +24,15 @@
  * Fizyka działa w kroku stałym, po FixedTick() wszystkich obiektów. Ruchem steruje się siłami
  * i impulsami albo wprost prędkością; Position() i Rotate() przenoszą bryłę natychmiast.
  * @code{.cpp}
- * auto& crate = scene.Spawn<RigidBody>().Position({400, 100}).Mass(2).Friction(0.8f);
- * crate.Spawn<collider::Rect>()
- *     .Position({-15, -15})
+ * auto& crate = scene.Spawn<node::physics::RigidBody>().Position({400,
+ * 100}).Mass(2).Friction(0.8f); crate.Spawn<node::collider::Rect>() .Position({-15, -15})
  *     .Size({30, 30})
  *     .Paint(BROWN)
  *     .Filled()
  *     .Visible();
  *
- * auto& ball = scene.Spawn<RigidBody>().Position({500, 100}).Bounce(0.7f);
- * ball.Spawn<collider::Circle>().Radius(12).Paint(RED).Filled().Visible();
+ * auto& ball = scene.Spawn<node::physics::RigidBody>().Position({500, 100}).Bounce(0.7f);
+ * ball.Spawn<node::collider::Circle>().Radius(12).Paint(RED).Filled().Visible();
  * ball.ApplyCentralImpulse({200, -100}); // rzut
  * @endcode
  */
@@ -197,7 +198,7 @@ class RigidBody : public PhysicsBody {
     Vector2 CenterOfMass() const { return centerOfMass_; }
 
   private:
-    friend class PhysicsWorld;
+    friend class ::PhysicsWorld;
 
     /** @brief Siła albo impuls czekający na najbliższy krok. */
     struct Pending {
@@ -219,3 +220,5 @@ class RigidBody : public PhysicsBody {
     float torqueImpulse_ = 0;      /**< Impuls kątowy do najbliższego kroku. */
     Vector2 centerOfMass_{};       /**< Środek masy z ostatniego kroku. */
 };
+
+} // namespace node::physics

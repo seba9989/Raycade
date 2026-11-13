@@ -17,28 +17,29 @@ warstwy wcześniejsze na liście:
 | `input/`     | Input, akcje i osie                                             | -                           |
 | `audio/`     | Audio (fasada) i z przestrzeni nazw `audio`: `playback/` Source, Sound, Music, Voice; `mixing/` Bus (raylib audio) | assets |
 | `entity/`    | Entity; `traits/` klasy bazowe (Transformable, Drawable, Updatable, Focusable, Contextable) | math, assets, render, input |
-| `node/Group.hpp` | Group - pusty węzeł grupujący                               | entity i jej zależności     |
-| `node/shapes/` | figury z przestrzeni nazw `shapes` (baza `Shape`); `point/`, `line/`, `polygon/`, `round/` | entity i jej zależności |
-| `node/visual/` | z przestrzeni nazw `visual`: `image/` Sprite, Canvas; `text/` Text; `group/` RenderGroup | entity i jej zależności |
-| `node/ui/`   | elementy interfejsu z przestrzeni nazw `ui`                     | entity i jej zależności     |
-| `node/sound/` | obiekty sceny z przestrzeni nazw `audio`: Emitter, Listener    | audio, entity               |
-| `node/collider/` | `Collider<S>`, CollisionShape, aliasy `collider::`          | node/shapes, node/visual    |
-| `node/physics/` | CollisionObject, PhysicsBody; `body/` StaticBody, CharacterBody, RigidBody; `area/` Area | node/collider i jej zależności |
+| `node/Group.hpp` | `node::Group` - pusty węzeł grupujący                       | entity i jej zależności     |
+| `node/shapes/` | figury z przestrzeni nazw `node::shapes` (baza `Shape`); `point/`, `line/`, `polygon/`, `round/` | entity i jej zależności |
+| `node/visual/` | z przestrzeni nazw `node::visual`: `image/` Sprite, Canvas; `text/` Text; `group/` RenderGroup | entity i jej zależności |
+| `node/ui/`   | elementy interfejsu z przestrzeni nazw `node::ui`               | entity i jej zależności     |
+| `node/sound/` | z przestrzeni nazw `node::sound`: Emitter, Listener           | audio, entity               |
+| `node/collider/` | z przestrzeni nazw `node::collider`: `Collider<S>`, CollisionShape, aliasy (`Rect`, `Circle`...) | node/shapes, node/visual    |
+| `node/physics/` | z przestrzeni nazw `node::physics`: CollisionObject, PhysicsBody; `body/` StaticBody, CharacterBody, RigidBody; `area/` Area | node/collider i jej zależności |
 | `scene/`     | Scene; `camera/` SceneCamera; `pointer/` PointerSystem (trafienia myszą); `physics/` PhysicsWorld (Box2D) | node/physics i jej zależności (Scene ma PhysicsWorld) |
 | `engine/Engine.hpp` | pętla, okno, sceny, zasoby, dźwięk                       | wszystkie powyższe          |
 | `engine/SceneMacro.hpp` | makro SCENE (wymaga pełnej klasy Engine)             | `engine/Engine.hpp`         |
 
-W `node/` leży wszystko, co gra tworzy przez `Spawn<T>()`. Każda grupa tematyczna ma własny
-podkatalog, także gdy ma jeden plik (`assets/font/`, `scene/camera/`). Podkatalog nigdy nie jest
-niższą warstwą niż jego rodzic. Katalog nie wyznacza przestrzeni nazw: `node/shapes/round/Circle.hpp`
-to `shapes::Circle`. Jeden plik zawiera jedną klasę; małe struktury pomocnicze (`Collision`,
+W `node/` i w przestrzeni nazw `node` leży wszystko, co gra tworzy przez `Spawn<T>()` (patrz
+sekcja „Przestrzenie nazw”). Każda grupa tematyczna ma własny podkatalog, także gdy
+ma jeden plik (`assets/font/`, `scene/camera/`). Podkatalog nigdy nie jest niższą warstwą niż
+jego rodzic. Przestrzeń nazw kończy się na drugim poziomie: `node/shapes/round/Circle.hpp` to
+`node::shapes::Circle` - głębsze katalogi porządkują tylko pliki. Jeden plik zawiera jedną klasę; małe struktury pomocnicze (`Collision`,
 `RayHit`, `AreaShapeContact`) leżą przy klasie, której dotyczą.
 
 Nagłówki zbiorcze leżą obok katalogu przestrzeni nazw: `audio.hpp` obok `audio/` (mikser),
-`node/shapes.hpp`, `node/visual.hpp`, `node/ui.hpp`, `node/sound.hpp` i `node/physics.hpp`
-(z colliderami). Podkatalogi tematyczne (`round/`, `body/`) nie mają własnych.
-`<raycade>` (w `engine/umbrella/`) dołącza `engine/Engine.hpp`, `engine/SceneMacro.hpp`,
-`audio.hpp`, `node/Group.hpp` i nagłówki zbiorcze z `node/`.
+`node/shapes.hpp`, `node/visual.hpp`, `node/ui.hpp`, `node/sound.hpp`, `node/collider.hpp`
+i `node/physics.hpp` (dołącza też collidery), a `node.hpp` zbiera je wszystkie razem z `Group`.
+Podkatalogi tematyczne (`round/`, `body/`) nie mają własnych. `<raycade>` (w `engine/umbrella/`)
+dołącza `engine/Engine.hpp`, `engine/SceneMacro.hpp`, `audio.hpp` i `node.hpp`.
 
 Źródła w `engine/src/` odwzorowują ten sam układ 1:1. Nagłówki prywatne implementacji leżą
 obok swoich `.cpp`: mikser dźwięku `src/audio/AudioMixer.hpp` (gra korzysta z fasady
@@ -56,6 +57,34 @@ deklaruje się zapowiadająco (`class SceneCamera;`), żeby nie łamać kolejno�
 Wewnątrz silnika nagłówki dołącza się zawsze pełną ścieżką: `#include <raycade/entity/Entity.hpp>`,
 nigdy względną (`"../Entity.hpp"`). Ścieżka względna zostaje tylko dla nagłówków prywatnych
 w `src/`. Katalogi mają nazwy małymi literami, pliki z klasami - PascalCase.
+
+## Przestrzenie nazw
+
+Wszystko, co gra tworzy przez `Spawn<T>()`, jest w przestrzeni nazw `node`, podzielonej
+tematycznie - wpisanie `Spawn<node::` podpowiada kategorie, a `Spawn<node::shapes::` typy:
+
+| Przestrzeń nazw  | Typy                                                                  |
+|------------------|-----------------------------------------------------------------------|
+| `node`           | `Group`                                                               |
+| `node::shapes`   | figury (`Rect`, `Circle`, `Polygon`...) i ich baza `Shape`            |
+| `node::visual`   | `Sprite`, `Text`, `Canvas`, `RenderGroup`                             |
+| `node::ui`       | `TextField`                                                           |
+| `node::physics`  | `StaticBody`, `CharacterBody`, `RigidBody`, `Area`, bazy `PhysicsBody` i `CollisionObject`, `Collision` |
+| `node::collider` | `Collider<S>`, `CollisionShape`, aliasy (`collider::Rect` = `Collider<shapes::Rect>`) |
+| `node::sound`    | `Emitter`, `Listener`                                                 |
+
+- **Klasy bazowe drzewa są poza `node`** (`Entity`, `Transformable`, `Drawable`, `Updatable`,
+  `Focusable`, `Contextable`) - nie tworzy się ich wprost, a dziedziczą po nich także obiekty
+  gry. Bazę w `node` ma tylko kategoria, w której jest wspólnym typem do przechowywania
+  (`shapes::Shape`, `physics::PhysicsBody`).
+- **Poza `node` są też Engine, Scene, SceneCamera, PhysicsWorld, zasoby i mikser** - to nie są
+  obiekty drzewa sceny. Mikser ma własną przestrzeń `audio` (patrz sekcja „Dźwięk”), dlatego
+  obiekty sceny dźwięku to `node::sound`, a nie `node::audio`.
+- **Przestrzeń nazw ma dwa poziomy**: `node::kategoria::Typ`. Głębsze katalogi
+  (`node/shapes/round/`) nie dodają poziomów.
+- Gra może napisać `using namespace node;` i używać `shapes::Circle`, `physics::StaticBody`;
+  `audio::` nadal oznacza mikser. Kod silnika poza `node` pisze pełne nazwy w nagłówkach,
+  a w plikach `.cpp` może użyć deklaracji `using node::physics::RigidBody;` dla konkretnych typów.
 
 ## Nazwy metod
 
@@ -80,15 +109,15 @@ w `src/`. Katalogi mają nazwy małymi literami, pliki z klasami - PascalCase.
   `ScaleBy(s)` dodają albo mnożą bieżącą. Metoda, która dopisuje element do kolekcji, ma
   prefiks `Add` (`SpriteSheet::AddFrame()`), żeby nie wyglądała jak setter.
 - **Jedna nazwa - jedno znaczenie.** Ta sama nazwa nie oznacza dwóch różnych rzeczy w różnych
-  klasach: przycięcie rysunku to `ClipRect()`, animacja to `Animation()` (w `visual::Sprite`
+  klasach: przycięcie rysunku to `ClipRect()`, animacja to `Animation()` (w `node::visual::Sprite`
   i w `SpriteSheet`), zdarzenie puszczenia przycisku to `OnMouseReleased()` - jak zapytanie
   `Input::MouseReleased()`, a nie stan `Input::MouseUp()`.
-- **Punkt zaczepienia** obiektów z rozmiarem (`visual::Sprite`, `visual::Text`) to
+- **Punkt zaczepienia** obiektów z rozmiarem (`node::visual::Sprite`, `node::visual::Text`) to
   `Origin()` w pikselach plus `Anchor()` jako część rozmiaru; wynik podaje `Pivot()`.
 - **Zdarzenia zaczynają się od `On`:** `OnClick()`, `OnUpdate()`, `OnDraw()`. Ponowne
   wywołanie zastępuje poprzednią reakcję (w `OnKeyPressed(key, ...)` - reakcję na ten sam
   klawisz). Pary zdarzeń dostają ten sam typ argumentu: `OnCollisionEnter/Stay/Exit()`
-  dostają `const Collision&`.
+  dostają `const node::physics::Collision&`.
 - **Jedno pojęcie - jedna nazwa:** prędkość ciała to `Velocity()` (w `CharacterBody`
   i `RigidBody`), liczba elementów to `...Count()` (`FrameCount()`, `SheetFrameCount()`),
   zasób z `Load()` sprawdza się przez `IsLoaded()`, a obiekt GPU bez pliku
@@ -110,7 +139,7 @@ w `Input`. Metody, które prowadzą wewnętrzny przebieg (kroki `PhysicsWorld`,
 ## Łańcuchowanie
 
 Każda metoda konfiguracji zwraca obiekt, na którym ją wywołano. W klasach z hierarchii Entity
-(kształty, `ui::TextField`, klasy bazowe) robi to deducing this:
+(kształty, `node::ui::TextField`, klasy bazowe) robi to deducing this:
 
 ```cpp
 template <typename Self> Self& Radius(this Self& self, float radius) {
@@ -120,11 +149,11 @@ template <typename Self> Self& Radius(this Self& self, float radius) {
 ```
 
 Pola i prywatne metody klasy czyta się wprost przez `self` (`self.radius_`,
-`self.SheetChanged()` w `visual::Sprite`), bez rzutowania na klasę bazową - dostęp jest sprawdzany w klasie,
+`self.SheetChanged()` w `node::visual::Sprite`), bez rzutowania na klasę bazową - dostęp jest sprawdzany w klasie,
 która definiuje metodę, więc działa też dla prywatnych składowych.
 
 Dzięki temu łańcuch zachowuje typ także w klasie pochodnej
-(`class Ball : public shapes::Circle`). Klasy spoza hierarchii (`Engine`, `Scene`,
+(`class Ball : public node::shapes::Circle`). Klasy spoza hierarchii (`Engine`, `Scene`,
 `SceneCamera`, `PrimitiveRenderer`, `Input`) zwracają po prostu `*this`.
 
 Callbacki zdarzeń dostają obiekt jako pierwszy argument (`Callback<Self, ...>`). Przechwycenie
@@ -216,10 +245,12 @@ audio.Bus("efekty").Paused();                // stan całej grupy
   próbki. Uchwyt skończonego głosu jest martwy i ignoruje polecenia bez wpisu w logu.
 - **Szyna to grupa dźwięków** (`audio::Bus`), a nie kanał - „kanał” w audio znaczy też kanał
   stereo albo pojedynczy głos. Setter dźwięku nazywa się krótko `Bus()`.
-- **Polecenia odtwarzania to czasowniki** (`Play()`, `Stop()`), jak w `visual::Sprite`, a trwały
+- **Polecenia odtwarzania to czasowniki** (`Play()`, `Stop()`), jak w `node::visual::Sprite`, a trwały
   stan grupy to flagi szyny (`Paused()`, `Muted()`).
-- **Dźwięk w miejscu świata gra przez `audio::Emitter`** - głos nie ma położenia, żeby nie
-  dublować `Transformable`. Słuchacz to `audio::Listener` (bez niego - środek kamery sceny).
+- **Dźwięk w miejscu świata gra przez `node::sound::Emitter`** - głos nie ma położenia, żeby nie
+  dublować `Transformable`. Słuchacz to `node::sound::Listener` (bez niego - środek kamery sceny).
+  Obiekty sceny są w `node::sound`, a nie `node::audio`, żeby `using namespace node;` nie robiło
+  z `audio::` nazwy niejednoznacznej.
 - **Głos należy do sceny**, w której aktualizacji albo konfiguracji go zagrano - przy
   `UnloadScene()`/`ReloadScene()` cichnie (bez `OnFinish()`), jak węzeł dźwięku w drzewie
   sceny. Grają dalej głosy z `Global()` (jak obiekt globalny; muzyka ma je domyślnie) i głosy
