@@ -113,6 +113,13 @@ class Typeface {
     /** @brief Sprawdza, czy to font domyślny raylib (bez polskich znaków). */
     bool IsDefault() const { return data_.empty(); }
 
+    /**
+     * @brief Sprawdza, czy czcionka pochodzi z pliku (odwrotność IsDefault()).
+     * @details Tak samo jak Bitmap::IsLoaded() - Assets::Font() zamiast brakującego pliku
+     * zwraca font domyślny, dla którego IsLoaded() zwraca false.
+     */
+    bool IsLoaded() const { return !IsDefault(); }
+
     /** @brief Sprawdza, czy atlasy używają filtru dwuliniowego. */
     bool IsSmooth() const { return smooth_; }
 

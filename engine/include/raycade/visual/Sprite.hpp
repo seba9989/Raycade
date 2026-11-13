@@ -109,7 +109,7 @@ class Sprite : public Entity {
      * Plik pobiera Assets z kontekstu (Engine::Assets()), więc wiele sprite'ów z tym samym
      * plikiem dzieli jedną bitmapę (i jeden arkusz JSON), a nazwa względna jest liczona od
      * katalogu assets/. Brakujący plik daje szachownicę zastępczą (Assets::Missing()) i wpis
-     * w logu. Bez Assets w kontekście plik jest wczytywany bezpośrednio.
+     * w logu. Bez Assets w kontekście - Assets::Local() (nazwa względem katalogu roboczego).
      * @code{.cpp}
      * scene.Spawn<visual::Sprite>().Sheet("hero.json").Play("run");
      * scene.Spawn<visual::Sprite>().Sheet("coin.png", {16, 16}).Play();
@@ -128,13 +128,10 @@ class Sprite : public Entity {
         Vector2 margin = {0, 0},
         Vector2 spacing = {0, 0}
     ) {
-        Assets* assets = self.template Context<Assets>();
-        if (IsJsonPath(path)) {
-            if (assets) return self.Sheet(assets->Sheet(path));
-            return self.Sheet(std::shared_ptr<const SpriteSheet>{Shared(SpriteSheet::Load(path))});
-        }
-        if (assets) return self.Sheet(assets->Bitmap(path), frameSize, margin, spacing);
-        return self.Sheet(Shared(Bitmap::Load(path)), frameSize, margin, spacing);
+        Assets* context = self.template Context<Assets>();
+        Assets& assets = context ? *context : Assets::Local();
+        if (IsJsonPath(path)) return self.Sheet(assets.Sheet(path));
+        return self.Sheet(assets.Bitmap(path), frameSize, margin, spacing);
     }
 
     /** @brief Podaje arkusz klatek (albo nullptr). */

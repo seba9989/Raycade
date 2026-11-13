@@ -1008,14 +1008,16 @@ class Engine : public Contextable {
     /**
      * @brief Zwraca pełną ścieżkę zasobu z katalogu assets/ obok pliku wykonywalnego.
      * @details CMake kopiuje tam katalog assets/ gry, więc ścieżka działa niezależnie od tego,
-     * z jakiego katalogu uruchomiono program.
+     * z jakiego katalogu uruchomiono program. To ta sama ścieżka, której używa Assets
+     * (Assets::Path()): znormalizowana (bez "." i ".."), a ścieżka bezwzględna zostaje bez
+     * zmian. Liczy się od Assets().Directory() - domyślnie assets/.
      * @param name Nazwa pliku w assets/, np. "player.png" albo "dzwieki/skok.wav".
      * @return Ścieżka, np. "/home/.../build/assets/player.png".
      */
     std::string AssetPath(const std::string& name) const;
 
     /**
-     * @brief Udostępnia pamięć podręczną zasobów (bitmapy, czcionki).
+     * @brief Udostępnia pamięć podręczną zasobów (bitmapy, arkusze, czcionki, shadery, dźwięki).
      * @details Nazwy względne są liczone od katalogu assets/ (AssetPath()). Ten sam plik
      * wczytuje się raz - kolejne prośby zwracają ten sam obiekt. Nieużywane zasoby są
      * zwalniane po zwolnieniu albo ponownym wczytaniu sceny, a wszystkie - w Shutdown(),
@@ -1023,7 +1025,9 @@ class Engine : public Contextable {
      * @code{.cpp}
      * auto hero = engine.Assets().Bitmap("hero.png");
      * auto font = engine.Assets().Font("font.ttf");
+     * auto glow = engine.Assets().Shader("glow.fs");
      * @endcode
+     * Błędy wczytania trafiają do Log() (jeden wpis na plik).
      * @return Pamięć podręczna zasobów.
      */
     ::Assets& Assets() { return assets_; }

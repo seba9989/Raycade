@@ -94,18 +94,17 @@ class TextField : public Entity, public Focusable {
 
     /**
      * @brief Ustawia czcionkę z pliku - tak jak visual::Sprite::Sheet() z nazwą pliku.
-     * @details Z Assets w kontekście (`Context<Assets>()`, domyślnie Engine::Assets()) plik
-     * jest wczytywany raz i współdzielony, a brakujący daje font zastępczy z wpisem w logu.
-     * Bez Assets w kontekście wczytuje Typeface::Load(); błąd daje nullptr (font domyślny).
+     * @details Plik pobiera Assets z kontekstu (`Context<Assets>()`, domyślnie Engine::Assets()),
+     * więc wczytuje się raz i jest współdzielony, a brakujący daje font domyślny raylib z wpisem
+     * w logu. Bez Assets w kontekście - Assets::Local() (nazwa względem katalogu roboczego).
      * @param path Nazwa pliku (względem katalogu Assets) albo ścieżka.
      * @param options Zestaw znaków i wygładzanie.
      * @return Ten sam obiekt.
      */
     template <typename Self>
     Self& Font(this Self& self, const std::string& path, const TypefaceOptions& options = {}) {
-        if (Assets* assets = self.template Context<Assets>())
-            return self.Font(assets->Font(path, options));
-        return self.Font(std::shared_ptr<const Typeface>{Shared(Typeface::Load(path, options))});
+        Assets* assets = self.template Context<Assets>();
+        return self.Font((assets ? *assets : Assets::Local()).Font(path, options));
     }
 
     /** @brief Wraca do czcionki z kontekstu albo domyślnej: `.Font(nullptr)`. */

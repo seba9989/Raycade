@@ -16,6 +16,7 @@
  */
 
 // IWYU pragma: begin_exports
+#include <raycade/audio/AudioClip.hpp>
 #include <raycade/audio/Emitter.hpp>
 #include <raycade/audio/Listener.hpp>
 #include <raycade/audio/mixer/Audio.hpp>

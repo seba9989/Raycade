@@ -10,10 +10,11 @@
 
 /**
  * @brief Przenosi wczytany zasób do std::shared_ptr; brak wartości daje nullptr.
- * @details Zasoby GPU (ShaderProgram, Typeface, Bitmap) wczytuje się przez Load(), które zwraca
- * std::optional, a obiekty sceny przyjmują je jako std::shared_ptr. Ta funkcja łączy oba kroki:
+ * @details Zasoby (ShaderProgram, Typeface, Bitmap, AudioClip...) wczytuje się przez Load(),
+ * które zwraca std::optional, a obiekty sceny przyjmują je jako std::shared_ptr. Ta funkcja
+ * łączy oba kroki:
  * @code{.cpp}
- * auto wave = Shared(ShaderProgram::Load("", "assets/wave.fs")); // nullptr przy błędzie
+ * auto wave = Shared(ShaderProgram::Load("", engine.AssetPath("wave.fs"))); // nullptr: błąd
  * if (!wave) engine.Log(LogLevel::Warning, "brak shadera fali");
  * scene.Spawn<visual::RenderGroup>().Shader(wave);
  * @endcode

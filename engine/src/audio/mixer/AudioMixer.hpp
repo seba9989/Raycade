@@ -13,15 +13,16 @@
 #include <map>
 #include <memory>
 #include <optional>
-#include <set>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
+#include <raycade/audio/AudioClip.hpp>
 #include <raycade/audio/mixer/Audio.hpp>
 #include <raycade/audio/mixer/AudioBus.hpp>
 #include <raycade/audio/mixer/Voice.hpp>
 #include <raycade/engine/EngineTypes.hpp>
+
+class Assets;
 
 /**
  * @brief Mikser: urządzenie audio, dźwięki i szyny według nazw oraz pula głosów.
@@ -29,26 +30,26 @@
  * Update() na końcu każdej klatki i zamyka urządzenie w Shutdown(). Uchwyty Voice odnajdują
  * mikser przez Current().
  *
- * Krótki dźwięk jest wczytywany do pamięci raz na plik (Clip), a każdy głos gra własny alias
- * raylib (LoadSoundAlias) - tak ten sam plik może grać kilka razy naraz. Dźwięk z
- * Audio::Streamed() gra jako strumień raylib (Music) czytany z pliku, a zapętlony bez Streamed()
- * - jako strumień z bajtów pliku w pamięci, bo tylko strumień raylib zapętla się bez przerwy.
+ * Dane plików pochodzą z Assets::Sound() (AudioClip, raz na plik), a każdy głos trzyma swój
+ * klip, dopóki gra - dlatego Assets::Purge() nie zwalnia grającego pliku. Krótki dźwięk gra
+ * jako własny alias raylib (LoadSoundAlias) - tak ten sam plik może grać kilka razy naraz.
+ * Zapętlony bez Streamed() gra jako strumień z bajtów klipu, bo tylko strumień raylib zapętla
+ * się bez przerwy. Dźwięk z Audio::Streamed() gra jako strumień czytany z pliku przez każdy
+ * głos osobno - nie przechodzi przez Assets, ale błąd zgłasza tak samo (Assets::Report()).
  */
 class AudioMixer {
   public:
     /** @brief Zapis w logu silnika. */
     using LogFunction = std::function<void(LogLevel, const std::string&)>;
-    /** @brief Zamiana nazwy pliku na ścieżkę (Assets::Path()). */
-    using PathFunction = std::function<std::string(const std::string&)>;
 
     /**
      * @brief Tworzy mikser bez urządzenia (dźwięki i szyny można konfigurować przed Open()).
      * @param log Zapis w logu.
-     * @param path Zamiana nazwy pliku na ścieżkę.
+     * @param assets Źródło danych plików (Assets silnika); musi żyć dłużej niż mikser.
      */
-    AudioMixer(LogFunction log, PathFunction path);
+    AudioMixer(LogFunction log, ::Assets& assets);
 
-    /** @brief Zamyka urządzenie (Close()). */
+    /** @brief Zatrzymuje głosy i zamyka urządzenie (StopAll(), CloseDevice()). */
     ~AudioMixer();
 
     AudioMixer(const AudioMixer&) = delete;
@@ -60,8 +61,15 @@ class AudioMixer {
     /** @brief Otwiera urządzenie audio; błąd zapisuje w logu. */
     void Open();
 
-    /** @brief Zatrzymuje wszystkie głosy, zwalnia dane i zamyka urządzenie. */
-    void Close();
+    /**
+     * @brief Zatrzymuje od razu wszystkie głosy (bez zdarzeń końca) i oddaje ich klipy.
+     * @details Engine woła ją przed Assets::Clear(), a CloseDevice() po nim - klipy zwalniają
+     * próbki, póki urządzenie jest otwarte.
+     */
+    void StopAll();
+
+    /** @brief Zamyka urządzenie audio. */
+    void CloseDevice();
 
     /** @brief Sprawdza, czy urządzenie audio jest otwarte. */
     bool IsReady() const { return ready_; }
@@ -79,10 +87,11 @@ class AudioMixer {
     void Update(float dt);
 
     /**
-     * @brief Zwalnia dane plików, których nie gra żaden głos.
-     * @return Liczba zwolnionych plików.
+     * @brief Sprawdza, czy wszystkie pliki dźwięku dają się wczytać (Audio::IsLoaded()).
+     * @param audio Dźwięk.
+     * @return true, gdy każdy plik z Files() (albo nazwa) się wczytuje.
      */
-    std::size_t Purge();
+    bool IsLoaded(const ::Audio& audio) const;
 
     /** @name Dla Audio, AudioBus i Voice */
     /** @{ */
@@ -128,7 +137,7 @@ class AudioMixer {
         bool stream = false;          /**< Czy głos gra strumień (music), a nie alias (sound). */
         ::Sound sound{};              /**< Alias próbek pliku. */
         ::Music music{};              /**< Strumień (Streamed() albo Looped()). */
-        std::shared_ptr<const std::vector<unsigned char>> bytes; /**< Plik dla strumienia z pamięci. */
+        std::shared_ptr<const AudioClip> clip; /**< Dane pliku (poza Streamed()), póki głos gra. */
         float fade = 1.0f;            /**< Bieżący poziom narastania/wyciszania (0-1). */
         float fadeRate = 0.0f;        /**< Zmiana fade na sekundę. */
         bool stopping = false;        /**< Czy głos wycisza się po Stop() (potem zwolnienie). */
@@ -161,23 +170,12 @@ class AudioMixer {
     float Duration(const Slot& slot) const;
 
   private:
-    /** @brief Dane jednego pliku w pamięci. */
-    struct Clip {
-        ::Sound sound{}; /**< Próbki (źródło aliasów). */
-    };
-
     /** @brief Stan szyny razem z rodzicami, liczony raz na klatkę. */
     struct BusState {
         float gain = 1.0f;   /**< Iloczyn głośności (0 przy wyciszeniu). */
         bool paused = false; /**< Czy szyna albo rodzic jest wstrzymany. */
     };
 
-    /** @brief Wczytuje plik do pamięci (raz); nullptr przy błędzie (raz w logu). */
-    const Clip* LoadClip(const std::string& path);
-    /** @brief Wczytuje bajty pliku (raz) dla strumienia z pamięci; nullptr przy błędzie. */
-    std::shared_ptr<const std::vector<unsigned char>> LoadBytes(const std::string& path);
-    /** @brief Zapisuje w logu błąd wczytania (raz na plik). */
-    void Failed(const std::string& path);
     /** @brief Wycisza pozostałe głosy szyny Exclusive() po starcie głosu slot. */
     void Replace(const Slot& slot);
     /** @brief Uruchamia zgłoszony głos; false - nie udało się wczytać pliku. */
@@ -208,15 +206,11 @@ class AudioMixer {
     static inline AudioMixer* current_ = nullptr; /**< Mikser silnika. */
 
     LogFunction log_;                             /**< Zapis w logu. */
-    PathFunction path_;                           /**< Nazwa pliku -> ścieżka. */
+    ::Assets& assets_;                            /**< Dane plików i ścieżki. */
     bool ready_ = false;                          /**< Czy urządzenie jest otwarte. */
     bool warnedNoDevice_ = false;                 /**< Czy zapisano brak urządzenia. */
     std::map<std::string, ::Audio> sounds_;       /**< Dźwięki według nazw. */
     std::map<std::string, ::AudioBus> buses_;     /**< Szyny według nazw ("" - główna). */
-    std::unordered_map<std::string, Clip> clips_; /**< Pliki w pamięci według ścieżek. */
-    /** Bajty plików dla zapętlonych strumieni z pamięci, według ścieżek. */
-    std::unordered_map<std::string, std::shared_ptr<const std::vector<unsigned char>>> bytes_;
-    std::set<std::string> failed_;                /**< Pliki, których nie wczytano. */
     std::vector<Slot> slots_;                     /**< Pula głosów (stały rozmiar). */
     std::uint64_t order_ = 0;                     /**< Licznik Play(). */
     const void* owner_ = nullptr;                 /**< Scena dla nowych głosów. */

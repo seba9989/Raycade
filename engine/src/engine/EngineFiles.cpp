@@ -31,7 +31,7 @@ long Engine::FileModTime(const std::string& path) const {
 }
 
 std::string Engine::AssetPath(const std::string& name) const {
-    return ApplicationDirectory() + "assets/" + name;
+    return assets_.Path(name);
 }
 
 std::optional<std::string> Engine::LoadText(const std::string& path) const {

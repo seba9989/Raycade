@@ -7,10 +7,12 @@
 #include <raylib.h>
 
 #include <algorithm>
+#include <cstddef>
 #include <memory>
 #include <optional>
 #include <vector>
 
+#include <raycade/render/Assets.hpp>
 #include <raycade/render/PrimitiveRenderer.hpp>
 #include <raycade/render/ShaderProgram.hpp>
 
@@ -92,7 +94,7 @@ class Drawable {
      * rysunkiem dzieci). Shader niepoprawnie wczytany (ShaderProgram::IsLoaded() == false) jest
      * pomijany.
      * @code{.cpp}
-     * auto glow = Shared(ShaderProgram::Load("", "assets/glow.fs"));
+     * auto glow = engine.Assets().Shader("glow.fs");
      * scene.Spawn<shapes::Circle>().Radius(40).Filled().Shader(glow);
      * @endcode
      * @param shader Shader (współdzielony) albo nullptr - bez shadera.
@@ -101,6 +103,29 @@ class Drawable {
     template <typename Self> Self& Shader(this Self& self, std::shared_ptr<ShaderProgram> shader) {
         self.shader_ = std::move(shader);
         return self;
+    }
+
+    /**
+     * @brief Ustawia shader z pliku - tak jak visual::Sprite::Sheet() z nazwą pliku.
+     * @details Plik pobiera Assets z kontekstu (Engine::Assets(), patrz Assets::Shader()), więc
+     * obiekty z tym samym plikiem dzielą jeden program (i jego uniformy), a nazwa względna jest
+     * liczona od katalogu assets/. Brakujący plik albo błąd kompilacji daje rysunek bez efektu
+     * i wpis w logu. Bez Assets w kontekście - Assets::Local().
+     * @code{.cpp}
+     * scene.Spawn<shapes::Circle>().Radius(40).Filled().Shader("glow.fs");
+     * @endcode
+     * @param fragment Plik shadera fragmentów.
+     * @return Ten sam obiekt.
+     * @pre Okno jest otwarte (np. konfiguracja sceny).
+     */
+    template <typename Self> Self& Shader(this Self& self, const std::string& fragment) {
+        Assets* assets = self.template Context<::Assets>();
+        return self.Shader((assets ? *assets : Assets::Local()).Shader(fragment));
+    }
+
+    /** @brief Wyłącza shader obiektu: `.Shader(nullptr)`. */
+    template <typename Self> Self& Shader(this Self& self, std::nullptr_t) {
+        return self.Shader(std::shared_ptr<ShaderProgram>{});
     }
 
     /** @brief Podaje shader obiektu (np. do ustawienia uniformów) albo nullptr. */

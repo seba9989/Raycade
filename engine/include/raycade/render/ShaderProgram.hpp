@@ -25,13 +25,17 @@ class Bitmap;
  * shader przez std::shared_ptr, więc jeden program może obsłużyć wiele obiektów.
  *
  * Shader wczytuje się po otwarciu okna (wymaga kontekstu OpenGL) - np. w konfiguracji sceny.
+ * Plik najprościej pobrać przez pamięć podręczną zasobów (Assets::Shader()): nazwa jest
+ * liczona od katalogu assets/, a brakujący plik daje pusty shader (rysunek bez efektu):
  * @code{.cpp}
- * auto wave = Shared(ShaderProgram::Load("", "assets/wave.fs")); // nullptr przy błędzie
+ * auto wave = engine.Assets().Shader("wave.fs");
  * scene.Spawn<visual::RenderGroup>().Size({300, 200}).Shader(wave);
  * scene.OnUpdate([wave](float) {
- *     if (wave) wave->Uniform("time", static_cast<float>(Engine::Get().Time()));
+ *     wave->Uniform("time", static_cast<float>(Engine::Get().Time()));
  * });
  * @endcode
+ * Load() i FromCode() tworzą osobny program - np. gdy obiekty mają mieć różne wartości
+ * uniformów: `Shared(ShaderProgram::Load("", engine.AssetPath("wave.fs")))`.
  */
 class ShaderProgram {
   public:

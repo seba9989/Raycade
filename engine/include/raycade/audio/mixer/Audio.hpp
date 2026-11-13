@@ -37,9 +37,11 @@ class AudioMixer;
  * engine.Audio("theme.ogg").Play();
  * @endcode
  *
- * Pliki wczytują się przy pierwszym odtworzeniu. Plik, którego nie da się wczytać, gra ciszą,
- * a w logu pojawia się jeden wpis na plik. Ustawienia zostają w silniku do końca programu,
- * a dane próbek są zwalniane razem z nieużywanymi zasobami (po zmianie scen).
+ * Ustawienia zostają w silniku do końca programu. Dane plików to zwykłe zasoby
+ * (Assets::Sound(), AudioClip): wczytują się przy pierwszym odtworzeniu i są zwalniane razem
+ * z innymi nieużywanymi zasobami po zmianie scen, chyba że akurat grają. Plik, którego nie da
+ * się wczytać, gra ciszą, a w logu pojawia się jeden wpis na plik. Czy pliki są dobre, mówi
+ * IsLoaded(); żeby pierwsze Play() nie czekało na dysk, gra trzyma klip z Assets::Sound().
  *
  * Ustawienia dźwięku mnożą się z ustawieniami jego szyny (AudioBus) i pojedynczego
  * odtworzenia (Voice).
@@ -213,6 +215,19 @@ class Audio {
      * @return Ten sam dźwięk.
      */
     Audio& Stop();
+
+    /**
+     * @brief Sprawdza, czy wszystkie pliki dźwięku dają się wczytać.
+     * @details Sprawdza każdy plik z Files() (albo nazwę). Plik bez Streamed() jest przy tym
+     * wczytywany do Assets (Assets::Sound()) - zostaje tam do najbliższego zwolnienia
+     * nieużywanych zasobów. Dla Streamed() sprawdza tylko, czy plik istnieje - strumień czyta go
+     * dopiero przy odtworzeniu. Nie wymaga urządzenia audio.
+     * @code{.cpp}
+     * if (!engine.Audio("kroki").IsLoaded()) engine.Log(LogLevel::Warning, "brak krokow");
+     * @endcode
+     * @return true, gdy każdy plik się wczytuje.
+     */
+    bool IsLoaded() const;
 
     /** @brief Sprawdza, czy gra choć jedno odtworzenie (wyciszane po Stop() się nie liczą). */
     bool IsPlaying() const { return VoiceCount() > 0; }

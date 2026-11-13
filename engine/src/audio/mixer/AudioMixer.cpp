@@ -5,8 +5,9 @@
 
 #include "AudioMixer.hpp"
 
+#include <raycade/render/Assets.hpp>
+
 #include <algorithm>
-#include <filesystem>
 #include <utility>
 
 namespace {
@@ -19,6 +20,11 @@ constexpr int kDefaultVoices = 32;
 
 /** @brief Najgłębsze drzewo szyn (ochrona przed cyklem przy liczeniu stanu). */
 constexpr int kMaxBusDepth = 64;
+
+/** @brief Klucz błędu strumienia w Assets (inny niż klucz klipu tego samego pliku). */
+std::string StreamKey(const std::string& path) {
+    return path + "\x1fstream";
+}
 
 /**
  * @brief Zamienia panoramę silnika (-1 lewo, 1 prawo) na wartość raylib.
@@ -40,14 +46,15 @@ float RandomUnit() {
 
 } // namespace
 
-AudioMixer::AudioMixer(LogFunction log, PathFunction path)
-    : log_(std::move(log)), path_(std::move(path)), slots_(kSlots) {
+AudioMixer::AudioMixer(LogFunction log, ::Assets& assets)
+    : log_(std::move(log)), assets_(assets), slots_(kSlots) {
     buses_.try_emplace("", *this, "").first->second.maxVoices_ = kDefaultVoices;
     current_ = this;
 }
 
 AudioMixer::~AudioMixer() {
-    Close();
+    StopAll();
+    CloseDevice();
     if (current_ == this) current_ = nullptr;
 }
 
@@ -58,17 +65,28 @@ void AudioMixer::Open() {
     if (!ready_) log_(LogLevel::Warning, "nie udalo sie otworzyc urzadzenia audio - bez dzwieku");
 }
 
-void AudioMixer::Close() {
+void AudioMixer::StopAll() {
     for (Slot& slot : slots_)
         if (slot.used) Release(slot, false);
     finished_.clear();
-    for (auto& [path, clip] : clips_)
-        ::UnloadSound(clip.sound);
-    clips_.clear();
-    bytes_.clear();
-    failed_.clear();
+}
+
+void AudioMixer::CloseDevice() {
     if (ready_) ::CloseAudioDevice();
     ready_ = false;
+}
+
+bool AudioMixer::IsLoaded(const ::Audio& audio) const {
+    const std::vector<std::string> single{audio.Name()};
+    for (const std::string& file : audio.files_.empty() ? single : audio.files_) {
+        if (audio.IsStreamed()) {
+            // strumień czyta plik dopiero przy graniu - tu tylko, czy plik istnieje
+            if (!::FileExists(assets_.Path(file).c_str())) return false;
+        } else if (!assets_.Sound(file)->IsLoaded()) {
+            return false;
+        }
+    }
+    return true;
 }
 
 Audio& AudioMixer::Sound(const std::string& name) {
@@ -315,63 +333,43 @@ AudioMixer::BusState AudioMixer::StateOf(const std::string& bus) const {
     return state;
 }
 
-void AudioMixer::Failed(const std::string& path) {
-    if (!failed_.insert(path).second) return;
-    log_(LogLevel::Warning, "nie udalo sie wczytac dzwieku \"" + path + "\" - cisza");
-}
-
-const AudioMixer::Clip* AudioMixer::LoadClip(const std::string& path) {
-    if (auto it = clips_.find(path); it != clips_.end()) return &it->second;
-    if (failed_.contains(path)) return nullptr;
-    ::Sound sound = ::LoadSound(path.c_str());
-    if (!::IsSoundValid(sound)) {
-        Failed(path);
-        return nullptr;
-    }
-    return &clips_.emplace(path, Clip{sound}).first->second;
-}
-
-std::shared_ptr<const std::vector<unsigned char>> AudioMixer::LoadBytes(const std::string& path) {
-    if (auto it = bytes_.find(path); it != bytes_.end()) return it->second;
-    if (failed_.contains(path)) return nullptr;
-    int size = 0;
-    unsigned char* data = ::LoadFileData(path.c_str(), &size);
-    if (!data) {
-        Failed(path);
-        return nullptr;
-    }
-    auto bytes = std::make_shared<const std::vector<unsigned char>>(data, data + size);
-    ::UnloadFileData(data);
-    return bytes_.emplace(path, std::move(bytes)).first->second;
-}
-
 bool AudioMixer::Start(Slot& slot) {
     const ::Audio& audio = *slot.audio;
-    const std::string path = path_(slot.path);
-    if (failed_.contains(path)) return false;
-    if (audio.IsStreamed() || audio.IsLooped()) {
-        if (audio.IsStreamed()) {
-            slot.music = ::LoadMusicStream(path.c_str());
-        } else {
-            slot.bytes = LoadBytes(path);
-            if (!slot.bytes) return false;
-            // strumień czyta bajty z pamięci przez cały czas gry - slot.bytes je trzyma
-            const std::string type = std::filesystem::path(path).extension().string();
-            slot.music = ::LoadMusicStreamFromMemory(
-                type.c_str(), slot.bytes->data(), static_cast<int>(slot.bytes->size())
-            );
-        }
+    if (audio.IsStreamed()) {
+        // każdy głos czyta plik osobno - nie ma czego współdzielić przez Assets
+        const std::string path = assets_.Path(slot.path);
+        const std::string key = StreamKey(path);
+        if (assets_.HasFailed(key)) return false;
+        slot.music = ::LoadMusicStream(path.c_str());
         if (!::IsMusicValid(slot.music)) {
-            slot.bytes.reset();
-            Failed(path);
+            assets_.Report(key, "dzwieku", path, "cisza");
             return false;
         }
         slot.music.looping = audio.IsLooped();
         slot.stream = true;
     } else {
-        const Clip* clip = LoadClip(path);
-        if (!clip) return false;
-        slot.sound = ::LoadSoundAlias(clip->sound);
+        slot.clip = assets_.Sound(slot.path); // błąd zapisuje Assets (raz na plik)
+        if (!slot.clip->IsLoaded()) {
+            slot.clip.reset();
+            return false;
+        }
+        if (audio.IsLooped()) {
+            // strumień czyta bajty klipu przez cały czas gry - slot.clip je trzyma
+            const auto bytes = slot.clip->Bytes();
+            slot.music = ::LoadMusicStreamFromMemory(
+                slot.clip->Type().c_str(), bytes.data(), static_cast<int>(bytes.size())
+            );
+            if (!::IsMusicValid(slot.music)) {
+                const std::string path = assets_.Path(slot.path);
+                assets_.Report(StreamKey(path), "dzwieku", path, "cisza");
+                slot.clip.reset();
+                return false;
+            }
+            slot.music.looping = true;
+            slot.stream = true;
+        } else {
+            slot.sound = ::LoadSoundAlias(slot.clip->Sound());
+        }
     }
     slot.started = true;
     if (audio.FadeInTime() > 0.0f) {
@@ -401,7 +399,7 @@ void AudioMixer::Release(Slot& slot, bool notify) {
         ::StopSound(slot.sound);
         ::UnloadSoundAlias(slot.sound);
     }
-    slot.bytes.reset();
+    slot.clip.reset(); // po aliasie i strumieniu - oba korzystają z danych klipu
     slot.used = false;
     slot.started = false;
     slot.audio = nullptr;
@@ -482,23 +480,3 @@ void AudioMixer::Notify() {
         callback(voice);
 }
 
-std::size_t AudioMixer::Purge() {
-    std::set<std::string> playing;
-    for (const Slot& slot : slots_)
-        if (slot.used) playing.insert(path_(slot.path));
-    std::size_t released = 0;
-    for (auto it = clips_.begin(); it != clips_.end();) {
-        if (playing.contains(it->first)) {
-            ++it;
-            continue;
-        }
-        ::UnloadSound(it->second.sound);
-        it = clips_.erase(it);
-        ++released;
-    }
-    released += std::erase_if(bytes_, [&playing](const auto& entry) {
-        return !playing.contains(entry.first);
-    });
-    failed_.clear(); // następna próba wczyta brakujący plik (np. po skopiowaniu)
-    return released;
-}

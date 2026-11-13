@@ -72,10 +72,10 @@ Contextable* ContextRoot() {
 
 Engine::Engine()
     : mixer_(std::make_unique<AudioMixer>(
-          [this](LogLevel level, const std::string& message) { Log(level, message); },
-          [this](const std::string& name) { return assets_.Path(name); }
+          [this](LogLevel level, const std::string& message) { Log(level, message); }, assets_
       )) {
-    assets_.Directory(AssetPath(""));
+    assets_.Directory(ApplicationDirectory() + "assets/");
+    assets_.Logger([this](LogLevel level, const std::string& message) { Log(level, message); });
     SetContext(assets_);
 }
 
@@ -230,8 +230,10 @@ void Engine::Shutdown() {
     pending_.clear();
     unload_.clear();
     reload_.clear();
+    // głosy oddają klipy przed Assets::Clear(); zdarzenia końca mogłyby sięgać do scen
+    mixer_->StopAll();
     ClearContext();  // wartości globalne też mogą trzymać tekstury
-    assets_.Clear(); // na końcu: sceny i kontekst mogły trzymać zasoby z pamięci podręcznej
+    assets_.Clear(); // na końcu: sceny, głosy i kontekst mogły trzymać zasoby z pamięci podręcznej
     if (recording_) {
         ::StopAutomationEventRecording();
         ::UnloadAutomationEventList(recordList_);
@@ -243,7 +245,7 @@ void Engine::Shutdown() {
         ::UnloadAutomationEventList(replayList_);
         replaying_ = false;
     }
-    mixer_->Close(); // po scenach: obiekty sceny mogą przy usuwaniu zatrzymywać swoje głosy
+    mixer_->CloseDevice(); // po Assets::Clear() - klipy zwalniają próbki przy otwartym urządzeniu
     postShader_.reset(); // zasób GPU - przed zamknięciem okna
     ReleaseTarget();
     ::CloseWindow();

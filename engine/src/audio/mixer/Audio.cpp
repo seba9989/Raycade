@@ -71,6 +71,10 @@ Audio& Audio::Stop() {
     return *this;
 }
 
+bool Audio::IsLoaded() const {
+    return mixer_->IsLoaded(*this);
+}
+
 int Audio::VoiceCount() const {
     return mixer_->VoiceCount(*this);
 }
