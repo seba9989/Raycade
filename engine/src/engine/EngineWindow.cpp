@@ -5,7 +5,7 @@
  * na bieżąco.
  */
 
-#include <raycade/Engine.hpp>
+#include <raycade/engine/Engine.hpp>
 
 Engine& Engine::Title(std::string title) {
     title_ = std::move(title);

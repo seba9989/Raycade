@@ -15,11 +15,11 @@
 #include <utility>
 #include <vector>
 
-#include <raycade/entity/Contextable.hpp>
-#include <raycade/entity/Drawable.hpp>
-#include <raycade/entity/Focusable.hpp>
-#include <raycade/entity/Transformable.hpp>
-#include <raycade/entity/Updatable.hpp>
+#include <raycade/entity/traits/Contextable.hpp>
+#include <raycade/entity/traits/Drawable.hpp>
+#include <raycade/entity/traits/Focusable.hpp>
+#include <raycade/entity/traits/Transformable.hpp>
+#include <raycade/entity/traits/Updatable.hpp>
 
 class Scene;
 class SceneCamera;

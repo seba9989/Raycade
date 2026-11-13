@@ -3,9 +3,9 @@
  * @brief Dźwięk: fasada miksera silnika (Audio).
  */
 
-#include <raycade/Engine.hpp>
+#include <raycade/engine/Engine.hpp>
 
-#include "../audio/mixer/AudioMixer.hpp"
+#include "../audio/AudioMixer.hpp"
 
 Audio& Engine::Audio() {
     return mixer_->Facade();

@@ -1,7 +1,7 @@
 /**
  * @file audio.hpp
- * @brief Zbiorczy nagłówek dźwięku: mikser (Audio, audio::Sound, Music, Bus, Voice) i obiekty sceny.
- * @details Dołączany przez `<raycade>`.
+ * @brief Zbiorczy nagłówek dźwięku: mikser (Audio, audio::Sound, Music, Bus, Voice).
+ * @details Dołączany przez `<raycade>`. Obiekty sceny (Emitter, Listener) dołącza `node/sound.hpp`.
  */
 #pragma once
 
@@ -22,13 +22,11 @@
  */
 
 // IWYU pragma: begin_exports
-#include <raycade/audio/AudioClip.hpp>
-#include <raycade/audio/Emitter.hpp>
-#include <raycade/audio/Listener.hpp>
-#include <raycade/audio/mixer/Audio.hpp>
-#include <raycade/audio/mixer/Bus.hpp>
-#include <raycade/audio/mixer/Music.hpp>
-#include <raycade/audio/mixer/Sound.hpp>
-#include <raycade/audio/mixer/Source.hpp>
-#include <raycade/audio/mixer/Voice.hpp>
+#include <raycade/assets/sound/AudioClip.hpp>
+#include <raycade/audio/Audio.hpp>
+#include <raycade/audio/mixing/Bus.hpp>
+#include <raycade/audio/playback/Music.hpp>
+#include <raycade/audio/playback/Sound.hpp>
+#include <raycade/audio/playback/Source.hpp>
+#include <raycade/audio/playback/Voice.hpp>
 // IWYU pragma: end_exports

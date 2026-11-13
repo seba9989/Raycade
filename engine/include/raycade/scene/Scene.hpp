@@ -11,13 +11,13 @@
 #include <utility>
 #include <vector>
 
-#include <raycade/entity/Contextable.hpp>
 #include <raycade/entity/Entity.hpp>
+#include <raycade/entity/traits/Contextable.hpp>
 #include <raycade/input/Input.hpp>
-#include <raycade/physics/PhysicsWorld.hpp>
-#include <raycade/render/PrimitiveRenderer.hpp>
-#include <raycade/scene/PointerSystem.hpp>
-#include <raycade/scene/SceneCamera.hpp>
+#include <raycade/render/primitives/PrimitiveRenderer.hpp>
+#include <raycade/scene/camera/SceneCamera.hpp>
+#include <raycade/scene/physics/PhysicsWorld.hpp>
+#include <raycade/scene/pointer/PointerSystem.hpp>
 
 /**
  * @brief Zbiór obiektów i funkcji logicznych jednego ekranu silnika.

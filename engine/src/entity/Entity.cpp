@@ -5,7 +5,7 @@
 #include <raycade/entity/Entity.hpp>
 
 #include <raycade/render/ClipStack.hpp>
-#include <raycade/scene/SceneCamera.hpp>
+#include <raycade/scene/camera/SceneCamera.hpp>
 
 void Entity::Update(float dt, const Input& input, const PointerFrame& pointer) {
     if (destroyed_) return; // czeka na usunięcie przez scenę na końcu klatki

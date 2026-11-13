@@ -25,12 +25,13 @@
 #pragma once
 
 // IWYU pragma: begin_exports
-#include <raycade/Engine.hpp>
 #include <raycade/audio.hpp>
+#include <raycade/engine/Engine.hpp>
 #include <raycade/engine/SceneMacro.hpp>
-#include <raycade/entity/Group.hpp>
-#include <raycade/physics.hpp>
-#include <raycade/shapes.hpp>
-#include <raycade/ui.hpp>
-#include <raycade/visual.hpp>
+#include <raycade/node/Group.hpp>
+#include <raycade/node/physics.hpp>
+#include <raycade/node/shapes.hpp>
+#include <raycade/node/sound.hpp>
+#include <raycade/node/ui.hpp>
+#include <raycade/node/visual.hpp>
 // IWYU pragma: end_exports

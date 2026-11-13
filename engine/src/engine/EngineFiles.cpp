@@ -3,7 +3,7 @@
  * @brief Pliki, katalogi, ścieżki zasobów i pamięć podręczna zasobów.
  */
 
-#include <raycade/Engine.hpp>
+#include <raycade/engine/Engine.hpp>
 
 /**
  * @details Katalog zasobów jest znany od razu (nie wymaga okna), a Assets trafia do kontekstu

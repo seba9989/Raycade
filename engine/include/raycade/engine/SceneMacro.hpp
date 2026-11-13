@@ -6,7 +6,7 @@
  */
 #pragma once
 
-#include <raycade/Engine.hpp>
+#include <raycade/engine/Engine.hpp>
 
 /**
  * @brief Pomocniczy rejestrator scen wykorzystywany przez makro SCENE.

@@ -3,7 +3,7 @@
  * @brief Kursor, pady oraz nagrywanie i odtwarzanie wejścia.
  */
 
-#include <raycade/Engine.hpp>
+#include <raycade/engine/Engine.hpp>
 
 Engine& Engine::ExitKey(int key) {
     exitKey_ = key;

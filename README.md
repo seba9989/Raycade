@@ -62,19 +62,23 @@ w plikach programu, nie w bibliotece.
 engine/
   umbrella/raycade        nagłówek zbiorczy <raycade>
   include/raycade/        nagłówki publiczne, w warstwach:
-    math/                   macierz przekształceń, Point2D, geometria
-    render/                 Bitmap, RenderTarget, PrimitiveRenderer
+    core/                   Shared, typy ustawień silnika (LogLevel, Scaling)
+    math/                   transform/ macierz przekształceń, geometry/ Point2D i geometria
+    assets/                 Assets; image/ font/ shader/ sound/ - zasoby z plików
+    render/                 RenderTarget, ClipStack, primitives/ PrimitiveRenderer
     input/                  klawiatura, mysz, pad, akcje i osie
-    audio/mixer/            dźwięk: Audio (fasada), Sound, Music, Bus (szyny), Voice (odtworzenie)
-    entity/                 Entity, Group i klasy bazowe
-    shapes/  shapes.hpp     figury geometryczne (namespace shapes)
-    visual/  visual.hpp     obrazy, tekst, płótno, RenderGroup (namespace visual)
-    physics/ physics.hpp    kolizje: Collider<S>, StaticBody, CharacterBody, RigidBody, Area
-    ui/      ui.hpp         interfejs (namespace ui)
-    scene/                  Scene, SceneCamera, PointerSystem (trafienia myszą)
-    audio/   audio.hpp      dźwięk w scenie: Emitter, Listener (namespace audio)
-    engine/                 typy ustawień silnika, makro SCENE
-    Engine.hpp              okno, pętla, sceny, dźwięk
+    audio/   audio.hpp      mikser: Audio (fasada), playback/ Sound, Music, Voice, mixing/ Bus
+    entity/                 Entity i traits/ - klasy bazowe
+    node/                   wszystko, co tworzy Spawn<T>():
+      Group.hpp               pusty węzeł grupujący
+      shapes/  shapes.hpp     figury geometryczne (namespace shapes)
+      visual/  visual.hpp     obrazy, tekst, płótno, RenderGroup (namespace visual)
+      ui/      ui.hpp         interfejs (namespace ui)
+      sound/   sound.hpp      dźwięk w scenie: Emitter, Listener (namespace audio)
+      collider/               Collider<S> (namespace collider)
+      physics/ physics.hpp    ciała i obszary: StaticBody, CharacterBody, RigidBody, Area
+    scene/                  Scene, camera/, pointer/ (trafienia myszą), physics/ (PhysicsWorld)
+    engine/                 Engine (okno, pętla, sceny, dźwięk), makro SCENE
   src/                    implementacja w tym samym układzie
     engine/                 Engine podzielony na pliki: okno, sceny, wejście, pliki...
 demo/                     program demonstracyjny i sceny laboratoriów

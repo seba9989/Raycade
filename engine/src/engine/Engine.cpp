@@ -7,14 +7,14 @@
  * (EngineAudio.cpp) oraz schowek, czas i losowość (EngineSystem.cpp).
  */
 
-#include <raycade/Engine.hpp>
+#include <raycade/engine/Engine.hpp>
 
 #include <algorithm>
 #include <cstdarg>
 #include <cstdio>
 #include <iostream>
 
-#include "../audio/mixer/AudioMixer.hpp"
+#include "../audio/AudioMixer.hpp"
 
 namespace {
 

@@ -17,7 +17,7 @@ target_include_directories(raycade PUBLIC
 target_compile_features(raycade PUBLIC cxx_std_23)
 
 # raylib jest częścią API (Color, Vector2, KEY_*), dlatego PUBLIC.
-# nlohmann/json (SpriteSheet.cpp) i Box2D (src/physics) tylko w implementacji - nie trafiają
+# nlohmann/json (SpriteSheet.cpp) i Box2D (src/scene/physics) tylko w implementacji - nie trafiają
 # do nagłówków API, więc gra ich nie widzi.
 target_link_libraries(
     raycade PUBLIC raylib PRIVATE raycade_warnings nlohmann_json::nlohmann_json box2d::box2d

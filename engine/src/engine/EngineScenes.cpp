@@ -3,11 +3,11 @@
  * @brief Tworzenie, rejestracja, leniwe wczytywanie i odroczone przełączanie scen.
  */
 
-#include <raycade/Engine.hpp>
+#include <raycade/engine/Engine.hpp>
 
 #include <stdexcept>
 
-#include "../audio/mixer/AudioMixer.hpp"
+#include "../audio/AudioMixer.hpp"
 
 Scene& Engine::CreateScene(const std::string& name) {
     auto [it, created] = scenes_.try_emplace(name);

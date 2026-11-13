@@ -10,33 +10,42 @@ warstwy wcześniejsze na liście:
 
 | Katalog      | Zawartość                                                       | Może dołączać               |
 |--------------|-----------------------------------------------------------------|-----------------------------|
-| `math/`      | AffineMatrix2D, Point2D, LineSegment, geometria, ConvexPart (części kształtów kolizji) | - |
-| `render/`    | Bitmap, Assets, RenderTarget, ClipStack, ShaderProgram, Typeface, PrimitiveRenderer | math    |
+| `core/`      | Shared (zasób w `shared_ptr`), EngineTypes (LogLevel, Scaling)  | -                           |
+| `math/`      | `transform/` AffineMatrix2D; `geometry/` Point2D, LineSegment, geometria, ConvexPart (części kształtów kolizji) | - |
+| `assets/`    | Assets (pamięć podręczna); `image/` Bitmap, SpriteSheet; `font/` Typeface; `shader/` ShaderProgram; `sound/` AudioClip | core |
+| `render/`    | RenderTarget, ClipStack; `primitives/` PrimitiveRenderer        | assets, math                |
 | `input/`     | Input, akcje i osie                                             | -                           |
-| `audio/mixer/` | Audio (fasada) i z przestrzeni nazw `audio`: Source, Sound, Music, Bus, Voice - dźwięki, muzyka, szyny i odtworzenia (raylib audio) | math |
-| `entity/`    | Entity, Group i klasy bazowe (Transformable, Drawable, Updatable...) | math, render, input    |
-| `shapes/`    | figury geometryczne z przestrzeni nazw `shapes` (baza `shapes::Shape`) | entity i jej zależności |
-| `visual/`    | obrazy, tekst i grupy rysowane do tekstury z przestrzeni nazw `visual` | entity i jej zależności |
-| `ui/`        | elementy interfejsu z przestrzeni nazw `ui`                     | entity i jej zależności     |
-| `physics/`   | `Collider<S>`, StaticBody, CharacterBody, RigidBody, Area, PhysicsWorld (Box2D) | shapes, visual i ich zależności |
-| `scene/`     | Scene, SceneCamera, PointerSystem (trafienia myszą)             | physics i jej zależności (Scene ma PhysicsWorld) |
-| `audio/`     | obiekty sceny z przestrzeni nazw `audio`: Emitter, Listener     | scene i jej zależności      |
-| `engine/EngineTypes.hpp` | typy ustawień: LogLevel, Scaling                    | -                           |
-| `Engine.hpp` | pętla, okno, sceny, zasoby, dźwięk                              | wszystkie powyższe          |
-| `engine/SceneMacro.hpp` | makro SCENE (wymaga pełnej klasy Engine)             | `Engine.hpp`                |
+| `audio/`     | Audio (fasada) i z przestrzeni nazw `audio`: `playback/` Source, Sound, Music, Voice; `mixing/` Bus (raylib audio) | assets |
+| `entity/`    | Entity; `traits/` klasy bazowe (Transformable, Drawable, Updatable, Focusable, Contextable) | math, assets, render, input |
+| `node/Group.hpp` | Group - pusty węzeł grupujący                               | entity i jej zależności     |
+| `node/shapes/` | figury z przestrzeni nazw `shapes` (baza `Shape`); `point/`, `line/`, `polygon/`, `round/` | entity i jej zależności |
+| `node/visual/` | z przestrzeni nazw `visual`: `image/` Sprite, Canvas; `text/` Text; `group/` RenderGroup | entity i jej zależności |
+| `node/ui/`   | elementy interfejsu z przestrzeni nazw `ui`                     | entity i jej zależności     |
+| `node/sound/` | obiekty sceny z przestrzeni nazw `audio`: Emitter, Listener    | audio, entity               |
+| `node/collider/` | `Collider<S>`, CollisionShape, aliasy `collider::`          | node/shapes, node/visual    |
+| `node/physics/` | CollisionObject, PhysicsBody; `body/` StaticBody, CharacterBody, RigidBody; `area/` Area | node/collider i jej zależności |
+| `scene/`     | Scene; `camera/` SceneCamera; `pointer/` PointerSystem (trafienia myszą); `physics/` PhysicsWorld (Box2D) | node/physics i jej zależności (Scene ma PhysicsWorld) |
+| `engine/Engine.hpp` | pętla, okno, sceny, zasoby, dźwięk                       | wszystkie powyższe          |
+| `engine/SceneMacro.hpp` | makro SCENE (wymaga pełnej klasy Engine)             | `engine/Engine.hpp`         |
 
-Nagłówek zbiorczy katalogu leży obok niego (`shapes.hpp` obok `shapes/`, `visual.hpp` obok
-`visual/`, `physics.hpp` obok `physics/`, `ui.hpp` obok `ui/`, `audio.hpp` obok `audio/`).
-`<raycade>` (w `engine/umbrella/`) dołącza `Engine.hpp`, `audio.hpp`, `engine/SceneMacro.hpp`,
-`entity/Group.hpp`, `shapes.hpp`, `visual.hpp`, `physics.hpp` i `ui.hpp`. Katalog `audio/` ma
-dwie warstwy: `audio/mixer/` (dźwięki i szyny, potrzebne w `Engine.hpp`) leży nisko, a obiekty
-sceny w samym `audio/` - wysoko, bo liczą odległość od kamery sceny. Źródła w `engine/src/`
-odwzorowują ten sam układ. Mikser dźwięku (`AudioMixer`) jest nagłówkiem prywatnym
-w `src/audio/mixer/` - gra korzysta z fasady `Engine::Audio()` i uchwytów `audio::Voice`.
-Implementacja
-`Engine` jest w `src/engine/`, podzielona tematycznie na pliki `Engine*.cpp` - który plik
-zawiera którą grupę metod, opisuje tabela w dokumentacji `Engine.hpp`. Nagłówki prywatne
-implementacji (np. `src/render/primitive_renderer/Pixel.hpp`) zostają w `src/`.
+W `node/` leży wszystko, co gra tworzy przez `Spawn<T>()`. Każda grupa tematyczna ma własny
+podkatalog, także gdy ma jeden plik (`assets/font/`, `scene/camera/`). Podkatalog nigdy nie jest
+niższą warstwą niż jego rodzic. Katalog nie wyznacza przestrzeni nazw: `node/shapes/round/Circle.hpp`
+to `shapes::Circle`. Jeden plik zawiera jedną klasę; małe struktury pomocnicze (`Collision`,
+`RayHit`, `AreaShapeContact`) leżą przy klasie, której dotyczą.
+
+Nagłówki zbiorcze leżą obok katalogu przestrzeni nazw: `audio.hpp` obok `audio/` (mikser),
+`node/shapes.hpp`, `node/visual.hpp`, `node/ui.hpp`, `node/sound.hpp` i `node/physics.hpp`
+(z colliderami). Podkatalogi tematyczne (`round/`, `body/`) nie mają własnych.
+`<raycade>` (w `engine/umbrella/`) dołącza `engine/Engine.hpp`, `engine/SceneMacro.hpp`,
+`audio.hpp`, `node/Group.hpp` i nagłówki zbiorcze z `node/`.
+
+Źródła w `engine/src/` odwzorowują ten sam układ 1:1. Nagłówki prywatne implementacji leżą
+obok swoich `.cpp`: mikser dźwięku `src/audio/AudioMixer.hpp` (gra korzysta z fasady
+`Engine::Audio()` i uchwytów `audio::Voice`), `src/render/primitives/Pixel.hpp`,
+`src/node/shapes/HitDistance.hpp`. Implementacja `Engine` jest w `src/engine/`, podzielona
+tematycznie na pliki `Engine*.cpp` - który plik zawiera którą grupę metod, opisuje tabela
+w dokumentacji `engine/Engine.hpp`.
 
 W nagłówku zostaje tylko to, co musi lub powinno być inline: szablony (settery z deducing
 this, `Spawn<T>()`, `Follow<T>()`), jedno- i dwuwierszowe gettery/settery oraz drobna
