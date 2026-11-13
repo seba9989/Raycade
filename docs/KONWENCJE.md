@@ -127,7 +127,8 @@ tematycznie - wpisanie `Spawn<node::` podpowiada kategorie, a `Spawn<node::shape
 - **Wyszukiwanie (`Find...`) zwraca brak wartości zamiast liczby magicznej:** wskaźnik
   (`FindAnimation()`, `Context<T>()`) albo `std::optional` (`FindFrame()`).
 - **Obiekty, które przyjmują zasób, przyjmują też nazwę pliku:** `Sprite::Sheet("hero.png")`,
-  `Text::Font("font.ttf")` - z `Assets` w kontekście, jeśli jest.
+  `Text::Font("font.ttf")`, `Drawable::Shader("glow.fs")` - z `Assets` w kontekście, a bez niego
+  z `Assets::Local()` (nazwa względem katalogu roboczego, ten sam zasób zastępczy i wpis w logu).
 
 ## Bez duplikatów
 
@@ -176,38 +177,51 @@ w lambdzie nazywamy `fn`, nie tak samo jak parametr (projekt kompiluje się z `-
 
 ## Zasoby
 
-Zasoby wczytywane z pliku albo kompilowane (Bitmap, Typeface, ShaderProgram) mają statyczne
-`Load()` zwracające `std::optional` - brak wartości oznacza błąd, a jego przyczynę zapisuje
-w logu raylib. Obiekty sceny przyjmują zasoby jako `std::shared_ptr` (wiele obiektów może
-używać jednej tekstury czy shadera); zamianę robi `Shared()`:
+Każdy zasób z pliku gry - bitmapę, arkusz, czcionkę, shader i dane dźwięku - pobiera się przez
+pamięć podręczną `Engine::Assets()`, a nie przez `Load()` w konfiguracji sceny. Wszystkie typy
+mają ten sam kontrakt:
+
+- nazwa jest liczona od katalogu `assets/` (`Assets::Path()`, to samo co `Engine::AssetPath()`);
+  ścieżka bezwzględna zostaje bez zmian,
+- ten sam plik wczytuje się raz - kluczem jest znormalizowana ścieżka,
+- brakujący plik daje zasób zastępczy zamiast `nullptr` (szachownica, font raylib, pusty shader,
+  cisza) i jeden wpis `[UWAGA]` w logu na plik, nawet gdy gra prosi o niego co klatkę,
+- czy plik się wczytał, mówi `IsLoaded()` - ma ją każdy typ zasobu,
+- `Purge()` po zwolnieniu sceny usuwa zasoby, których nie trzyma już nikt poza pamięcią.
+
+```cpp
+auto hero = engine.Assets().Bitmap("hero.png");
+auto anim = engine.Assets().Sheet("hero.json"); // Aseprite / TexturePacker
+auto font = engine.Assets().Font("font.ttf");
+auto wave = engine.Assets().Shader("wave.fs");  // albo Shader("wave.vs", "wave.fs")
+auto roar = engine.Assets().Clip("roar.wav");   // dane pliku dźwięku (AudioClip)
+```
+
+Zasoby tylko do odczytu (Bitmap, SpriteSheet, Typeface, AudioClip) są zwracane jako
+`std::shared_ptr<const T>`, a ShaderProgram bez `const`, bo ustawia się w nim uniformy. Shader
+z `Assets` jest wspólny dla wszystkich, którzy pobrali ten plik - razem z uniformami. Shader
+wymaga otwartego okna (np. konfiguracji sceny); wcześniej `Assets` zwraca pusty.
+
+Arkusze sprite'ów (eksport JSON z Aseprite albo TexturePackera) wczytuje `Assets::Sheet()`:
+klatki, czasy klatek i animacje z tagów, a obraz z `meta.image` trafia do tej samej pamięci
+podręcznej co `Bitmap()`. Arkusz jest tylko do odczytu - animacje i zdarzenia klatek dopisuje
+się do kopii (`std::make_shared<SpriteSheet>(*anim)`).
+
+`Assets` trzyma tylko dane plików. Ustawienia dźwięków (`engine.Audio().Sound(name)`) są
+w mikserze, bo `Purge()` zgubiłby konfigurację z `main()`, a nazwa dźwięku nie musi być plikiem
+(patrz „Dźwięk”). Żeby pierwsze odtworzenie nie czekało na dysk, gra trzyma wynik `Clip()`.
+
+Obiekty sceny przyjmują zasoby jako `std::shared_ptr` albo nazwę pliku (patrz „Nazwy metod”).
+Każdy typ ma też statyczne `Load()` zwracające `std::optional` - brak wartości oznacza błąd,
+a jego przyczynę zapisuje log raylib. Zostaje ono dla zasobów spoza gry (np. pliku wskazanego
+przez użytkownika), dla kodu, który sam chce obsłużyć błąd, i dla shadera z własnymi
+uniformami dla jednego obiektu; zamianę na wskaźnik robi `Shared()`:
 
 ```cpp
 auto wave = Shared(ShaderProgram::Load("", "assets/wave.fs")); // nullptr przy błędzie
 ```
 
-Zasoby tylko do odczytu (Bitmap, Typeface) przekazuje się jako `std::shared_ptr<const T>`,
-a ShaderProgram bez `const`, bo ustawia się w nim uniformy.
-
-Bitmapy i czcionki z plików gry pobiera się przez pamięć podręczną `Engine::Assets()`, a nie
-przez `Load()` w konfiguracji sceny. Nazwa jest liczona od katalogu `assets/`, ten sam plik
-wczytuje się raz, a brakujący daje zasób zastępczy (szachownica, font raylib) i jeden wpis
-w logu zamiast `nullptr`:
-
-```cpp
-auto hero = engine.Assets().Bitmap("hero.png");
-auto roar = engine.Assets().Clip("roar.wav");   // dane pliku dźwięku (AudioClip)
-auto font = engine.Assets().Font("font.ttf");
-auto anim = engine.Assets().Sheet("hero.json"); // Aseprite / TexturePacker
-```
-
-Arkusze sprite'ów z programów graficznych (eksport JSON z Aseprite albo TexturePackera) wczytuje
-`Assets::Sheet()`: klatki, czasy klatek i animacje z tagów, a obraz z `meta.image` trafia do tej
-samej pamięci podręcznej co `Bitmap()`. Zwrócony arkusz jest tylko do odczytu - animacje
-i zdarzenia klatek dopisuje się do kopii (`std::make_shared<SpriteSheet>(*anim)`).
-
-`Load()` zostaje dla zasobów spoza gry (np. plik wskazany przez użytkownika) i dla kodu, który
-sam chce obsłużyć błąd. `ShaderProgram` nie przechodzi przez `Assets`, bo jego uniformy są
-stanem obiektu, który go używa.
+Nowy typ zasobu z pliku dostaje metodę w `Assets` i ten sam kontrakt.
 
 ## Dźwięk
 
