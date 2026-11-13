@@ -13,7 +13,7 @@ warstwy wcześniejsze na liście:
 | `math/`      | AffineMatrix2D, Point2D, LineSegment, geometria, ConvexPart (części kształtów kolizji) | - |
 | `render/`    | Bitmap, Assets, RenderTarget, ClipStack, ShaderProgram, Typeface, PrimitiveRenderer | math    |
 | `input/`     | Input, akcje i osie                                             | -                           |
-| `audio/mixer/` | Audio, AudioBus, Voice - dźwięki, szyny i odtworzenia (raylib audio) | math                   |
+| `audio/mixer/` | Audio (fasada) i z przestrzeni nazw `audio`: Source, Sound, Music, Bus, Voice - dźwięki, muzyka, szyny i odtworzenia (raylib audio) | math |
 | `entity/`    | Entity, Group i klasy bazowe (Transformable, Drawable, Updatable...) | math, render, input    |
 | `shapes/`    | figury geometryczne z przestrzeni nazw `shapes` (baza `shapes::Shape`) | entity i jej zależności |
 | `visual/`    | obrazy, tekst i grupy rysowane do tekstury z przestrzeni nazw `visual` | entity i jej zależności |
@@ -32,7 +32,7 @@ Nagłówek zbiorczy katalogu leży obok niego (`shapes.hpp` obok `shapes/`, `vis
 dwie warstwy: `audio/mixer/` (dźwięki i szyny, potrzebne w `Engine.hpp`) leży nisko, a obiekty
 sceny w samym `audio/` - wysoko, bo liczą odległość od kamery sceny. Źródła w `engine/src/`
 odwzorowują ten sam układ. Mikser dźwięku (`AudioMixer`) jest nagłówkiem prywatnym
-w `src/audio/mixer/` - gra korzysta z `Engine::Audio()`, `Engine::AudioBus()` i `Voice`.
+w `src/audio/mixer/` - gra korzysta z fasady `Engine::Audio()` i uchwytów `audio::Voice`.
 Implementacja
 `Engine` jest w `src/engine/`, podzielona tematycznie na pliki `Engine*.cpp` - który plik
 zawiera którą grupę metod, opisuje tabela w dokumentacji `Engine.hpp`. Nagłówki prywatne
@@ -157,6 +157,7 @@ w logu zamiast `nullptr`:
 
 ```cpp
 auto hero = engine.Assets().Bitmap("hero.png");
+auto roar = engine.Assets().Clip("roar.wav");   // dane pliku dźwięku (AudioClip)
 auto font = engine.Assets().Font("font.ttf");
 auto anim = engine.Assets().Sheet("hero.json"); // Aseprite / TexturePacker
 ```
@@ -172,35 +173,48 @@ stanem obiektu, który go używa.
 
 ## Dźwięk
 
-Dźwięki i szyny miksera pobiera się z silnika po nazwie, jak sceny: `engine.Audio(name)`
-i `engine.AudioBus(name)`. Pierwsze pobranie tworzy obiekt z ustawieniami domyślnymi, a kolejne
-zwracają ten sam, więc konfiguruje się go raz (np. w `main()`), a odtwarza w dowolnym miejscu.
-Ustawienia mnożą się w górę: głos (`Voice`) - dźwięk (`Audio`) - szyny (`AudioBus`) aż do
-szyny głównej (`engine.AudioBus()`).
+Dźwięk ma jeden punkt wejścia, jak zasoby: `engine.Audio()` zwraca fasadę `Audio`, a z niej
+pobiera się po nazwie dźwięki (`Sound(name)`), muzykę (`Music(name)`) i szyny (`Bus(name)`).
+Pierwsze pobranie tworzy obiekt z ustawieniami domyślnymi, a kolejne zwracają ten sam, więc
+konfiguruje się go raz (np. w `main()`), a odtwarza w dowolnym miejscu. Ustawienia mnożą się
+w górę: głos (`audio::Voice`) - dźwięk albo muzyka (`audio::Sound`, `audio::Music`) - szyny
+(`audio::Bus`) aż do szyny głównej, której ustawienia ma sama fasada (`engine.Audio().Volume()`).
 
 ```cpp
-engine.AudioBus("kroki").Parent("efekty").Volume(0.6f);
-engine.Audio("kroki").Files({"step1.wav", "step2.wav"}).PitchVariation(0.05f).Bus("kroki");
+Audio& audio = engine.Audio();
+audio.Bus("kroki").Parent("efekty").Volume(0.6f);
+audio.Sound("kroki").Files({"step1.wav", "step2.wav"}).PitchVariation(0.05f).Bus("kroki");
+audio.Music("theme.ogg").FadeInTime(1.5f).FadeOutTime(1.0f);
 
-engine.Audio("kroki").Play();                    // Play() tylko odtwarza
-engine.Audio("coin.wav").Play().Pitch(1.5f);     // zmiana jednego odtworzenia
-engine.AudioBus("efekty").Paused();              // stan całej grupy
+audio.Sound("kroki").Play();                 // Play() tylko odtwarza
+audio.Sound("coin.wav").Play().Pitch(1.5f);  // zmiana jednego odtworzenia
+audio.Music("theme.ogg").Play();             // poprzednia ścieżka się wycisza
+audio.Bus("efekty").Paused();                // stan całej grupy
 ```
+
+- **Typy dźwięku są w przestrzeni nazw `audio`**, bo raylib ma globalne `Sound` i `Music`.
+  Z tego samego powodu w grze nie używa się `using namespace audio;`.
+- **Dźwięk (`audio::Sound`) i muzyka (`audio::Music`) to osobne typy** ze wspólną bazą
+  `audio::Source` (pliki, głośność, szyna, pętla, wyciszanie). Dźwięk gra wiele razy naraz
+  i ma limity (`MaxVoices()`, `MinInterval()`); muzyka gra jednym odtworzeniem, zawsze jako
+  strumień, domyślnie w pętli na szynie `"music"` (`Audio::kMusicBus`, z `Exclusive()`),
+  a pauzę, przewijanie i `OnFinish()` ma na sobie. Nazwy dźwięków i muzyki są osobne.
 
 - **Nazwa dźwięku jest plikiem** (względem `assets/`), chyba że `Files()` poda listę wariantów -
   jedna lista jednym setterem, jak `Polygon::Vertices()`.
-- **`Play()` zwraca uchwyt `Voice`**, a nie dźwięk - tworzy nowe odtworzenie, tak jak `Spawn<T>()`
+- **`Sound::Play()` zwraca uchwyt `audio::Voice`**, a nie dźwięk - tworzy nowe odtworzenie, tak jak `Spawn<T>()`
   zwraca nowy obiekt. Głos rusza na końcu klatki, więc ustawienia z łańcucha działają od pierwszej
   próbki. Uchwyt skończonego głosu jest martwy i ignoruje polecenia bez wpisu w logu.
-- **Szyna to grupa dźwięków** (`AudioBus`), a nie kanał - „kanał” w audio znaczy też kanał
+- **Szyna to grupa dźwięków** (`audio::Bus`), a nie kanał - „kanał” w audio znaczy też kanał
   stereo albo pojedynczy głos. Setter dźwięku nazywa się krótko `Bus()`.
 - **Polecenia odtwarzania to czasowniki** (`Play()`, `Stop()`), jak w `visual::Sprite`, a trwały
   stan grupy to flagi szyny (`Paused()`, `Muted()`).
 - **Dźwięk w miejscu świata gra przez `audio::Emitter`** - głos nie ma położenia, żeby nie
   dublować `Transformable`. Słuchacz to `audio::Listener` (bez niego - środek kamery sceny).
 - **Głos należy do sceny**, w której aktualizacji albo konfiguracji go zagrano - przy
-  `UnloadScene()`/`ReloadScene()` cichnie (bez `OnFinish()`). Wyjątek: dźwięki na szynie
-  `Exclusive()` (muzyka) i z globalnego `Engine::OnUpdate()` grają dalej.
+  `UnloadScene()`/`ReloadScene()` cichnie (bez `OnFinish()`), jak węzeł dźwięku w drzewie
+  sceny. Grają dalej głosy z `Global()` (jak obiekt globalny; muzyka ma je domyślnie) i głosy
+  zagrane z globalnego `Engine::OnUpdate()` albo z `main()`. Szyna nie zmienia tej reguły.
 - Nazwy szyn to identyfikatory - bez polskich znaków (`"muzyka"`, `"efekty"`).
 
 ## Obsługa błędów (Engine)
@@ -214,7 +228,7 @@ engine.AudioBus("efekty").Paused();              // stan całej grupy
   `Replay()`) zmieniają stan silnika i same zapisują wynik w logu.
 - `Init()` loguje błąd, a wynik podaje `IsReady()`.
 - Wyjątek rzuca tylko `Engine::Scene()`, bo musi zwrócić referencję do sceny, której nie ma.
-  `Engine::Audio()` i `Engine::AudioBus()` też zwracają referencję, ale nieznaną nazwę tworzą
+  `Audio::Sound()`, `Audio::Music()` i `Audio::Bus()` też zwracają referencję, ale nieznaną nazwę tworzą
   (jak `Assets` - brakujący plik gra ciszą z jednym wpisem w logu).
 
 ## Pliki i ścieżki

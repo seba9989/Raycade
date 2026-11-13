@@ -10,6 +10,8 @@
 
 #include "AudioMixer.hpp"
 
+namespace audio {
+
 namespace {
 
 /** @brief Głos uchwytu albo nullptr (martwy uchwyt albo brak miksera). */
@@ -95,7 +97,9 @@ bool Voice::IsPlaying() const {
     return slot && !slot->paused && !slot->userPaused && !slot->stopping;
 }
 
-const Audio* Voice::Sound() const {
+const audio::Sound* Voice::Sound() const {
     const auto* slot = SlotOf(*this);
-    return slot ? slot->audio : nullptr;
+    return slot ? slot->sound : nullptr;
 }
+
+} // namespace audio

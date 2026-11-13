@@ -1,35 +1,39 @@
 /**
- * @file AudioBus.cpp
+ * @file Bus.cpp
  * @brief Ustawienia szyny i przekazanie poleceń do miksera silnika.
  */
 
-#include <raycade/audio/mixer/AudioBus.hpp>
+#include <raycade/audio/mixer/Bus.hpp>
 
 #include <algorithm>
 #include <utility>
 
 #include "AudioMixer.hpp"
 
-AudioBus& AudioBus::Parent(std::string parent) {
+namespace audio {
+
+Bus& Bus::Parent(std::string parent) {
     mixer_->Reparent(*this, parent);
     return *this;
 }
 
-AudioBus& AudioBus::Volume(float volume) {
+Bus& Bus::Volume(float volume) {
     volume_ = std::max(0.0f, volume);
     return *this;
 }
 
-AudioBus& AudioBus::MaxVoices(int count) {
+Bus& Bus::MaxVoices(int count) {
     maxVoices_ = mixer_->ClampVoices(*this, count);
     return *this;
 }
 
-AudioBus& AudioBus::Stop() {
+Bus& Bus::Stop() {
     mixer_->Stop(*this);
     return *this;
 }
 
-int AudioBus::VoiceCount() const {
+int Bus::VoiceCount() const {
     return mixer_->VoiceCount(*this);
 }
+
+} // namespace audio

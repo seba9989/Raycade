@@ -15,7 +15,7 @@
  * - EngineSystem.cpp - schowek oraz czas, losowość i różne (w tym Screenshot(),
  *   EventWaiting()),
  * - EngineFiles.cpp - pliki, katalogi i zasoby (Assets()),
- * - EngineAudio.cpp - dźwięk (Audio(), AudioBus()).
+ * - EngineAudio.cpp - dźwięk (Audio()).
  */
 #pragma once
 
@@ -34,7 +34,6 @@
 #include <vector>
 
 #include <raycade/audio/mixer/Audio.hpp>
-#include <raycade/audio/mixer/AudioBus.hpp>
 #include <raycade/input/Input.hpp>
 #include <raycade/render/Assets.hpp>
 #include <raycade/render/Bitmap.hpp>
@@ -68,8 +67,8 @@ class AudioMixer;
  *   Replay()) albo `std::optional` (LoadText()),
  * - Init() zapisuje błąd w logu, a wynik podaje IsReady(),
  * - wyjątek (std::out_of_range) rzuca tylko Scene(), bo musi zwrócić referencję do sceny,
- *   której nie ma. Audio() i AudioBus() też zwracają referencję, ale nieznaną nazwę tworzą
- *   (jak Assets - brakujący plik gra ciszą), więc nie rzucają.
+ *   której nie ma. Audio().Sound(), Music() i Bus() też zwracają referencję, ale nieznaną
+ *   nazwę tworzą (jak Assets - brakujący plik gra ciszą), więc nie rzucają.
  *
  * @code{.cpp}
  * Engine& engine = Engine::Get().Title("Gra").Window(800, 600).Fps(60).Init();
@@ -1104,41 +1103,31 @@ class Engine : public Contextable {
 
     /**
      * @name Dźwięk
-     * Dźwięki i szyny miksera pobiera się po nazwie, jak sceny. Urządzenie audio otwiera Init(),
+     * Dźwięki, muzykę i szyny miksera daje fasada Audio(). Urządzenie audio otwiera Init(),
      * a zamyka Shutdown(); bez urządzenia (np. brak karty dźwiękowej) Play() nic nie robi,
      * a w logu jest jeden wpis.
      */
     /** @{ */
 
     /**
-     * @brief Podaje dźwięk o nazwie, tworząc go przy pierwszym użyciu.
-     * @details Ustawienia dźwięku zostają w silniku do końca programu, więc konfiguruje się go
-     * raz, a odtwarza w dowolnym miejscu. Nazwa jest zarazem plikiem w assets/, chyba że
-     * Audio::Files() poda listę wariantów. Dźwięki można konfigurować także przed Init().
+     * @brief Podaje dźwięk silnika: dźwięki, muzykę i szyny po nazwie.
+     * @details Ustawienia zostają w silniku do końca programu, więc konfiguruje się je raz
+     * (także przed Init()), a odtwarza w dowolnym miejscu. Patrz Audio.
      * @code{.cpp}
-     * engine.Audio("coin.wav").Volume(0.7f).PitchVariation(0.08f).Bus("efekty");
-     * engine.Audio("kroki").Files({"step1.wav", "step2.wav", "step3.wav"}).Bus("efekty");
+     * engine.Audio().Volume(0.8f);                                   // szyna główna
+     * engine.Audio().Sound("coin.wav").Volume(0.7f).PitchVariation(0.08f).Bus("efekty");
+     * engine.Audio().Music("theme.ogg").FadeInTime(1.5f);
      *
-     * engine.Audio("coin.wav").Play();
-     * engine.Audio("coin.wav").Play().Pitch(1.5f); // zmiana tylko tego odtworzenia
+     * engine.Audio().Sound("coin.wav").Play().Pitch(1.5f); // zmiana tylko tego odtworzenia
+     * engine.Audio().Music("theme.ogg").Play();
+     * engine.Audio().Bus("efekty").Paused();
      * @endcode
-     * @param name Nazwa dźwięku (albo pliku).
-     * @return Dźwięk.
+     * @return Fasada miksera.
      */
-    ::Audio& Audio(const std::string& name);
+    ::Audio& Audio();
 
-    /**
-     * @brief Podaje szynę miksera o nazwie, tworząc ją przy pierwszym użyciu.
-     * @details Nowa szyna jest podpięta pod szynę główną. Patrz AudioBus.
-     * @code{.cpp}
-     * engine.AudioBus().Volume(0.8f);                 // szyna główna
-     * engine.AudioBus("muzyka").Volume(0.5f);
-     * engine.AudioBus("efekty").Paused();
-     * @endcode
-     * @param name Nazwa szyny; pusta - szyna główna.
-     * @return Szyna.
-     */
-    ::AudioBus& AudioBus(const std::string& name = "");
+    /** @copydoc Audio() */
+    const ::Audio& Audio() const;
 
     /** @} */
 
@@ -1317,7 +1306,7 @@ class Engine : public Contextable {
     std::string screenshot_;   /**< Ścieżka zrzutu do wykonania na końcu klatki. */
 
     ::Assets assets_;                       /**< Pamięć podręczna zasobów z plików. */
-    std::unique_ptr<AudioMixer> mixer_;     /**< Dźwięki, szyny i głosy (Audio()). */
+    std::unique_ptr<AudioMixer> mixer_;     /**< Dźwięki, muzyka, szyny i głosy (Audio()). */
     std::map<std::string, ::Scene> scenes_; /**< Utworzone sceny według nazw. */
     std::string active_;                    /**< Nazwa aktywnej sceny. */
     std::string pending_; /**< Scena, na którą przełączamy po zakończeniu klatki. */

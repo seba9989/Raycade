@@ -133,7 +133,7 @@ std::shared_ptr<ShaderProgram> Assets::Shader(
     return shader;
 }
 
-std::shared_ptr<const AudioClip> Assets::Sound(const std::string& name) {
+std::shared_ptr<const AudioClip> Assets::Clip(const std::string& name) {
     const std::string path = Path(name);
     if (const auto it = sounds_.find(path); it != sounds_.end()) return it->second;
     if (!silentClip_) silentClip_ = std::make_shared<const AudioClip>();

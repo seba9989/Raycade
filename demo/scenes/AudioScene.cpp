@@ -1,18 +1,17 @@
 /**
  * @file AudioScene.cpp
- * @brief Pokaz dźwięku: Engine::Audio(), Voice, szyny miksera (AudioBus), muzyka
- * i dźwięk w przestrzeni (audio::Emitter, audio::Listener).
- * @details Dźwięki i szyny są skonfigurowane raz, w main.cpp - scena tylko je odtwarza.
+ * @brief Pokaz dźwięku: Engine::Audio() (audio::Sound, audio::Music, audio::Voice), szyny
+ * miksera (audio::Bus) i dźwięk w przestrzeni (audio::Emitter, audio::Listener).
+ * @details Dźwięki, muzyka i szyny są skonfigurowane raz, w main.cpp - scena tylko je odtwarza.
  * - przyciski albo klawisze odtwarzają dźwięki: spacja moneta (losowa wysokość), K kroki
  *   (losowy plik z trzech), U uderzenie,
  * - Q odtwarza monetę z wysokością zmienioną tylko dla tego odtworzenia (Voice::Pitch()),
  * - P wstrzymuje szynę "efekty" razem z jej dzieckiem "kroki" (szyna "interfejs" gra dalej),
  * - N wycisza szynę "efekty", strzałki w górę i w dół zmieniają głośność szyny głównej,
- * - muzyka startuje razem ze sceną; M przełącza ścieżkę theme/boss - szyna "muzyka" ma
+ * - muzyka startuje razem ze sceną; M przełącza ścieżkę theme/boss - szyna "music" ma
  *   Exclusive(), więc stara ścieżka się wycisza (FadeOutTime()), a nowa narasta (FadeInTime()),
  *   S zatrzymuje muzykę z wyciszeniem, B wycisza samą szynę muzyki,
- * - Enter wstrzymuje i wznawia bieżącą ścieżkę (Voice::Pause() / Voice::Play()) - Play() na
- *   szynie Exclusive() zwraca głos, który już gra,
+ * - Enter wstrzymuje i wznawia bieżącą ścieżkę (Music::Pause() / Music::Resume()),
  * - moneta ma MaxVoices(4) i MinInterval(): przytrzymana spacja nie zagłusza reszty; Backspace
  *   ucina ostatnią monetę przez zapamiętany uchwyt Voice,
  * - na dole jest świat: postać (strzałki w lewo/prawo) ma słuchacza (audio::Listener), a jej
@@ -20,7 +19,7 @@
  *   dźwiękiem - słychać je głośniej i z właściwej strony, gdy postać podejdzie,
  * - C zrzuca skrzynię (RigidBody) - uderzenie o podłogę gra z głośnością z prędkości,
  * - X wywołuje wybuch: jednorazowy emiter usuwający się w OnFinish(),
- * - R wczytuje scenę od nowa: głosy sceny (ognisko) cichną, a muzyka gra dalej,
+ * - R wczytuje scenę od nowa: głosy sceny (ognisko) cichną, a muzyka (Global()) gra dalej,
  * - napis u góry pokazuje stan szyn, liczbę trwających głosów, czas ostatniej monety
  *   (Voice::PlaybackTime() / Duration()) i liczbę skończonych monet (Voice::OnFinish()).
  */
@@ -49,7 +48,8 @@ class Crate : public RigidBody {
         OnCollisionEnter([](Crate& self, const Collision&) {
             if (self.speed_ < 60.0f) return; // toczenie i drobne stuknięcia bez dźwięku
             Engine::Get()
-                .Audio("uderzenie")
+                .Audio()
+                .Sound("uderzenie")
                 .Play() // ustawienia tylko tego odtworzenia: mocniej - głośniej i niżej
                 .Volume(std::clamp(self.speed_ / 700.0f, 0.15f, 1.0f))
                 .Pitch(1.25f - std::clamp(self.speed_ / 1600.0f, 0.0f, 0.4f));
@@ -70,7 +70,7 @@ class Crate : public RigidBody {
 /** @brief Wybuch w danym miejscu: jednorazowy emiter z błyskiem, który znika po dźwięku. */
 void Explosion(Scene& scene, Vector2 where) {
     auto& boom = scene.Spawn<audio::Emitter>()
-                     .Audio("uderzenie")
+                     .Sound("uderzenie")
                      .MaxDistance(700)
                      .Position(where)
                      .Play()
@@ -87,8 +87,8 @@ void SoundButton(Scene& scene, Vector2 position, const std::string& label, std::
                        .OnMouseEnter([](shapes::Rect& self) { self.Filled(); })
                        .OnMouseLeave([](shapes::Rect& self) { self.Filled(false); })
                        .OnClick([sound = std::move(sound)](shapes::Rect&) {
-                           Engine::Get().Audio("klik").Play();
-                           Engine::Get().Audio(sound).Play();
+                           Engine::Get().Audio().Sound("klik").Play();
+                           Engine::Get().Audio().Sound(sound).Play();
                        });
     button.Spawn<visual::Text>()
         .Content(label)
@@ -99,7 +99,7 @@ void SoundButton(Scene& scene, Vector2 position, const std::string& label, std::
 }
 
 /** @brief Opis stanu szyny do napisu: wyciszona, wstrzymana albo głośność w procentach. */
-std::string BusLabel(const AudioBus& bus) {
+std::string BusLabel(const audio::Bus& bus) {
     if (bus.IsMuted()) return "wyciszona";
     if (bus.IsPaused()) return "wstrzymana";
     return std::to_string(static_cast<int>(std::lround(bus.Volume() * 100))) + "%";
@@ -129,8 +129,9 @@ SCENE("dzwiek") {
     auto& status = scene.Spawn<visual::Text>().FontSize(18).Position({40, 70});
     auto& coinInfo = scene.Spawn<visual::Text>().FontSize(16).Paint(GRAY).Position({40, 285});
 
-    // muzyka: szyna Exclusive() - ta sama ścieżka nie zaczyna się od nowa przy powrocie na scenę
-    engine.Audio("theme.wav").Play();
+    // muzyka jest globalna: po powrocie na scenę albo R gra dalej ta ścieżka, która grała
+    if (engine.Audio().Bus(Audio::kMusicBus).VoiceCount() == 0)
+        engine.Audio().Music("theme.wav").Play();
 
     // ---------------- świat: dźwięk w przestrzeni ----------------
     scene.Gravity({0, 1400});
@@ -149,7 +150,7 @@ SCENE("dzwiek") {
                          self.Radius(13 + 2 * std::sin(time * 17) + std::sin(time * 5));
                      });
     fire.Spawn<audio::Emitter>()
-        .Audio("ogien")
+        .Sound("ogien")
         .MaxDistance(650)
         .Attenuation(audio::Falloff::Smooth)
         .Play();
@@ -165,15 +166,16 @@ SCENE("dzwiek") {
                      .Position({160, kFloor})
                      .Play("stoi")
                      .OnFrameEvent([&engine](visual::Sprite&, const std::string& event) {
-                         if (event == "krok") engine.Audio("kroki").Play();
+                         if (event == "krok") engine.Audio().Sound("kroki").Play();
                      });
     hero.Spawn<audio::Listener>();
 
     // stan sceny trzymany w lambdzie: uchwyt ostatniej monety i licznik skończonych
     auto finished = std::make_shared<int>(0);
     scene.OnUpdate([&engine, &scene, &status, &coinInfo, &hero, finished,
-                    lastCoin = Voice{}](float dt) mutable {
+                    lastCoin = audio::Voice{}](float dt) mutable {
         const Input& input = engine.Input();
+        Audio& audio = engine.Audio();
 
         // postać: ruch i animacja (kroki grają same, ze zdarzeń klatek)
         const float move = (input.KeyDown(KEY_RIGHT) ? 1.0f : 0.0f) -
@@ -190,41 +192,40 @@ SCENE("dzwiek") {
         if (input.KeyPressed(KEY_R)) engine.ReloadScene("dzwiek");
 
         if (input.KeyDown(KEY_SPACE)) // przytrzymana: limit głosów i MinInterval() pilnują hałasu
-            lastCoin = engine.Audio("coin.wav").Play().OnFinish([finished](Voice&) { ++*finished; });
+            lastCoin = audio.Sound("coin.wav").Play().OnFinish([finished](audio::Voice&) {
+                ++*finished;
+            });
         if (input.KeyPressed(KEY_BACKSPACE)) lastCoin.Stop(); // martwy uchwyt - bez efektu
-        if (input.KeyPressed(KEY_K)) engine.Audio("kroki").Play();
-        if (input.KeyPressed(KEY_U)) engine.Audio("uderzenie").Play();
+        if (input.KeyPressed(KEY_K)) audio.Sound("kroki").Play();
+        if (input.KeyPressed(KEY_U)) audio.Sound("uderzenie").Play();
         // zmiana tylko tego jednego odtworzenia - ustawienia dźwięku zostają bez zmian
-        if (input.KeyPressed(KEY_Q)) engine.Audio("coin.wav").Play().Pitch(1.5f);
+        if (input.KeyPressed(KEY_Q)) audio.Sound("coin.wav").Play().Pitch(1.5f);
 
-        if (input.KeyPressed(KEY_M)) {
-            const bool boss = engine.Audio("boss.wav").IsPlaying();
-            engine.Audio(boss ? "theme.wav" : "boss.wav").Play(); // stara ścieżka się wycisza
-        }
+        audio::Music& theme = audio.Music("theme.wav");
+        audio::Music& boss = audio.Music("boss.wav");
+        // bieżąca ścieżka: boss, jeśli ma odtworzenie (także wstrzymane), inaczej theme
+        audio::Music& track = boss.VoiceCount() > 0 ? boss : theme;
+        if (input.KeyPressed(KEY_M)) (&track == &boss ? theme : boss).Play(); // stara się wycisza
         if (input.KeyPressed(KEY_ENTER)) {
-            // Play() na szynie Exclusive() zwraca głos, który już gra - to jest bieżąca ścieżka
-            const bool boss = engine.Audio("boss.wav").VoiceCount() > 0; // także wstrzymany
-            Voice track = engine.Audio(boss ? "boss.wav" : "theme.wav").Play();
             if (track.IsPaused())
-                track.Play();
+                track.Resume();
             else
                 track.Pause();
         }
-        if (input.KeyPressed(KEY_S)) engine.AudioBus("muzyka").Stop();
-        AudioBus& music = engine.AudioBus("muzyka");
+        audio::Bus& music = audio.Bus(Audio::kMusicBus);
+        if (input.KeyPressed(KEY_S)) music.Stop();
         if (input.KeyPressed(KEY_B)) music.Muted(!music.IsMuted());
 
-        AudioBus& master = engine.AudioBus();
-        AudioBus& effects = engine.AudioBus("efekty");
+        audio::Bus& effects = audio.Bus("efekty");
         if (input.KeyPressed(KEY_P)) effects.Paused(!effects.IsPaused());
         if (input.KeyPressed(KEY_N)) effects.Muted(!effects.IsMuted());
-        if (input.KeyPressed(KEY_UP)) master.Volume(std::min(master.Volume() + 0.1f, 1.0f));
-        if (input.KeyPressed(KEY_DOWN)) master.Volume(std::max(master.Volume() - 0.1f, 0.0f));
+        if (input.KeyPressed(KEY_UP)) audio.Volume(std::min(audio.Volume() + 0.1f, 1.0f));
+        if (input.KeyPressed(KEY_DOWN)) audio.Volume(std::max(audio.Volume() - 0.1f, 0.0f));
 
         status.Content(
-            "Główna: " + BusLabel(master) + "    efekty: " + BusLabel(effects) +
-            "    kroki: " + BusLabel(engine.AudioBus("kroki")) + "    muzyka: " + BusLabel(music) +
-            "    głosy: " + std::to_string(master.VoiceCount())
+            "Główna: " + BusLabel(audio.Bus()) + "    efekty: " + BusLabel(effects) +
+            "    kroki: " + BusLabel(audio.Bus("kroki")) + "    muzyka: " + BusLabel(music) +
+            "    głosy: " + std::to_string(audio.VoiceCount())
         );
         coinInfo.Content(
             "Ostatnia moneta: " + std::format("{:.2f} / {:.2f} s", lastCoin.PlaybackTime(),

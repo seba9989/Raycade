@@ -65,7 +65,7 @@ engine/
     math/                   macierz przekształceń, Point2D, geometria
     render/                 Bitmap, RenderTarget, PrimitiveRenderer
     input/                  klawiatura, mysz, pad, akcje i osie
-    audio/mixer/            dźwięk: Audio, AudioBus (szyny), Voice (odtworzenie)
+    audio/mixer/            dźwięk: Audio (fasada), Sound, Music, Bus (szyny), Voice (odtworzenie)
     entity/                 Entity, Group i klasy bazowe
     shapes/  shapes.hpp     figury geometryczne (namespace shapes)
     visual/  visual.hpp     obrazy, tekst, płótno, RenderGroup (namespace visual)

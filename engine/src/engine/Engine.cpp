@@ -212,7 +212,7 @@ int Engine::Run() {
 
         // zmiany scen między klatkami, poza pętlą po obiektach
         ApplySceneChanges();
-        // głosy zgłoszone w tej klatce (Audio::Play()) ruszają z kompletem ustawień
+        // głosy zgłoszone w tej klatce (Sound::Play(), Music::Play()) ruszają z kompletem ustawień
         mixer_->Update(dt);
         ++frameCount_;
     }

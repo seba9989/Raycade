@@ -43,9 +43,9 @@ void Emitter::PlayVoice() {
 void Emitter::StartRequested() {
     AudioMixer* mixer = AudioMixer::Current();
     const int requests = std::exchange(requests_, 0);
-    if (!mixer || audio_.empty()) return;
+    if (!mixer || sound_.empty()) return;
     for (int i = 0; i < requests; ++i) {
-        Voice voice = mixer->Sound(audio_).Play();
+        Voice voice = mixer->Sound(sound_).Play();
         if (voice == Voice{}) continue; // brak urządzenia albo MinInterval()
         voice.OnFinish([this](Voice&) {
             if (finish_) finish_();
@@ -66,7 +66,8 @@ void Emitter::StopVoices() {
 }
 
 void Emitter::Tick(float, const Input&) {
-    std::erase_if(voices_, [](const Voice& voice) { return voice.Sound() == nullptr; });
+    AudioMixer* mixer = AudioMixer::Current();
+    std::erase_if(voices_, [mixer](const Voice& voice) { return !mixer || !mixer->Find(voice); });
     StartRequested();
     Spatialize(); // przed końcem klatki - nowe głosy ruszają już z właściwą głośnością
 }

@@ -1,80 +1,73 @@
 /**
  * @file Audio.cpp
- * @brief Ustawienia dźwięku i przekazanie poleceń do miksera silnika.
+ * @brief Fasada dźwięku silnika - przekazuje wywołania do miksera.
  */
 
 #include <raycade/audio/mixer/Audio.hpp>
 
-#include <algorithm>
-#include <utility>
-
 #include "AudioMixer.hpp"
 
-Audio& Audio::Files(std::vector<std::string> files) {
-    files_ = std::move(files);
-    lastFile_ = -1;
-    return *this;
+audio::Sound& Audio::Sound(const std::string& name) {
+    return mixer_->Sound(name);
+}
+
+audio::Music& Audio::Music(const std::string& name) {
+    return mixer_->Music(name);
+}
+
+audio::Bus& Audio::Bus(const std::string& name) {
+    return mixer_->Bus(name);
+}
+
+const audio::Bus& Audio::Master() const {
+    return mixer_->Bus("");
+}
+
+bool Audio::IsReady() const {
+    return mixer_->IsReady();
 }
 
 Audio& Audio::Volume(float volume) {
-    volume_ = std::max(0.0f, volume);
+    Bus().Volume(volume);
     return *this;
 }
 
-Audio& Audio::Pitch(float pitch) {
-    pitch_ = std::max(0.01f, pitch);
+float Audio::Volume() const {
+    return Master().Volume();
+}
+
+Audio& Audio::Muted(bool value) {
+    Bus().Muted(value);
     return *this;
 }
 
-Audio& Audio::PitchVariation(float variation) {
-    pitchVariation_ = std::clamp(variation, 0.0f, 0.99f);
+bool Audio::IsMuted() const {
+    return Master().IsMuted();
+}
+
+Audio& Audio::Paused(bool value) {
+    Bus().Paused(value);
     return *this;
 }
 
-Audio& Audio::Pan(float pan) {
-    pan_ = std::clamp(pan, -1.0f, 1.0f);
-    return *this;
-}
-
-Audio& Audio::FadeInTime(float seconds) {
-    fadeInTime_ = std::max(0.0f, seconds);
-    return *this;
-}
-
-Audio& Audio::FadeOutTime(float seconds) {
-    fadeOutTime_ = std::max(0.0f, seconds);
-    return *this;
+bool Audio::IsPaused() const {
+    return Master().IsPaused();
 }
 
 Audio& Audio::MaxVoices(int count) {
-    maxVoices_ = std::max(0, count);
+    Bus().MaxVoices(count);
     return *this;
 }
 
-Audio& Audio::MinInterval(float seconds) {
-    minInterval_ = std::max(0.0f, seconds);
-    return *this;
-}
-
-Audio& Audio::Bus(std::string bus) {
-    mixer_->Bus(bus); // szyna powstaje od razu - widać ją w logu przy konfiguracji
-    bus_ = std::move(bus);
-    return *this;
-}
-
-Voice Audio::Play() {
-    return mixer_->Play(*this);
+int Audio::MaxVoices() const {
+    return Master().MaxVoices();
 }
 
 Audio& Audio::Stop() {
-    mixer_->Stop(*this);
+    Bus().Stop();
     return *this;
 }
 
-bool Audio::IsLoaded() const {
-    return mixer_->IsLoaded(*this);
-}
-
 int Audio::VoiceCount() const {
-    return mixer_->VoiceCount(*this);
+    return Master().VoiceCount();
 }

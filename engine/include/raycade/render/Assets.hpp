@@ -38,7 +38,7 @@
  * | SpriteSheet   | Sheet()  | jedna klatka z szachownicą | -                      |
  * | Typeface      | Font()   | font domyślny raylib       | -                      |
  * | ShaderProgram | Shader() | pusty shader (bez efektu)  | otwartego okna         |
- * | AudioClip     | Sound()  | pusty klip (cisza)         | - (granie: urządzenia) |
+ * | AudioClip     | Clip()   | pusty klip (cisza)         | - (granie: urządzenia) |
  *
  * Czy plik się wczytał, mówi IsLoaded() każdego z tych typów. Błąd jest widoczny (albo
  * słyszalny), a w logu pojawia się jeden wpis na plik, nawet jeśli gra prosi o niego co klatkę.
@@ -171,18 +171,18 @@ class Assets {
 
     /**
      * @brief Podaje dane pliku dźwiękowego, wczytując je przy pierwszym użyciu.
-     * @details Z tej metody korzysta Engine::Audio() przy każdym Play(). Gra może wczytać plik
+     * @details Z tej metody korzysta mikser (Engine::Audio()) przy każdym Play(). Gra może wczytać plik
      * zawczasu i trzymać wynik, żeby pierwsze odtworzenie nie czekało na dysk (patrz AudioClip).
      * @param name Nazwa pliku (patrz Path()).
      * @return Klip albo pusty klip (IsLoaded() == false, gra ciszą), gdy pliku nie da się
      * wczytać.
      */
-    std::shared_ptr<const AudioClip> Sound(const std::string& name);
+    std::shared_ptr<const AudioClip> Clip(const std::string& name);
 
     /**
      * @brief Zapisuje w logu błąd wczytania zasobu - raz na klucz, do następnego Purge().
      * @details Dla zasobów wczytywanych poza Assets, które mają się zachowywać tak samo (np.
-     * dźwięk Audio::Streamed() czytany z dysku przez każdy głos).
+     * dźwięk Sound::Streamed() albo muzyka czytane z dysku przez każdy głos).
      * @param key Klucz błędu (np. ścieżka z dopiskiem rodzaju).
      * @param kind Rodzaj zasobu w dopełniaczu, np. "bitmapy".
      * @param path Ścieżka pliku.

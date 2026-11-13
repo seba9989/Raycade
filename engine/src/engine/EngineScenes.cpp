@@ -17,7 +17,10 @@ Scene& Engine::CreateScene(const std::string& name) {
 }
 
 Engine& Engine::CreateScene(const std::string& name, const std::function<void(::Scene&)>& setup) {
-    setup(CreateScene(name));
+    ::Scene& scene = CreateScene(name);
+    mixer_->Owner(&scene); // dźwięki z konfiguracji należą do sceny, jak przy Load()
+    setup(scene);
+    mixer_->Owner(nullptr);
     return *this;
 }
 
@@ -129,8 +132,8 @@ Engine& Engine::ReloadScene(const std::string& name) {
 /**
  * @details Kolejność:
  * 1. przełączenie na scenę z SwitchScene() (wczytanie, jeśli trzeba),
- * 2. zwolnienie scen z UnloadScene() i ReloadScene() razem z ich głosami (poza muzyką na
- *    szynie AudioBus::Exclusive()),
+ * 2. zwolnienie scen z UnloadScene() i ReloadScene() razem z ich głosami (poza dźwiękami
+ *    audio::Source::Global() - domyślnie muzyką),
  * 3. ponowne wczytanie scen z ReloadScene(),
  * 4. jeśli aktywna scena została zwolniona - wczytanie jej od nowa (restart),
  * 5. zwolnienie zasobów (Assets::Purge()), których nie używa już żadna scena ani żaden głos.

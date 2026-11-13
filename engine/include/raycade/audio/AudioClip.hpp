@@ -19,15 +19,15 @@
  * jest poprawny. Zdekodowane próbki czekają w pamięci RAM i trafiają do urządzenia przy
  * pierwszym odtworzeniu (Sound()) - tak jak Bitmap wysyła teksturę na kartę graficzną dopiero
  * przy rysowaniu. Plik zostaje też w pamięci w postaci zakodowanej - z niego grają zapętlone
- * strumienie (Audio::Looped() bez Audio::Streamed()).
+ * strumienie (Source::Looped() bez Sound::Streamed()).
  *
- * Gra zwykle nie używa klipów wprost - pliki wczytuje Engine::Audio() przy pierwszym Play().
- * Assets::Sound() pozwala sprawdzić plik albo wczytać go zawczasu: klip trzymany przez grę
+ * Gra zwykle nie używa klipów wprost - pliki wczytuje mikser (Engine::Audio()) przy pierwszym
+ * Play(). Assets::Clip() pozwala sprawdzić plik albo wczytać go zawczasu: klip trzymany przez grę
  * nie jest zwalniany przy zmianie scen, więc pierwsze Play() nie czeka na dysk.
  * @code{.cpp}
  * // w konfiguracji sceny: boss.wav zostaje w pamięci, dopóki lambda trzyma wskaźnik
- * scene.OnUpdate([roar = engine.Assets().Sound("boss.wav")](float) {
- *     if (bossAppears) Engine::Get().Audio("boss.wav").Play(); // bez czekania na dysk
+ * scene.OnUpdate([roar = engine.Assets().Clip("roar.wav")](float) {
+ *     if (bossAppears) Engine::Get().Audio().Sound("roar.wav").Play(); // bez czekania na dysk
  * });
  * @endcode
  */

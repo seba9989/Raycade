@@ -1,16 +1,16 @@
 /**
  * @file EngineAudio.cpp
- * @brief Dźwięk: dostęp do dźwięków i szyn miksera silnika.
+ * @brief Dźwięk: fasada miksera silnika (Audio).
  */
 
 #include <raycade/Engine.hpp>
 
 #include "../audio/mixer/AudioMixer.hpp"
 
-Audio& Engine::Audio(const std::string& name) {
-    return mixer_->Sound(name);
+Audio& Engine::Audio() {
+    return mixer_->Facade();
 }
 
-AudioBus& Engine::AudioBus(const std::string& name) {
-    return mixer_->Bus(name);
+const Audio& Engine::Audio() const {
+    return mixer_->Facade();
 }

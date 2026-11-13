@@ -24,15 +24,15 @@ enum class Falloff {
 /**
  * @brief Źródło dźwięku w świecie: im dalej od słuchacza, tym ciszej, a lewo/prawo słychać
  * w panoramie.
- * @details Emiter odtwarza dźwięk z Engine::Audio() (z jego plikami i ustawieniami) i co
+ * @details Emiter odtwarza dźwięk z Audio::Sound() (z jego plikami i ustawieniami) i co
  * klatkę liczy dla swoich głosów głośność i panoramę z położenia względem słuchacza.
  * Słuchaczem jest audio::Listener w tej samej scenie, a bez niego - środek kamery sceny
  * (SceneCamera::Target()). Emiter w układzie ekranu (ScreenSpace()) gra bez tłumienia.
  * @code{.cpp}
- * engine.Audio("ogien").Files({"fire.wav"}).Looped().Bus("efekty");
+ * engine.Audio().Sound("ogien").Files({"fire.wav"}).Looped().Bus("efekty");
  *
  * scene.Spawn<audio::Emitter>()
- *     .Audio("ogien")
+ *     .Sound("ogien")
  *     .MaxDistance(500)
  *     .Attenuation(audio::Falloff::Linear)
  *     .Position({750, 580})
@@ -41,11 +41,11 @@ enum class Falloff {
  *
  * Jednorazowy dźwięk w danym miejscu to emiter, który usuwa się po końcu odtwarzania:
  * @code{.cpp}
- * scene.Spawn<audio::Emitter>().Audio("wybuch").Position(where).Play()
+ * scene.Spawn<audio::Emitter>().Sound("wybuch").Position(where).Play()
  *     .OnFinish([](audio::Emitter& self) { self.Destroy(); });
  * @endcode
  *
- * Usunięcie emitera zatrzymuje jego głosy (z wyciszeniem Audio::FadeOutTime()). Emiter jest
+ * Usunięcie emitera zatrzymuje jego głosy (z wyciszeniem Source::FadeOutTime()). Emiter jest
  * niewidoczny i nie przyjmuje kliknięć.
  */
 class Emitter : public Entity {
@@ -54,17 +54,17 @@ class Emitter : public Entity {
     ~Emitter() override;
 
     /**
-     * @brief Ustawia dźwięk (nazwę z Engine::Audio()), który odtwarza emiter.
+     * @brief Ustawia dźwięk (nazwę z Audio::Sound()), który odtwarza emiter.
      * @param name Nazwa dźwięku.
      * @return Ten sam obiekt.
      */
-    template <typename Self> Self& Audio(this Self& self, std::string name) {
-        self.audio_ = std::move(name);
+    template <typename Self> Self& Sound(this Self& self, std::string name) {
+        self.sound_ = std::move(name);
         return self;
     }
 
     /** @brief Podaje nazwę dźwięku. */
-    const std::string& Audio() const { return audio_; }
+    const std::string& Sound() const { return sound_; }
 
     /**
      * @brief Ustawia odległość, w której dźwięk cichnie do zera (i pełne wychylenie panoramy).
@@ -97,7 +97,7 @@ class Emitter : public Entity {
      * @details Głos rusza w najbliższej aktualizacji emitera, gdy znane jest już jego położenie
      * z całego łańcucha (także z Position() wywołanego po Play()) - także gdy Play() wywołano
      * przed dodaniem do sceny. Każde kolejne Play() bez pauzy dodaje nowy głos, jak
-     * Audio::Play().
+     * Sound::Play().
      * @return Ten sam obiekt.
      */
     template <typename Self> Self& Play(this Self& self) {
@@ -115,7 +115,7 @@ class Emitter : public Entity {
     }
 
     /**
-     * @brief Zatrzymuje głosy emitera (z wyciszeniem Audio::FadeOutTime()).
+     * @brief Zatrzymuje głosy emitera (z wyciszeniem Source::FadeOutTime()).
      * @return Ten sam obiekt.
      */
     template <typename Self> Self& Stop(this Self& self) {
@@ -155,7 +155,7 @@ class Emitter : public Entity {
     /** @brief Ustawia głosom tłumienie i panoramę. */
     void Spatialize();
 
-    std::string audio_;                 /**< Nazwa dźwięku z Engine::Audio(). */
+    std::string sound_;                 /**< Nazwa dźwięku z Audio::Sound(). */
     float maxDistance_ = 600.0f;        /**< Zasięg słyszalności. */
     Falloff falloff_ = Falloff::Linear; /**< Krzywa tłumienia. */
     std::vector<Voice> voices_;         /**< Głosy emitera (martwe usuwa Tick()). */
