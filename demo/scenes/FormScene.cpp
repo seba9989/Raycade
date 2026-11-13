@@ -7,7 +7,6 @@
 #include <string>
 
 SCENE("formularz") {
-    Engine& engine = Engine::Get();
 
     // czcionka z polskimi literami dla całej sceny (pola i napisy biorą ją z kontekstu)
     scene.ProvideContext<DefaultTypeface>(engine.Assets().Font("font.ttf"));

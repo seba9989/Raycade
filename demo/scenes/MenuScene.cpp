@@ -30,7 +30,7 @@ SCENE("menu") {
         .Paint(DARKBLUE)
         .OnMouseEnter([](shapes::Rect& self) { self.Filled(); })
         .OnMouseLeave([](shapes::Rect& self) { self.Filled(false); })
-        .OnClick([](shapes::Rect&) { Engine::Get().SwitchScene("prymitywy"); });
+        .OnClick([&engine](shapes::Rect&) { engine.SwitchScene("prymitywy"); });
 
     scene.OnDraw([](PrimitiveRenderer&) {
         ::DrawText("MENU", 455, 230, 40, DARKBLUE);

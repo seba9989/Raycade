@@ -18,8 +18,8 @@ SCENE("prymitywy") {
         .Size({120, 80})
         .Paint(DARKBLUE)
         .Filled()
-        .OnUpdate([](shapes::Rect& self, float dt) {
-            const Input& input = Engine::Get().Input();
+        .OnUpdate([&engine](shapes::Rect& self, float dt) {
+            const Input& input = engine.Input();
             Vector2 position = self.Position();
             const float speed = 200 * dt;
             if (input.KeyDown(KEY_RIGHT)) position.x += speed;
@@ -91,8 +91,8 @@ SCENE("prymitywy") {
         .To({700, 300})
         .Raster(Rasterizer::Custom)
         .Paint(RED)
-        .OnUpdate([](shapes::Line& self, float) {
-            const Input& input = Engine::Get().Input();
+        .OnUpdate([&engine](shapes::Line& self, float) {
+            const Input& input = engine.Input();
             if (input.MouseDown(MOUSE_BUTTON_RIGHT)) self.To(input.MousePosition());
         })
         .OnKeyPressed(KEY_SPACE, [incremental = true](shapes::Line& self) mutable {

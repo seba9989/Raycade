@@ -163,7 +163,6 @@ class ScoreBar : public Entity {
 
 /** @brief Konfiguruje scenę pokazu kontekstu. */
 SCENE("kontekst") {
-    Engine& engine = Engine::Get();
 
     // Poziom silnika: zwykle udostępnia się go w main(); tu tylko wtedy, gdy jeszcze go nie ma,
     // żeby rekord przetrwał ReloadScene (konfiguracja sceny wykonuje się wtedy ponownie).

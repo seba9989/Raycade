@@ -123,7 +123,6 @@ void SpawnBall(Scene& scene, Vector2 position) {
 
 /** @brief Konfiguruje scenę efektów. */
 SCENE("efekty") {
-    Engine& engine = Engine::Get();
     scene.ProvideContext<Balls>();
 
     // czcionka z polskimi znakami (w repozytorium DejaVu Sans) - dla wszystkich napisów sceny.
@@ -253,8 +252,8 @@ SCENE("efekty") {
         .Anchor({0.5f, 0.5f})
         .Paint(DARKBLUE)
         .Position({870, 660})
-        .OnUpdate([](visual::Text& self, float) {
-            const float time = static_cast<float>(Engine::Get().Time());
+        .OnUpdate([&engine](visual::Text& self, float) {
+            const float time = static_cast<float>(engine.Time());
             const float scale = 1.4f + 0.4f * std::sin(time * 2.0f);
             self.Scale({scale, scale}); // skala bezwzględna (ScaleBy() mnożyłby bieżącą)
         });
@@ -286,13 +285,13 @@ SCENE("efekty") {
         }
     });
 
-    scene.OnUpdate([&scene, &counter, wave, gray](float) {
-        Engine& e = Engine::Get();
-        if (wave) wave->Uniform("time", static_cast<float>(e.Time()));
-        if (e.Input().KeyPressed(KEY_G)) e.PostShader(e.PostShader() ? nullptr : gray);
+    scene.OnUpdate([&engine, &scene, &counter, wave, gray](float) {
+        if (wave) wave->Uniform("time", static_cast<float>(engine.Time()));
+        if (engine.Input().KeyPressed(KEY_G))
+            engine.PostShader(engine.PostShader() ? nullptr : gray);
 
-        if (e.Input().ActionPressed("nowa pilka")) {
-            const Vector2 mouse = e.Input().MousePosition();
+        if (engine.Input().ActionPressed("nowa pilka")) {
+            const Vector2 mouse = engine.Input().MousePosition();
             const bool inField = ::CheckCollisionPointRec(mouse, kField);
             SpawnBall(scene, inField ? mouse : Vector2{kField.x + kField.width / 2, kField.y + 40});
         }
@@ -300,8 +299,8 @@ SCENE("efekty") {
         counter.Content(
             "Piłki: " + std::to_string(balls->list.size()) +
             "   usunięte: " + std::to_string(balls->removed) +
-            "   kroki stałe: " + std::to_string(std::lround(1.0f / e.FixedStep())) +
-            "/s   FPS: " + std::to_string(e.CurrentFps())
+            "   kroki stałe: " + std::to_string(std::lround(1.0f / engine.FixedStep())) +
+            "/s   FPS: " + std::to_string(engine.CurrentFps())
         );
     });
 }

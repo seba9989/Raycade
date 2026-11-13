@@ -132,12 +132,12 @@ SCENE("figury") {
         .Size({420, 280})
         .Background(WHITE)
         .Edit(paintContours)
-        .OnClick([colorIndex = 0](visual::Canvas& self) mutable {
+        .OnClick([&engine, colorIndex = 0](visual::Canvas& self) mutable {
             // inne niż kolory konturów i pasków - boundary fill traktuje piksel w kolorze
             // wypełnienia jako już wypełniony i na nim się zatrzymuje
             static constexpr std::array<Color, 6> kColors{LIME,   PINK,  VIOLET,
                                                           ORANGE, BEIGE, MAGENTA};
-            const Input& input = Engine::Get().Input();
+            const Input& input = engine.Input();
             const Vector2 seed = self.ScreenToLocal(input.MousePosition());
             const bool boundary = input.KeyDown(KEY_LEFT_SHIFT) || input.KeyDown(KEY_RIGHT_SHIFT);
             const Color color = kColors[colorIndex++ % kColors.size()];

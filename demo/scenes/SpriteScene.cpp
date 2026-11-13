@@ -49,7 +49,6 @@ const char* ModeName(const SpriteSheet& sheet, const std::string& clip) {
 } // namespace
 
 SCENE("sprite") {
-    Engine& engine = Engine::Get();
     scene.ProvideContext<DefaultTypeface>(engine.Assets().Font("font.ttf"));
     const auto label =
         [&scene](Vector2 position, std::string text, float size = 15) -> visual::Text& {
@@ -174,8 +173,8 @@ SCENE("sprite") {
         // wszystkie sprite'y z tym arkuszem od razu pokazują nową wersję
         .OnKeyPressed(
             KEY_L,
-            [sheet, &sheetView, describe, addEvent, reloads = 0](visual::Sprite&) mutable {
-                auto fresh = Shared(Bitmap::Load(Engine::Get().Assets().Path(kFile)));
+            [&engine, sheet, &sheetView, describe, addEvent, reloads = 0](visual::Sprite&) mutable {
+                auto fresh = Shared(Bitmap::Load(engine.Assets().Path(kFile)));
                 if (!fresh) {
                     addEvent("L: nie można wczytać pliku");
                     return;

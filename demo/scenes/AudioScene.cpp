@@ -109,7 +109,6 @@ std::string BusLabel(const AudioBus& bus) {
 
 /** @brief Konfiguruje scenę dźwięku. */
 SCENE("dzwiek") {
-    Engine& engine = Engine::Get();
     scene.ProvideContext<DefaultTypeface>(engine.Assets().Font("font.ttf"));
 
     scene.Spawn<visual::Text>().Content("Dźwięk").FontSize(28).Position({40, 30});
@@ -165,8 +164,8 @@ SCENE("dzwiek") {
                      .Scale({2.5f, 2.5f})
                      .Position({160, kFloor})
                      .Play("stoi")
-                     .OnFrameEvent([](visual::Sprite&, const std::string& event) {
-                         if (event == "krok") Engine::Get().Audio("kroki").Play();
+                     .OnFrameEvent([&engine](visual::Sprite&, const std::string& event) {
+                         if (event == "krok") engine.Audio("kroki").Play();
                      });
     hero.Spawn<audio::Listener>();
 

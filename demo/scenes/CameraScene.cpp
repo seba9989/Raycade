@@ -111,7 +111,6 @@ void ResetCamera(SceneCamera& camera, const Walker& player) {
 
 /** @brief Konfiguruje scenę pokazu kamery. */
 SCENE("kamera") {
-    Engine& engine = Engine::Get();
 
     // --- świat ---
     for (int i = 0; i < 8; ++i) {

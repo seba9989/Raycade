@@ -155,8 +155,8 @@ SCENE("trafienia") {
         .OnDrag([](Button& self, Vector2 delta) { self.Translate(delta); });
 
     // --- kolumna 3: zdarzenia idą do rodzica ---
-    scene.Spawn<Robot>().Position({820, 250}).OnClick([](Robot&) {
-        Engine::Get().Log("Robot klikniety (przez czesc)");
+    scene.Spawn<Robot>().Position({820, 250}).OnClick([&engine](Robot&) {
+        engine.Log("Robot klikniety (przez czesc)");
     });
 
     scene.OnDraw([](PrimitiveRenderer&) {

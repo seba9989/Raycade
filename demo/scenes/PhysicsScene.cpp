@@ -210,8 +210,7 @@ SCENE("fizyka") {
         if (hit && !sees) renderer.Circle(hit->point, 3);
     });
 
-    scene.OnUpdate([&scene, &ledge](float) {
-        Engine& engine = Engine::Get();
+    scene.OnUpdate([&engine, &scene, &ledge](float) {
         const Input& input = engine.Input();
         if (input.KeyPressed(KEY_F1)) scene.DebugColliders(!scene.IsDebugColliders());
         if (input.KeyPressed(KEY_R)) engine.ReloadScene("fizyka");
