@@ -28,6 +28,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <format>
 #include <memory>
 #include <string>
 
@@ -101,15 +102,13 @@ void SoundButton(Scene& scene, Vector2 position, const std::string& label, std::
 std::string BusLabel(const audio::Bus& bus) {
     if (bus.IsMuted()) return "wyciszona";
     if (bus.IsPaused()) return "wstrzymana";
-    return std::to_string(static_cast<int>(std::lround(bus.Volume() * 100))) + "%";
+    return std::format("{}%", std::lround(bus.Volume() * 100));
 }
 
 } // namespace
 
 /** @brief Konfiguruje scenę dźwięku. */
 SCENE("dzwiek") {
-    scene.ProvideContext<DefaultTypeface>(engine.Assets().Font("font.ttf"));
-
     scene.Spawn<visual::Text>().Content("Dźwięk").FontSize(28).Position({40, 30});
     scene.Spawn<visual::Text>()
         .Content("Spacja moneta, K kroki, U uderzenie, Q moneta o kwintę wyżej, Backspace ucina monetę\n"

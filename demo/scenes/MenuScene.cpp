@@ -23,6 +23,13 @@ SCENE("menu") {
             self.Position({500 + 150 * std::sin(time * 2), 440});
         });
 
+    scene.Spawn<visual::Text>()
+        .Content("MENU")
+        .FontSize(40)
+        .Paint(DARKBLUE)
+        .Anchor({0.5f, 0})
+        .Position({500, 230});
+
     // przycisk: podświetla się pod kursorem, kliknięcie przełącza scenę
     scene.Spawn<shapes::Rect>()
         .Position({400, 300})
@@ -30,14 +37,30 @@ SCENE("menu") {
         .Paint(DARKBLUE)
         .OnMouseEnter([](shapes::Rect& self) { self.Filled(); })
         .OnMouseLeave([](shapes::Rect& self) { self.Filled(false); })
-        .OnClick([&engine](shapes::Rect&) { engine.SwitchScene("prymitywy"); });
+        .OnClick([&engine](shapes::Rect&) { engine.SwitchScene("prymitywy"); })
+        .Children([](shapes::Rect& button) {
+            // napis bez zdarzeń - kliknięcie w niego trafia w przycisk
+            button.Spawn<visual::Text>()
+                .Content("START")
+                .FontSize(24)
+                .Paint(GRAY)
+                .Anchor({0.5f, 0.5f})
+                .Position({100, 30});
+        });
 
-    scene.OnDraw([](PrimitiveRenderer&) {
-        ::DrawText("MENU", 455, 230, 40, DARKBLUE);
-        ::DrawText("START", 470, 320, 24, GRAY);
-        ::DrawText("Klawisze scen:", 240, 530, 20, DARKGRAY);
-        ::DrawText("1 menu     2 prymitywy     3 figury     4 transformacje", 240, 560, 18, GRAY);
-        ::DrawText("5 kontekst     6 trafienia     7 kamera     8 efekty", 240, 586, 18, GRAY);
-        ::DrawText("9 formularz     0 sprite     - fizyka     = dzwiek", 240, 612, 18, GRAY);
-    });
+    scene.Spawn<visual::Text>()
+        .Content("Klawisze scen:")
+        .FontSize(20)
+        .Paint(DARKGRAY)
+        .Position({240, 530});
+    scene.Spawn<visual::Text>()
+        .Content(
+            "1 menu     2 prymitywy     3 figury     4 transformacje\n"
+            "5 kontekst     6 trafienia     7 kamera     8 efekty\n"
+            "9 formularz     0 sprite     - fizyka     = dźwięk"
+        )
+        .FontSize(18)
+        .Paint(GRAY)
+        .LineHeight(1.45f)
+        .Position({240, 560});
 }

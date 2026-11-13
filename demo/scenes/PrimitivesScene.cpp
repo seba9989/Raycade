@@ -6,6 +6,7 @@
  */
 
 #include <cmath>
+#include <string>
 #include <vector>
 
 #include <raycade>
@@ -183,13 +184,20 @@ SCENE("prymitywy") {
             segment.From().Draw(renderer); // końce odcinków jako Point2D
             segment.To().Draw(renderer);
         }
-
-        ::DrawText("lamane: Point2D / LineSegment", 335, 388, 10, GRAY);
-        ::DrawText("Draw(): raylib / przyrostowy", 830, 608, 10, GRAY);
-        ::DrawText(
-            "strzalki - prostokat, L - warstwa, PPM - odcinek, "
-            "SPACJA - algorytm, LPM - klik",
-            20, 630, 18, GRAY
-        );
     });
+
+    // ---------------- podpisy ----------------
+    const auto label = [&scene](Vector2 position, std::string text, float size) {
+        scene.Spawn<visual::Text>()
+            .Content(std::move(text))
+            .FontSize(size)
+            .Paint(GRAY)
+            .Position(position);
+    };
+    label({335, 388}, "łamane: Point2D / LineSegment", 10);
+    label({830, 608}, "Draw(): raylib / przyrostowy", 10);
+    label(
+        {20, 630},
+        "strzałki - prostokąt, L - warstwa, PPM - odcinek, SPACJA - algorytm, LPM - klik", 18
+    );
 }

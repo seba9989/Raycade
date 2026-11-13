@@ -5,8 +5,10 @@
 #include <raycade>
 
 #include <algorithm>
+#include <format>
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace {
 
@@ -49,7 +51,6 @@ const char* ModeName(const SpriteSheet& sheet, const std::string& clip) {
 } // namespace
 
 SCENE("sprite") {
-    scene.ProvideContext<DefaultTypeface>(engine.Assets().Font("font.ttf"));
     const auto label =
         [&scene](Vector2 position, std::string text, float size = 15) -> visual::Text& {
         return scene.Spawn<visual::Text>()
@@ -78,12 +79,12 @@ SCENE("sprite") {
     // linia stanu pliku; reloads - ile razy przeładowano klawiszem L
     const auto describe = [&file, sheet](const Bitmap& image, bool ok, int reloads) {
         std::string text = std::string{kJson} + " + .png: ";
-        text += ok ? ::TextFormat(
-                         "%dx%d, klatki %d, animacje %d", image.Width(), image.Height(),
-                         sheet->FrameCount(), static_cast<int>(sheet->Animations().size())
+        text += ok ? std::format(
+                         "{}x{}, klatki {}, animacje {}", image.Width(), image.Height(),
+                         sheet->FrameCount(), sheet->Animations().size()
                      )
                    : "BRAK - szachownica zastępcza";
-        if (reloads > 0) text += ::TextFormat("   przeładowano (L): %d", reloads);
+        if (reloads > 0) text += std::format("   przeładowano (L): {}", reloads);
         file.Content(text).Paint(ok ? DARKGREEN : MAROON);
     };
     describe(*bitmap, bitmap->IsLoaded(), 0);
@@ -127,11 +128,11 @@ SCENE("sprite") {
                      .Scale({4, 4})
                      .Play("stoi");
     hero.OnFinish([addEvent](visual::Sprite& self, const std::string& name) {
-            addEvent("koniec \"" + name + "\" -> stoi");
+            addEvent(std::format("koniec \"{}\" -> stoi", name));
             self.Play("stoi");
         })
         .OnFrameEvent([addEvent](visual::Sprite& self, const std::string& event) {
-            addEvent(event + " (klatka " + std::to_string(self.Frame()) + ")");
+            addEvent(std::format("{} (klatka {})", event, self.Frame()));
         })
         // trafienie myszą liczy się w obróconej i przeskalowanej klatce (Contains + Origin)
         .OnClick([addEvent](visual::Sprite& self) {
@@ -182,7 +183,7 @@ SCENE("sprite") {
                 sheet->Bitmap(fresh);
                 sheetView.Sheet(fresh);
                 describe(*fresh, true, ++reloads);
-                addEvent(::TextFormat("L: przeładowano (%dx%d)", fresh->Width(), fresh->Height()));
+                addEvent(std::format("L: przeładowano ({}x{})", fresh->Width(), fresh->Height()));
             }
         )
         .OnUpdate([&info, &marker, sheet, preview](visual::Sprite& self, float) {
@@ -246,8 +247,10 @@ SCENE("sprite") {
     );
     label(
         {300, row},
-        std::string{"Sheet(\""} + kFile + "\", ...)\nta sama bitmapa (Assets): " +
-            (byName.Sheet()->Bitmap() == bitmap ? "tak" : "NIE"),
+        std::format(
+            "Sheet(\"{}\", ...)\nta sama bitmapa (Assets): {}", kFile,
+            byName.Sheet()->Bitmap() == bitmap ? "tak" : "NIE"
+        ),
         13
     );
     byName.Fps(4)
@@ -261,8 +264,10 @@ SCENE("sprite") {
     auto& jsonByName = scene.Spawn<visual::Sprite>().Sheet(kJson);
     label(
         {760, row},
-        std::string{"Sheet(\""} + kJson + "\")\nten sam arkusz (Assets): " +
-            (jsonByName.Sheet() == fromFile ? "tak" : "NIE") + "\nobrót wokół Origin()",
+        std::format(
+            "Sheet(\"{}\")\nten sam arkusz (Assets): {}\nobrót wokół Origin()", kJson,
+            jsonByName.Sheet() == fromFile ? "tak" : "NIE"
+        ),
         13
     );
     jsonByName.Play("waha")

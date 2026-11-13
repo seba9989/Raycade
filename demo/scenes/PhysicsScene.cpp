@@ -22,7 +22,6 @@
 #include <raycade>
 
 #include <cmath>
-#include <string>
 
 namespace {
 
@@ -219,19 +218,29 @@ SCENE("fizyka") {
         ledge.Disabled(input.KeyDown(KEY_S) || input.KeyDown(KEY_DOWN));
     });
 
-    scene.OnDraw([&player](PrimitiveRenderer&) {
-        const auto yes = [](bool value) { return value ? "tak" : "nie"; };
-        ::DrawText(
-            "A/D lub strzalki - ruch   spacja/W - skok   S - zeskok z polki   B - pilka pod "
-            "kursorem   \n"
-            "F1 - collidery   R - od nowa",
-            20, 20, 18, DARKGRAY
-        );
-        const std::string state =
-            "monety: " + std::to_string(coins) + "/" + std::to_string(kCoins) +
-            "   podloga: " + yes(player.IsOnFloor()) + "   sciana: " + yes(player.IsOnWall()) +
-            "   sufit: " + yes(player.IsOnCeiling());
-        ::DrawText(state.c_str(), 20, 46, 18, GRAY);
-        if (coins == kCoins) ::DrawText("Wszystkie monety zebrane!", 360, 120, 28, GOLD);
-    });
+    // ---------------- napisy ----------------
+    scene.Spawn<visual::Text>()
+        .Content(
+            "A/D lub strzałki - ruch   spacja/W - skok   S - zeskok z półki   B - piłka pod "
+            "kursorem\nF1 - collidery   R - od nowa"
+        )
+        .FontSize(18)
+        .Paint(DARKGRAY)
+        .Position({20, 20});
+    scene.Spawn<visual::Text>().FontSize(18).Paint(GRAY).Position({20, 66}).OnUpdate(
+        [&player](visual::Text& self, float) {
+            const auto yes = [](bool value) { return value ? "tak" : "nie"; };
+            self.Content(
+                "monety: {}/{}   podłoga: {}   ściana: {}   sufit: {}", coins, kCoins,
+                yes(player.IsOnFloor()), yes(player.IsOnWall()), yes(player.IsOnCeiling())
+            );
+        }
+    );
+    scene.Spawn<visual::Text>()
+        .Content("Wszystkie monety zebrane!")
+        .FontSize(28)
+        .Paint(GOLD)
+        .Position({360, 120})
+        .Visible(false)
+        .OnUpdate([](visual::Text& self, float) { self.Visible(coins == kCoins); });
 }

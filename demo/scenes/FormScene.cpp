@@ -7,10 +7,6 @@
 #include <string>
 
 SCENE("formularz") {
-
-    // czcionka z polskimi literami dla całej sceny (pola i napisy biorą ją z kontekstu)
-    scene.ProvideContext<DefaultTypeface>(engine.Assets().Font("font.ttf"));
-
     scene.Spawn<visual::Text>().Content("Zapisy na turniej").FontSize(28).Position({40, 30});
 
     // ---------------- etykiety i pola ----------------

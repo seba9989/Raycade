@@ -163,7 +163,6 @@ class ScoreBar : public Entity {
 
 /** @brief Konfiguruje scenę pokazu kontekstu. */
 SCENE("kontekst") {
-
     // Poziom silnika: zwykle udostępnia się go w main(); tu tylko wtedy, gdy jeszcze go nie ma,
     // żeby rekord przetrwał ReloadScene (konfiguracja sceny wykonuje się wtedy ponownie).
     if (!engine.Context<BestScore>()) engine.ProvideContext<BestScore>();
@@ -189,26 +188,39 @@ SCENE("kontekst") {
 
     scene.Spawn<ScoreBar>().Position({60, 520});
 
-    scene.OnUpdate([&engine](float) {
+    scene.Spawn<shapes::Rect>()
+        .Position({Player::kArena.x, Player::kArena.y})
+        .Size({Player::kArena.width, Player::kArena.height})
+        .Paint(LIGHTGRAY);
+
+    // ---------------- podpisy ----------------
+    const auto label = [&scene](
+                           Vector2 position, std::string text, float size, Color color = GRAY
+                       ) -> visual::Text& {
+        return scene.Spawn<visual::Text>()
+            .Content(std::move(text))
+            .FontSize(size)
+            .Paint(color)
+            .Position(position);
+    };
+    label({60, 70}, "Kontekst poddrzewa: panel -> kafelki", 20, DARKGRAY);
+    label({290, 130}, "panel A", 18);
+    label({290, 250}, "panel B", 18);
+    label({140, 370}, "kafelek bez panelu: Theme sceny", 18);
+    label({60, 430}, "LPM na kafelku - zmiana Theme całego panelu", 16);
+    label({540, 70}, "SetContext(gracz): pościgowcy znajdują gracza", 18, DARKGRAY);
+    label({540, 420}, "strzałki - ruch gracza", 16);
+    label({60, 560}, "R - ReloadScene: wynik sceny od zera, rekord zostaje", 16);
+    auto& scoreText = label({60, 490}, "", 20, DARKGRAY);
+
+    scene.OnUpdate([&engine, &scene, &scoreText](float) {
         if (engine.Input().KeyPressed(KEY_R)) engine.ReloadScene("kontekst");
-    });
-
-    scene.OnDraw([&scene](PrimitiveRenderer&) {
-        ::DrawText("Kontekst poddrzewa: panel -> kafelki", 60, 70, 20, DARKGRAY);
-        ::DrawText("panel A", 290, 130, 18, GRAY);
-        ::DrawText("panel B", 290, 250, 18, GRAY);
-        ::DrawText("kafelek bez panelu: Theme sceny", 140, 370, 18, GRAY);
-        ::DrawText("LPM na kafelku - zmiana Theme calego panelu", 60, 430, 16, GRAY);
-
-        ::DrawText("SetContext(gracz): poscigowcy znajduja gracza", 540, 70, 18, DARKGRAY);
-        ::DrawRectangleLinesEx(Player::kArena, 1.0f, LIGHTGRAY);
-        ::DrawText("strzalki - ruch gracza", 540, 420, 16, GRAY);
 
         const Score* score = scene.Context<Score>();
         const BestScore* best = scene.Context<BestScore>(); // scena -> silnik
-        const std::string text = "Wynik (scena): " + std::to_string(score ? score->value : 0) +
-                                 "   Rekord (silnik): " + std::to_string(best ? best->value : 0);
-        ::DrawText(text.c_str(), 60, 490, 20, DARKGRAY);
-        ::DrawText("R - ReloadScene: wynik sceny od zera, rekord zostaje", 60, 560, 16, GRAY);
+        scoreText.Content(
+            "Wynik (scena): {}   Rekord (silnik): {}", score ? score->value : 0,
+            best ? best->value : 0
+        );
     });
 }

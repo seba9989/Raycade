@@ -125,13 +125,11 @@ void SpawnBall(Scene& scene, Vector2 position) {
 SCENE("efekty") {
     scene.ProvideContext<Balls>();
 
-    // czcionka z polskimi znakami (w repozytorium DejaVu Sans) - dla wszystkich napisów sceny.
-    // Napisy mają polskie litery; bez pliku czcionki font raylib pokaże w ich miejscu "?",
-    // a dolny napis (bez polskich liter) wyjaśnia dlaczego.
-    // Assets wczytuje plik raz - ponowne wejście do sceny używa tej samej czcionki
-    std::shared_ptr<const Typeface> font = engine.Assets().Font("font.ttf");
-    const bool hasFont = !font->IsDefault();
-    scene.ProvideContext<DefaultTypeface>(font);
+    // czcionkę z polskimi znakami (w repozytorium DejaVu Sans) udostępnia main() w kontekście
+    // silnika. Napisy mają polskie litery; bez pliku czcionki font raylib pokaże w ich miejscu
+    // "?", a dolny napis (bez polskich liter) wyjaśnia dlaczego.
+    const DefaultTypeface* font = engine.Context<DefaultTypeface>();
+    const bool hasFont = font && font->typeface && !font->typeface->IsDefault();
     const auto title = [&scene](Vector2 position, std::string content) -> visual::Text& {
         return scene.Spawn<visual::Text>()
             .Content(std::move(content))

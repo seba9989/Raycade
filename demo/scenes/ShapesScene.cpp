@@ -6,6 +6,7 @@
  */
 
 #include <array>
+#include <string>
 #include <vector>
 
 #include <raycade>
@@ -154,18 +155,24 @@ SCENE("figury") {
         });
 
     // ---------------- podpisy ----------------
-    scene.OnDraw([](PrimitiveRenderer&) {
-        ::DrawText("Okrag (8-krotna symetria)", 20, 20, 18, DARKGRAY);
-        ::DrawText("Elipsa (4-krotna symetria)", 520, 20, 18, DARKGRAY);
-        ::DrawText("wlasny        raylib       nalozone", 50, 175, 14, GRAY);
-        ::DrawText("wlasny          raylib          nalozone", 560, 175, 14, GRAY);
-        ::DrawText("Wielokaty: kontur / scanline / z odcinkow", 20, 330, 18, DARKGRAY);
-        ::DrawText("lamana wiazana - nie rysuje sie", 170, 560, 14, GRAY);
-        ::DrawText("Wypelnianie przez spojnosc", 560, 304, 18, DARKGRAY);
-        ::DrawText(
-            "LPM - flood fill, Shift+LPM - boundary fill, R - wyczysc plotno, "
-            "czerwony - wlasny algorytm, niebieski - raylib",
-            20, 630, 14, GRAY
-        );
-    });
+    const auto label = [&scene](Vector2 position, std::string text, float size, Color color) {
+        scene.Spawn<visual::Text>()
+            .Content(std::move(text))
+            .FontSize(size)
+            .Paint(color)
+            .Position(position);
+    };
+    label({20, 20}, "Okrąg (8-krotna symetria)", 18, DARKGRAY);
+    label({520, 20}, "Elipsa (4-krotna symetria)", 18, DARKGRAY);
+    label({50, 175}, "własny        raylib       nałożone", 14, GRAY);
+    label({560, 175}, "własny          raylib          nałożone", 14, GRAY);
+    label({20, 330}, "Wielokąty: kontur / scanline / z odcinków", 18, DARKGRAY);
+    label({170, 560}, "łamana wiązana - nie rysuje się", 14, GRAY);
+    label({560, 304}, "Wypełnianie przez spójność", 18, DARKGRAY);
+    label(
+        {20, 630},
+        "LPM - flood fill, Shift+LPM - boundary fill, R - wyczyść płótno, "
+        "czerwony - własny algorytm, niebieski - raylib",
+        14, GRAY
+    );
 }

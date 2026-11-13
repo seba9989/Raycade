@@ -80,9 +80,11 @@
  * wstrzymuje, X odbija drugie koło; lista w panelu z ClipRect() przewija się kółkiem myszy;
  * powierzchnia faluje shaderem, a G włącza szarość całego obrazu (Engine::PostShader());
  * piłki odbijają się z fizyką w kroku stałym (OnFixedUpdate()), LPM usuwa piłkę (Destroy()),
- * a B albo podwójne kliknięcie (gest) dodaje nową. Napisy sceny mają polskie znaki dzięki
- * czcionce `demo/assets/font.ttf` (DejaVu Sans, licencja w `demo/assets/FONT-LICENSE.txt`);
- * można ją podmienić na dowolny inny plik TTF (Typeface).
+ * a B albo podwójne kliknięcie (gest) dodaje nową.
+ * Napisy wszystkich scen (visual::Text) i HUD mają polskie znaki dzięki czcionce
+ * `demo/assets/font.ttf` (DejaVu Sans, licencja w `demo/assets/FONT-LICENSE.txt`), którą main()
+ * udostępnia całej grze jako DefaultTypeface w kontekście silnika; można ją podmienić na dowolny
+ * inny plik TTF (Typeface).
  * Na scenie `formularz` dwa pola tekstowe (ui::TextField) zbierają imię i e-mail: Tab
  * przechodzi między polami, Enter w imieniu przenosi do e-maila, a w e-mailu - tak jak
  * przycisk "Zapisz" - sprawdza dane i dopisuje osobę do listy. Pole z fokusem przejmuje
@@ -112,8 +114,8 @@
  * klawisze odtwarzają monetę, kroki (losowy plik z trzech) i uderzenie, P wstrzymuje szynę
  * efektów, N ją wycisza, a strzałki zmieniają głośność główną. Muzyka gra ze strumienia w pętli;
  * M przełącza ścieżkę z przenikaniem (szyna "music" z Exclusive()), a S ją wycisza
- * i zatrzymuje. Enter wstrzymuje samą ścieżkę (Music::Pause()), a Backspace ucina ostatnią monetę; napis
- * pokazuje czas jej odtwarzania i liczbę skończonych monet (Voice::OnFinish()). Na dole sceny
+ * i zatrzymuje. Enter wstrzymuje samą ścieżkę (Music::Pause()), a Backspace ucina ostatnią monetę;
+ * napis pokazuje czas jej odtwarzania i liczbę skończonych monet (Voice::OnFinish()). Na dole sceny
  * postać (strzałki w lewo/prawo) nosi słuchacza (audio::Listener) i stawia kroki ze zdarzeń
  * klatek; ognisko to emiter (audio::Emitter) - słychać je głośniej i z właściwej strony, gdy
  * postać podejdzie. C zrzuca skrzynię z dźwiękiem uderzenia zależnym od prędkości, X wywołuje
@@ -129,13 +131,13 @@
  * Wynik trafia do `docs/html/index.html`.
  */
 
-#include <string>
+#include <format>
 
 #include <raycade>
 
 /**
  * @brief Konfiguruje silnik, ustawia logikę globalną i uruchamia pętlę gry.
- * @details Sceny rejestrują się same - patrz makro SCENE w plikach katalogu src/scenes.
+ * @details Sceny rejestrują się same - patrz makro SCENE w plikach katalogu demo/scenes.
  * @return Kod wyjścia zwrócony przez Engine::Run().
  */
 int main() {
@@ -152,12 +154,17 @@ int main() {
 
     if (!engine.IsReady()) return 1;
 
+    // czcionka z polskimi znakami dla wszystkich napisów gry (visual::Text, ui::TextField i HUD);
+    // brakujący plik daje font raylib (bez polskich liter) i jeden wpis w logu
+    const auto font = engine.Assets().Font("font.ttf");
+    engine.ProvideContext<DefaultTypeface>(font);
+
     // dźwięk (scena "dzwiek"): szyny i dźwięki konfiguruje się raz, a odtwarza w dowolnym miejscu
     Audio& audio = engine.Audio();
     audio.Volume(0.8f); // szyna główna
     audio.Bus("efekty").MaxVoices(24);
     audio.Bus("kroki").Parent("efekty").Volume(0.6f);
-    audio.Bus("interfejs"); // nie pauzuje się razem z efektami
+    audio.Bus("interfejs");                   // nie pauzuje się razem z efektami
     audio.Bus(Audio::kMusicBus).Volume(0.6f); // szyna muzyki: jedna ścieżka naraz, z przenikaniem
     audio.Music("theme.wav").FadeInTime(1.5f).FadeOutTime(1.5f);
     audio.Music("boss.wav").FadeInTime(0.5f).FadeOutTime(1.0f);
@@ -173,7 +180,12 @@ int main() {
         .Bus("kroki");
     audio.Sound("uderzenie").Files({"hit.wav"}).MaxVoices(6).Bus("efekty");
     audio.Sound("klik").Files({"click.wav"}).Volume(0.5f).Bus("interfejs");
-    audio.Sound("ogien").Files({"fire.wav"}).Looped().FadeInTime(0.5f).FadeOutTime(0.3f).Bus("efekty");
+    audio.Sound("ogien")
+        .Files({"fire.wav"})
+        .Looped()
+        .FadeInTime(0.5f)
+        .FadeOutTime(0.3f)
+        .Bus("efekty");
 
     return engine
         .OnUpdate([&](float) {
@@ -195,10 +207,14 @@ int main() {
             if (input.KeyPressed(KEY_F11)) engine.Fullscreen(!engine.IsFullscreen());
         })
         .OnDraw([&](PrimitiveRenderer&) {
-            const std::string hud = "Scena: " + engine.ActiveScene() +
-                                    "   [0-9, -, =] zmiana sceny (lista w menu)   [F11] pelny ekran";
-            const int bottom = static_cast<int>(engine.ViewSize().y);
-            ::DrawText(hud.c_str(), 20, bottom - 32, 18, DARKGRAY);
+            // HUD nad każdą sceną: globalne OnDraw() nie ma obiektów, więc rysuje czcionką wprost
+            font->Draw(
+                std::format(
+                    "Scena: {}   [0-9, -, =] zmiana sceny (lista w menu)   [F11] pełny ekran",
+                    engine.ActiveScene()
+                ),
+                {20, engine.ViewSize().y - 32}, TextStyle{.size = 18}, DARKGRAY
+            );
         })
         .Run();
 }

@@ -5,6 +5,8 @@
 
 #include <raycade>
 
+#include <string>
+
 /** @brief Tworzy trzy porównania transformacji. */
 SCENE("transformacje") {
     // Warstwa 1 rysuje szare kontury stanu przed transformacją nad kolorowymi figurami.
@@ -38,14 +40,19 @@ SCENE("transformacje") {
         })
         .Rotate(PI / 5.0f); // wokół własnej pozycji (200, 440)
 
-    // Podpisy i punkty obrotu/skalowania są rysowane już we współrzędnych ekranu.
-    scene.OnDraw([](PrimitiveRenderer&) {
-        ::DrawText("Szary kontur = PRZED     Kolor = PO", 30, 70, 20, DARKGRAY);
-        ::DrawText("Obrot prostokata o 30 stopni (kliknij)", 80, 300, 18, DARKGRAY);
-        ::DrawText("Skalowanie kola: X 1.5, Y 0.6", 520, 300, 18, DARKGRAY);
-        ::DrawText("Obrot grupy razem z dziecmi", 80, 560, 18, DARKGRAY);
-        ::DrawCircle(255, 195, 3, MAROON);
-        ::DrawCircle(650, 200, 3, MAROON);
-        ::DrawCircle(200, 440, 3, MAROON);
-    });
+    // Punkty obrotu i skalowania nad figurami.
+    for (const Vector2 pivot : {Vector2{255, 195}, Vector2{650, 200}, Vector2{200, 440}})
+        scene.Spawn<shapes::Circle>().Position(pivot).Radius(3).Paint(MAROON).Filled().Layer(2);
+
+    const auto label = [&scene](Vector2 position, std::string text, float size, Color color) {
+        scene.Spawn<visual::Text>()
+            .Content(std::move(text))
+            .FontSize(size)
+            .Paint(color)
+            .Position(position);
+    };
+    label({30, 70}, "Szary kontur = PRZED     Kolor = PO", 20, DARKGRAY);
+    label({80, 300}, "Obrót prostokąta o 30 stopni (kliknij)", 18, DARKGRAY);
+    label({520, 300}, "Skalowanie koła: X 1.5, Y 0.6", 18, DARKGRAY);
+    label({80, 560}, "Obrót grupy razem z dziećmi", 18, DARKGRAY);
 }
