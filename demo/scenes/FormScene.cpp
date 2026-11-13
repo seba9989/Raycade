@@ -47,7 +47,7 @@ SCENE("formularz") {
                         .Position({340, 90});
     name.OnChange([&counter](ui::TextField&, const std::string& text) {
         // MaxLength liczy znaki, nie bajty - "ż" to 2 bajty UTF-8
-        counter.Content(std::to_string(::TextLength(text.c_str())) + "/24");
+        counter.Content("{}/24", ::TextLength(text.c_str()));
     });
 
     // wspólna akcja dla Entera w polach i przycisku

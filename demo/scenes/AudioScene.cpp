@@ -28,7 +28,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <format>
 #include <memory>
 #include <string>
 
@@ -223,14 +222,13 @@ SCENE("dzwiek") {
         if (input.KeyPressed(KEY_DOWN)) audio.Volume(std::max(audio.Volume() - 0.1f, 0.0f));
 
         status.Content(
-            "Główna: " + BusLabel(audio.Bus()) + "    efekty: " + BusLabel(effects) +
-            "    kroki: " + BusLabel(audio.Bus("kroki")) + "    muzyka: " + BusLabel(music) +
-            "    głosy: " + std::to_string(audio.VoiceCount())
+            "Główna: {}    efekty: {}    kroki: {}    muzyka: {}    głosy: {}",
+            BusLabel(audio.Bus()), BusLabel(effects), BusLabel(audio.Bus("kroki")), BusLabel(music),
+            audio.VoiceCount()
         );
         coinInfo.Content(
-            "Ostatnia moneta: " + std::format("{:.2f} / {:.2f} s", lastCoin.PlaybackTime(),
-                                               lastCoin.Duration()) +
-            "    skończone monety: " + std::to_string(*finished)
+            "Ostatnia moneta: {:.2f} / {:.2f} s    skończone monety: {}", lastCoin.PlaybackTime(),
+            lastCoin.Duration(), *finished
         );
     });
 }

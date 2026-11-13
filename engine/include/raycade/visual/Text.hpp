@@ -5,6 +5,7 @@
 #pragma once
 
 #include <cstddef>
+#include <format>
 #include <memory>
 #include <optional>
 #include <string>
@@ -53,6 +54,29 @@ class Text : public Entity {
         self.content_ = std::move(content);
         self.size_.reset();
         return self;
+    }
+
+    /**
+     * @brief Ustawia treść napisu sformatowaną jak std::format.
+     * @details Wzorzec jest sprawdzany w czasie kompilacji. Wersja bez argumentów to
+     * Content(std::string) - tam nawiasy `{}` są zwykłymi znakami.
+     * @code{.cpp}
+     * label.Content("Punkty: {}  czas: {:.1f} s", score, time);
+     * @endcode
+     * @param format Wzorzec std::format.
+     * @param arg, args Wartości wstawiane do wzorca.
+     * @return Ten sam obiekt.
+     */
+    template <typename Self, typename Arg, typename... Args>
+    Self& Content(
+        this Self& self,
+        std::format_string<Arg, Args...> format,
+        Arg&& arg,
+        Args&&... args
+    ) {
+        return self.Content(
+            std::format(format, std::forward<Arg>(arg), std::forward<Args>(args)...)
+        );
     }
 
     /** @brief Podaje treść napisu. */

@@ -190,18 +190,16 @@ SCENE("sprite") {
             marker.Position({preview.x + frame.x * kZoom, preview.y + frame.y * kZoom});
             const Vector2 size = self.FrameSize();
             info.Content(
-                "Animacja: " +
-                (self.CurrentAnimation().empty() ? std::string{"(domyślna)"}
-                                                 : self.CurrentAnimation()) +
-                " [" + ModeName(*self.Sheet(), self.CurrentAnimation()) + "]\n" +
-                "Klatka: " + std::to_string(self.Frame()) + "   w arkuszu: " +
-                std::to_string(self.SheetFrame()) + " / " + std::to_string(self.SheetFrameCount()) +
-                "\n" + "Gra: " + (self.IsPlaying() ? "tak" : "nie") +
-                "   Speed: " + ::TextFormat("%.3g", self.Speed()) + "\n" +
-                "FlippedX: " + (self.IsFlippedX() ? "tak" : "nie") +
-                "   FlippedY: " + (self.IsFlippedY() ? "tak" : "nie") + "\n" +
-                "FrameSize: " + std::to_string(static_cast<int>(size.x)) + "x" +
-                std::to_string(static_cast<int>(size.y))
+                "Animacja: {} [{}]\n"
+                "Klatka: {}   w arkuszu: {} / {}\n"
+                "Gra: {}   Speed: {:.3g}\n"
+                "FlippedX: {}   FlippedY: {}\n"
+                "FrameSize: {}x{}",
+                self.CurrentAnimation().empty() ? "(domyślna)" : self.CurrentAnimation(),
+                ModeName(*self.Sheet(), self.CurrentAnimation()), self.Frame(), self.SheetFrame(),
+                self.SheetFrameCount(), self.IsPlaying() ? "tak" : "nie", self.Speed(),
+                self.IsFlippedX() ? "tak" : "nie", self.IsFlippedY() ? "tak" : "nie",
+                static_cast<int>(size.x), static_cast<int>(size.y)
             );
         });
 
@@ -228,8 +226,8 @@ SCENE("sprite") {
     // odczyt licznika co klatkę: wszystkie sprite'y trzymają ten sam std::shared_ptr
     shared.OnUpdate([sheet](visual::Text& self, float) {
         self.Content(
-            "16 sprite'ów z jednym arkuszem (use_count arkusza: " +
-            std::to_string(sheet.use_count()) + ") - różne fazy Frame() i Speed()"
+            "16 sprite'ów z jednym arkuszem (use_count arkusza: {}) - różne fazy Frame() i Speed()",
+            sheet.use_count()
         );
     });
 

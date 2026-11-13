@@ -162,7 +162,7 @@ SCENE("efekty") {
                 self.Play();
         })
         .OnFrameEvent([&turns, count = 0](visual::Sprite&, const std::string&) mutable {
-            turns.Content("obroty: " + std::to_string(++count / 2));
+            turns.Content("obroty: {}", ++count / 2);
         });
     scene.Spawn<visual::Sprite>()
         .Sheet(wheel)
@@ -188,7 +188,7 @@ SCENE("efekty") {
             .OnClick([](shapes::Rect& self) { self.Paint(GOLD); })
             .Children([i](shapes::Rect& row) {
                 row.Spawn<visual::Text>()
-                    .Content("Wiersz " + std::to_string(i + 1) + " (LPM)")
+                    .Content("Wiersz {} (LPM)", i + 1)
                     .FontSize(18)
                     .Paint(DARKBROWN)
                     .Position({10, 7});
@@ -297,10 +297,8 @@ SCENE("efekty") {
         }
         const Balls* balls = scene.Context<Balls>();
         counter.Content(
-            "Piłki: " + std::to_string(balls->list.size()) +
-            "   usunięte: " + std::to_string(balls->removed) +
-            "   kroki stałe: " + std::to_string(std::lround(1.0f / engine.FixedStep())) +
-            "/s   FPS: " + std::to_string(engine.CurrentFps())
+            "Piłki: {}   usunięte: {}   kroki stałe: {}/s   FPS: {}", balls->list.size(),
+            balls->removed, std::lround(1.0f / engine.FixedStep()), engine.CurrentFps()
         );
     });
 }
