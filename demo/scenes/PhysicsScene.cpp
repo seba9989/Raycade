@@ -198,7 +198,7 @@ SCENE("fizyka") {
     scene.Spawn<node::physics::Area>()
         .Position({880, 604})
         .Children([](node::physics::Area& lava) {
-            lava.Spawn<node::collider::Rect>().Size({100, 16}).Paint(RED).Filled().Visible();
+            lava.Spawn<node::collider::Rect>().Size({100, 16});
         })
         .OnBodyEnter([](node::physics::Area&, node::physics::PhysicsBody& body) {
             if (auto* player = dynamic_cast<Player*>(&body)) player->Respawn();
