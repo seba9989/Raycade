@@ -85,7 +85,8 @@ class Music : public Source {
     /** @brief Podaje miejsce odtwarzania w sekundach (0, gdy ścieżka nie gra). */
     float PlaybackTime() const;
 
-    /** @brief Podaje długość pliku w sekundach (0, gdy ścieżka nie gra albo jeszcze nie ruszyła). */
+    /** @brief Podaje długość pliku w sekundach (0, gdy ścieżka nie gra albo jeszcze nie ruszyła).
+     */
     float Duration() const;
 
     /**
@@ -109,8 +110,8 @@ class Music : public Source {
   private:
     friend class ::AudioMixer; // zapisuje głos ścieżki i wywołuje OnFinish()
 
-    Voice voice_;                           /**< Odtworzenie ścieżki (martwe - nie gra). */
-    std::function<void(Music&)> onFinish_;  /**< Zdarzenie końca ścieżki. */
+    Voice voice_;                          /**< Odtworzenie ścieżki (martwe - nie gra). */
+    std::function<void(Music&)> onFinish_; /**< Zdarzenie końca ścieżki. */
 };
 
 } // namespace audio

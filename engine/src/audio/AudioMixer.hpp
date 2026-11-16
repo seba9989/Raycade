@@ -139,34 +139,34 @@ class AudioMixer {
 
     /** @brief Głos w puli. */
     struct Slot {
-        std::uint32_t generation = 1; /**< Generacja (rośnie przy każdym zwolnieniu). */
-        bool used = false;            /**< Czy miejsce jest zajęte. */
-        bool started = false;         /**< Czy głos już gra (false - czeka na koniec klatki). */
-        bool paused = false;          /**< Czy dźwięk jest wstrzymany w raylib. */
+        std::uint32_t generation = 1;    /**< Generacja (rośnie przy każdym zwolnieniu). */
+        bool used = false;               /**< Czy miejsce jest zajęte. */
+        bool started = false;            /**< Czy głos już gra (false - czeka na koniec klatki). */
+        bool paused = false;             /**< Czy dźwięk jest wstrzymany w raylib. */
         audio::Source* source = nullptr; /**< Dźwięk albo muzyka, z której powstał głos. */
         audio::Sound* sound = nullptr;   /**< Dźwięk (nullptr dla muzyki). */
         audio::Music* track = nullptr;   /**< Muzyka (nullptr dla dźwięku). */
-        std::string bus;              /**< Szyna (ustalona przy Play()). */
-        std::string path;             /**< Wylosowany plik. */
-        bool stream = false;          /**< Czy głos gra strumień (music), a nie alias (sound). */
-        ::Sound alias{};              /**< Alias próbek pliku. */
-        ::Music music{};              /**< Strumień (Streamed() albo Looped()). */
+        std::string bus;                 /**< Szyna (ustalona przy Play()). */
+        std::string path;                /**< Wylosowany plik. */
+        bool stream = false;             /**< Czy głos gra strumień (music), a nie alias (sound). */
+        ::Sound alias{};                 /**< Alias próbek pliku. */
+        ::Music music{};                 /**< Strumień (Streamed() albo Looped()). */
         std::shared_ptr<const AudioClip> clip; /**< Dane pliku (poza Streamed()), póki głos gra. */
-        float fade = 1.0f;            /**< Bieżący poziom narastania/wyciszania (0-1). */
-        float fadeRate = 0.0f;        /**< Zmiana fade na sekundę. */
-        bool stopping = false;        /**< Czy głos wycisza się po Stop() (potem zwolnienie). */
-        bool userPaused = false;      /**< Czy wstrzymany przez Voice::Pause(). */
-        float time = 0.0f;            /**< Czas odtwarzania liczony przez silnik (alias). */
-        float seek = -1.0f;           /**< Przewinięcie do wykonania po starcie (< 0 - brak). */
-        std::uint64_t order = 0;      /**< Numer Play() - najstarszy głos ma najmniejszy. */
+        float fade = 1.0f;                     /**< Bieżący poziom narastania/wyciszania (0-1). */
+        float fadeRate = 0.0f;                 /**< Zmiana fade na sekundę. */
+        bool stopping = false;   /**< Czy głos wycisza się po Stop() (potem zwolnienie). */
+        bool userPaused = false; /**< Czy wstrzymany przez Voice::Pause(). */
+        float time = 0.0f;       /**< Czas odtwarzania liczony przez silnik (alias). */
+        float seek = -1.0f;      /**< Przewinięcie do wykonania po starcie (< 0 - brak). */
+        std::uint64_t order = 0; /**< Numer Play() - najstarszy głos ma najmniejszy. */
         std::function<void(audio::Voice&)> onFinish; /**< Zdarzenie końca (Voice::OnFinish()). */
-        const void* owner = nullptr;  /**< Scena, do której należy głos (nullptr - żadna). */
-        float spatialGain = 1.0f;     /**< Tłumienie z odległości (node::sound::Emitter). */
-        float spatialPan = 0.0f;      /**< Panorama z położenia (node::sound::Emitter). */
-        float volume = 1.0f;          /**< Głośność głosu (Voice::Volume()). */
-        float pitch = 1.0f;           /**< Wysokość głosu (Voice::Pitch()). */
-        float pan = 0.0f;             /**< Panorama głosu (Voice::Pan()). */
-        float variation = 1.0f;       /**< Wylosowana zmiana wysokości (PitchVariation()). */
+        const void* owner = nullptr; /**< Scena, do której należy głos (nullptr - żadna). */
+        float spatialGain = 1.0f;    /**< Tłumienie z odległości (node::sound::Emitter). */
+        float spatialPan = 0.0f;     /**< Panorama z położenia (node::sound::Emitter). */
+        float volume = 1.0f;         /**< Głośność głosu (Voice::Volume()). */
+        float pitch = 1.0f;          /**< Wysokość głosu (Voice::Pitch()). */
+        float pan = 0.0f;            /**< Panorama głosu (Voice::Pan()). */
+        float variation = 1.0f;      /**< Wylosowana zmiana wysokości (PitchVariation()). */
     };
 
     /** @brief Podaje głos uchwytu albo nullptr dla martwego uchwytu. */
@@ -223,21 +223,21 @@ class AudioMixer {
 
     static inline AudioMixer* current_ = nullptr; /**< Mikser silnika. */
 
-    LogFunction log_;                             /**< Zapis w logu. */
-    ::Assets& assets_;                            /**< Dane plików i ścieżki. */
-    bool ready_ = false;                          /**< Czy urządzenie jest otwarte. */
-    bool warnedNoDevice_ = false;                 /**< Czy zapisano brak urządzenia. */
-    std::map<std::string, audio::Sound> sounds_;  /**< Dźwięki według nazw. */
-    std::map<std::string, audio::Music> music_;   /**< Muzyka według nazw. */
-    std::map<std::string, audio::Bus> buses_;     /**< Szyny według nazw ("" - główna). */
-    ::Audio facade_{*this};                       /**< Fasada dla gry. */
-    std::vector<Slot> slots_;                     /**< Pula głosów (stały rozmiar). */
-    std::uint64_t order_ = 0;                     /**< Licznik Play(). */
-    const void* owner_ = nullptr;                 /**< Scena dla nowych głosów. */
-    const void* listener_ = nullptr;              /**< Słuchacz (node::sound::Listener). */
-    const void* listenerScene_ = nullptr;         /**< Scena słuchacza. */
-    Vector2 listenerPosition_{};                  /**< Położenie słuchacza w świecie. */
-    bool warnedSeek_ = false;                     /**< Czy zapisano brak przewijania aliasu. */
+    LogFunction log_;                            /**< Zapis w logu. */
+    ::Assets& assets_;                           /**< Dane plików i ścieżki. */
+    bool ready_ = false;                         /**< Czy urządzenie jest otwarte. */
+    bool warnedNoDevice_ = false;                /**< Czy zapisano brak urządzenia. */
+    std::map<std::string, audio::Sound> sounds_; /**< Dźwięki według nazw. */
+    std::map<std::string, audio::Music> music_;  /**< Muzyka według nazw. */
+    std::map<std::string, audio::Bus> buses_;    /**< Szyny według nazw ("" - główna). */
+    ::Audio facade_{*this};                      /**< Fasada dla gry. */
+    std::vector<Slot> slots_;                    /**< Pula głosów (stały rozmiar). */
+    std::uint64_t order_ = 0;                    /**< Licznik Play(). */
+    const void* owner_ = nullptr;                /**< Scena dla nowych głosów. */
+    const void* listener_ = nullptr;             /**< Słuchacz (node::sound::Listener). */
+    const void* listenerScene_ = nullptr;        /**< Scena słuchacza. */
+    Vector2 listenerPosition_{};                 /**< Położenie słuchacza w świecie. */
+    bool warnedSeek_ = false;                    /**< Czy zapisano brak przewijania aliasu. */
     /** Zdarzenia końca do wywołania na końcu klatki. */
     std::vector<std::pair<std::function<void(audio::Voice&)>, audio::Voice>> finished_;
     /** Muzyka, która w tej klatce doszła do końca (Music::OnFinish()). */

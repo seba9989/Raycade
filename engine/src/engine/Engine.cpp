@@ -71,9 +71,12 @@ Contextable* ContextRoot() {
 }
 
 Engine::Engine()
-    : mixer_(std::make_unique<AudioMixer>(
-          [this](LogLevel level, const std::string& message) { Log(level, message); }, assets_
-      )) {
+    : mixer_(
+          std::make_unique<AudioMixer>(
+              [this](LogLevel level, const std::string& message) { Log(level, message); },
+              assets_
+          )
+      ) {
     assets_.Directory(ApplicationDirectory() + "assets/");
     assets_.Logger([this](LogLevel level, const std::string& message) { Log(level, message); });
     SetContext(assets_);
@@ -246,7 +249,7 @@ void Engine::Shutdown() {
         replaying_ = false;
     }
     mixer_->CloseDevice(); // po Assets::Clear() - klipy zwalniają próbki przy otwartym urządzeniu
-    postShader_.reset(); // zasób GPU - przed zamknięciem okna
+    postShader_.reset();   // zasób GPU - przed zamknięciem okna
     ReleaseTarget();
     ::CloseWindow();
     // komunikaty raylib po zamknięciu znów idą prosto na konsolę (silnik może już nie istnieć)

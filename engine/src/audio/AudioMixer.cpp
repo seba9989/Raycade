@@ -177,23 +177,25 @@ bool AudioMixer::StealOldest(const std::function<bool(const Slot&)>& match) {
 }
 
 /**
- * @details Kolejno: limit dźwięku (maxVoices), limity szyny dźwięku i jej rodziców (aż do szyny głównej,
- * której limit to rozmiar puli) i na końcu sama pula. W każdym przypadku ustępuje najstarszy
- * głos z danej grupy - nowy dźwięk jest zwykle ważniejszy niż ten, który gra od dawna.
+ * @details Kolejno: limit dźwięku (maxVoices), limity szyny dźwięku i jej rodziców (aż do szyny
+ * głównej, której limit to rozmiar puli) i na końcu sama pula. W każdym przypadku ustępuje
+ * najstarszy głos z danej grupy - nowy dźwięk jest zwykle ważniejszy niż ten, który gra od dawna.
  */
 void AudioMixer::MakeRoom(const audio::Source& source, int maxVoices) {
     if (maxVoices > 0)
         while (VoiceCount(source) >= maxVoices &&
-               StealOldest([&source](const Slot& s) { return s.source == &source; })) {}
+               StealOldest([&source](const Slot& s) { return s.source == &source; })) {
+        }
     std::string bus = source.Bus();
     for (int depth = 0; depth < kMaxBusDepth; ++depth) {
         const audio::Bus& node = Bus(bus);
         const auto within = [this, &bus](const Slot& s) { return IsWithin(s.bus, bus); };
         if (node.MaxVoices() > 0)
-            while (std::ranges::count_if(slots_, [&](const Slot& s) {
-                       return s.used && within(s);
-                   }) >= node.MaxVoices() &&
-                   StealOldest(within)) {}
+            while (std::ranges::count_if(
+                       slots_, [&](const Slot& s) { return s.used && within(s); }
+                   ) >= node.MaxVoices() &&
+                   StealOldest(within)) {
+            }
         if (bus.empty()) break;
         bus = node.Parent();
     }
@@ -240,9 +242,11 @@ void AudioMixer::Seek(Slot& slot, float seconds) {
         return;
     }
     if (!warnedSeek_)
-        log_(LogLevel::Warning,
-             "PlaybackTime(s) dziala tylko dla muzyki i dzwiekow Streamed() albo Looped() - "
-             "pominieto");
+        log_(
+            LogLevel::Warning,
+            "PlaybackTime(s) dziala tylko dla muzyki i dzwiekow Streamed() albo Looped() - "
+            "pominieto"
+        );
     warnedSeek_ = true;
 }
 
@@ -329,8 +333,10 @@ void AudioMixer::Reparent(audio::Bus& bus, const std::string& parent) {
     }
     Bus(parent); // rodzic powstaje, jeśli go nie ma
     if (IsWithin(parent, bus.Name())) {
-        log_(LogLevel::Error,
-             "szyna \"" + bus.Name() + "\" pod \"" + parent + "\" utworzylaby cykl - pominieto");
+        log_(
+            LogLevel::Error,
+            "szyna \"" + bus.Name() + "\" pod \"" + parent + "\" utworzylaby cykl - pominieto"
+        );
         return;
     }
     bus.parent_ = parent;
@@ -441,12 +447,10 @@ void AudioMixer::Release(Slot& slot, bool notify) {
 
 void AudioMixer::Apply(Slot& slot, const BusState& bus) {
     const audio::Source& source = *slot.source;
-    const float volume = std::max(
-        0.0f, source.Volume() * slot.volume * slot.fade * bus.gain * slot.spatialGain
-    );
+    const float volume =
+        std::max(0.0f, source.Volume() * slot.volume * slot.fade * bus.gain * slot.spatialGain);
     const float pitch = std::max(0.01f, source.Pitch() * slot.variation * slot.pitch);
-    const float pan =
-        RaylibPan(std::clamp(source.Pan() + slot.pan + slot.spatialPan, -1.0f, 1.0f));
+    const float pan = RaylibPan(std::clamp(source.Pan() + slot.pan + slot.spatialPan, -1.0f, 1.0f));
     if (slot.stream) {
         ::SetMusicVolume(slot.music, volume);
         ::SetMusicPitch(slot.music, pitch);
@@ -516,4 +520,3 @@ void AudioMixer::Notify() {
     for (audio::Music* music : std::exchange(finishedMusic_, {}))
         if (music->onFinish_) music->onFinish_(*music);
 }
-

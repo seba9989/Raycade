@@ -171,8 +171,9 @@ class Assets {
 
     /**
      * @brief Podaje dane pliku dźwiękowego, wczytując je przy pierwszym użyciu.
-     * @details Z tej metody korzysta mikser (Engine::Audio()) przy każdym Play(). Gra może wczytać plik
-     * zawczasu i trzymać wynik, żeby pierwsze odtworzenie nie czekało na dysk (patrz AudioClip).
+     * @details Z tej metody korzysta mikser (Engine::Audio()) przy każdym Play(). Gra może wczytać
+     * plik zawczasu i trzymać wynik, żeby pierwsze odtworzenie nie czekało na dysk (patrz
+     * AudioClip).
      * @param name Nazwa pliku (patrz Path()).
      * @return Klip albo pusty klip (IsLoaded() == false, gra ciszą), gdy pliku nie da się
      * wczytać.

@@ -192,8 +192,8 @@ SCENE("dzwiek") {
         Audio& audio = engine.Audio();
 
         // postać: ruch i animacja (kroki grają same, ze zdarzeń klatek)
-        const float move = (input.KeyDown(KEY_RIGHT) ? 1.0f : 0.0f) -
-                           (input.KeyDown(KEY_LEFT) ? 1.0f : 0.0f);
+        const float move =
+            (input.KeyDown(KEY_RIGHT) ? 1.0f : 0.0f) - (input.KeyDown(KEY_LEFT) ? 1.0f : 0.0f);
         const float x = std::clamp(hero.Position().x + move * 220.0f * dt, 30.0f, 970.0f);
         hero.Position({x, kFloor});
         if (move != 0.0f) hero.FlippedX(move < 0.0f);
@@ -206,9 +206,8 @@ SCENE("dzwiek") {
         if (input.KeyPressed(KEY_R)) engine.ReloadScene("dzwiek");
 
         if (input.KeyDown(KEY_SPACE)) // przytrzymana: limit głosów i MinInterval() pilnują hałasu
-            lastCoin = audio.Sound("coin.wav").Play().OnFinish([finished](audio::Voice&) {
-                ++*finished;
-            });
+            lastCoin =
+                audio.Sound("coin.wav").Play().OnFinish([finished](audio::Voice&) { ++*finished; });
         if (input.KeyPressed(KEY_BACKSPACE)) lastCoin.Stop(); // martwy uchwyt - bez efektu
         if (input.KeyPressed(KEY_K)) audio.Sound("kroki").Play();
         if (input.KeyPressed(KEY_U)) audio.Sound("uderzenie").Play();

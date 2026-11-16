@@ -203,19 +203,19 @@ class Source {
 
     ~Source() = default;
 
-    AudioMixer* mixer_;               /**< Mikser silnika. */
-    std::string name_;                /**< Nazwa (i domyślny plik). */
-    std::vector<std::string> files_;  /**< Warianty; puste - plikiem jest nazwa. */
-    std::string bus_;                 /**< Szyna; pusta - główna. */
-    float volume_ = 1.0f;             /**< Głośność. */
-    float pitch_ = 1.0f;              /**< Wysokość. */
-    float pan_ = 0.0f;                /**< Panorama. */
-    float fadeInTime_ = 0.0f;         /**< Czas narastania. */
-    float fadeOutTime_ = 0.0f;        /**< Czas wyciszania. */
-    bool looped_ = false;             /**< Pętla. */
-    bool streamed_ = false;           /**< Czytanie pliku na bieżąco. */
-    bool global_ = false;             /**< Niezależność od scen. */
-    int lastFile_ = -1;               /**< Ostatnio wylosowany plik (bez powtórzeń). */
+    AudioMixer* mixer_;              /**< Mikser silnika. */
+    std::string name_;               /**< Nazwa (i domyślny plik). */
+    std::vector<std::string> files_; /**< Warianty; puste - plikiem jest nazwa. */
+    std::string bus_;                /**< Szyna; pusta - główna. */
+    float volume_ = 1.0f;            /**< Głośność. */
+    float pitch_ = 1.0f;             /**< Wysokość. */
+    float pan_ = 0.0f;               /**< Panorama. */
+    float fadeInTime_ = 0.0f;        /**< Czas narastania. */
+    float fadeOutTime_ = 0.0f;       /**< Czas wyciszania. */
+    bool looped_ = false;            /**< Pętla. */
+    bool streamed_ = false;          /**< Czytanie pliku na bieżąco. */
+    bool global_ = false;            /**< Niezależność od scen. */
+    int lastFile_ = -1;              /**< Ostatnio wylosowany plik (bez powtórzeń). */
 
   private:
     friend class ::AudioMixer; // czyta ustawienia przy starcie głosu i losuje pliki

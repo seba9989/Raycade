@@ -28,8 +28,8 @@ namespace audio {
  * @endcode
  *
  * Szynę "music" (Audio::kMusicBus) silnik tworzy sam, z Exclusive() - na niej gra
- * audio::Music. Nazwa szyny to identyfikator, więc jest bez polskich znaków. Literówka w nazwie tworzy nową
- * szynę zamiast błędu - jej powstanie widać w logu (LogLevel::Debug).
+ * audio::Music. Nazwa szyny to identyfikator, więc jest bez polskich znaków. Literówka w nazwie
+ * tworzy nową szynę zamiast błędu - jej powstanie widać w logu (LogLevel::Debug).
  */
 class Bus {
   public:
@@ -140,12 +140,12 @@ class Bus {
   private:
     friend class ::AudioMixer; // czyta stan szyn przy miksowaniu
 
-    AudioMixer* mixer_;    /**< Mikser silnika. */
-    std::string name_;     /**< Nazwa; pusta - szyna główna. */
-    std::string parent_;   /**< Rodzic; pusty - szyna główna. */
-    float volume_ = 1.0f;  /**< Głośność. */
-    bool muted_ = false;   /**< Wyciszenie. */
-    bool paused_ = false;  /**< Pauza. */
+    AudioMixer* mixer_;      /**< Mikser silnika. */
+    std::string name_;       /**< Nazwa; pusta - szyna główna. */
+    std::string parent_;     /**< Rodzic; pusty - szyna główna. */
+    float volume_ = 1.0f;    /**< Głośność. */
+    bool muted_ = false;     /**< Wyciszenie. */
+    bool paused_ = false;    /**< Pauza. */
     bool exclusive_ = false; /**< Jeden dźwięk naraz. */
     int maxVoices_ = 0;      /**< Limit głosów; 0 - bez limitu. */
 };
