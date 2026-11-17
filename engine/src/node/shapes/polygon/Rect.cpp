@@ -1,0 +1,22 @@
+/**
+ * @file Rect.cpp
+ * @brief Rysowanie i test trafienia kształtu node::shapes::Rect.
+ */
+#include <raycade/node/shapes/polygon/Rect.hpp>
+
+namespace node::shapes {
+
+bool Rect::Contains(Vector2 point) const {
+    const auto local = TryToLocal(point);
+    return local && ::CheckCollisionPointRec(*local, {0.0f, 0.0f, size_.x, size_.y});
+}
+
+void Rect::Draw(PrimitiveRenderer& renderer) const {
+    Brush(renderer).Rect({0.0f, 0.0f}, size_);
+}
+
+void Rect::ConvexParts(std::vector<ConvexPart>& parts) const {
+    parts.push_back(ConvexPart::Polygon({{0.0f, 0.0f}, {size_.x, 0.0f}, size_, {0.0f, size_.y}}));
+}
+
+} // namespace node::shapes

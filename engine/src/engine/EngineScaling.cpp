@@ -3,7 +3,7 @@
  * @brief Rozdzielczość gry, skalowanie obrazu do okna i shader całego obrazu.
  */
 
-#include <raycade/Engine.hpp>
+#include <raycade/engine/Engine.hpp>
 
 #include <algorithm>
 #include <cmath>

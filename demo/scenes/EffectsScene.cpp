@@ -4,14 +4,14 @@
  * @details
  * - animacja: koło z arkusza 8 klatek (arkusz rysowany w programie na Bitmap); LPM na kole
  *   wstrzymuje i wznawia animację, X odbija drugie koło,
- * - przycinanie: lista w panelu z Clip() - kółko myszy przewija, wiersze poza panelem nie są
+ * - przycinanie: lista w panelu z ClipRect() - kółko myszy przewija, wiersze poza panelem nie są
  *   widoczne ani klikalne,
  * - shadery: powierzchnia z falującym shaderem (uniform czasu), G włącza szarość całego obrazu
  *   (Engine::PostShader()),
  * - usuwanie i krok stały: piłki odbijają się z fizyką liczoną w OnFixedUpdate(); LPM na piłce
  *   usuwa ją (Destroy()), B albo podwójne kliknięcie w boisko (gest GESTURE_DOUBLETAP) dodaje
  *   nową,
- * - tekst: napisy to obiekty shapes::Text rysowane czcionką z polskimi znakami z pliku
+ * - tekst: napisy to obiekty node::visual::Text rysowane czcionką z polskimi znakami z pliku
  *   `assets/font.ttf` (w repozytorium DejaVu Sans; bez niego - font raylib).
  */
 
@@ -67,10 +67,10 @@ struct Balls {
 };
 
 /** @brief Piłka z prędkością; LPM ją usuwa. */
-class Ball : public shapes::Circle {
+class Ball : public node::shapes::Circle {
   public:
     Ball() {
-        Radius(18).Fill().OnClick([](Ball& self) {
+        Radius(18).Filled().OnClick([](Ball& self) {
             // najpierw z listy fizyki - po końcu klatki wskaźnik będzie nieważny
             if (Balls* balls = self.Context<Balls>()) {
                 std::erase(balls->list, &self);
@@ -101,8 +101,8 @@ std::shared_ptr<const Bitmap> MakeWheelSheet() {
             18 * std::cos(static_cast<float>(i) * PI / 4.0f),
             18 * std::sin(static_cast<float>(i) * PI / 4.0f)
         };
-        renderer.Paint(ORANGE).Fill().Circle(center, 20);
-        renderer.Paint(DARKBROWN).Fill(false).Circle(center, 20);
+        renderer.Paint(ORANGE).Filled().Circle(center, 20);
+        renderer.Paint(DARKBROWN).Filled(false).Circle(center, 20);
         renderer.Line(center, Vector2{center.x + spoke.x, center.y + spoke.y});
         renderer.Line(center, Vector2{center.x - spoke.x, center.y - spoke.y});
     }
@@ -114,7 +114,7 @@ void SpawnBall(Scene& scene, Vector2 position) {
     Engine& engine = Engine::Get();
     const Color colors[] = {RED, BLUE, DARKGREEN, PURPLE, ORANGE, MAROON};
 
-    scene.Spawn<Ball>().Position(position).Paint(colors[engine.RandomValue(0, 5)]).velocity = {
+    scene.Spawn<Ball>().Position(position).Paint(colors[engine.RandomInt(0, 5)]).velocity = {
         engine.RandomFloat(-250, 250), engine.RandomFloat(-300, -50)
     };
 }
@@ -123,18 +123,15 @@ void SpawnBall(Scene& scene, Vector2 position) {
 
 /** @brief Konfiguruje scenę efektów. */
 SCENE("efekty") {
-    Engine& engine = Engine::Get();
     scene.ProvideContext<Balls>();
 
-    // czcionka z polskimi znakami (w repozytorium DejaVu Sans) - dla wszystkich napisów sceny.
-    // Napisy mają polskie litery; bez pliku czcionki font raylib pokaże w ich miejscu "?",
-    // a dolny napis (bez polskich liter) wyjaśnia dlaczego.
-    // Assets wczytuje plik raz - ponowne wejście do sceny używa tej samej czcionki
-    std::shared_ptr<const Typeface> font = engine.Assets().Font("font.ttf");
-    const bool hasFont = !font->IsDefault();
-    scene.ProvideContext<DefaultTypeface>(font);
-    const auto title = [&scene](Vector2 position, std::string content) -> shapes::Text& {
-        return scene.Spawn<shapes::Text>()
+    // czcionkę z polskimi znakami (w repozytorium DejaVu Sans) udostępnia main() w kontekście
+    // silnika. Napisy mają polskie litery; bez pliku czcionki font raylib pokaże w ich miejscu
+    // "?", a dolny napis (bez polskich liter) wyjaśnia dlaczego.
+    const DefaultTypeface* font = engine.Context<DefaultTypeface>();
+    const bool hasFont = font && font->typeface && !font->typeface->IsDefault();
+    const auto title = [&scene](Vector2 position, std::string content) -> node::visual::Text& {
+        return scene.Spawn<node::visual::Text>()
             .Content(std::move(content))
             .FontSize(18)
             .Paint(DARKGRAY)
@@ -146,89 +143,93 @@ SCENE("efekty") {
     // jeden opis animacji dla obu sprite'ów: siatka 4 x 2 klatek i nazwane animacje
     const auto wheel =
         std::make_shared<SpriteSheet>(SpriteSheet::Grid(MakeWheelSheet(), {kFrame, kFrame}));
-    wheel->Clip("kreci", 0, 8, 12).Clip("waha", 0, 5, 8, Playback::PingPong);
+    wheel->Animation("kreci", 0, 8, 12).Animation("waha", 0, 5, 8, Playback::PingPong);
     // każde przejście szprychy przez poziom (klatki 0 i 4) - zdarzenie klatki
     wheel->Event("kreci", 0, "poziomo").Event("kreci", 4, "poziomo");
     auto& turns = title({40, 250}, "obroty: 0").FontSize(16);
-    scene.Spawn<shapes::Sprite>()
+    scene.Spawn<node::visual::Sprite>()
         .Sheet(wheel)
         .Play("kreci")
         .Origin({kFrame / 2, kFrame / 2})
         .Position({100, 140})
         .Scale({2, 2})
-        .OnClick([](shapes::Sprite& self) {
+        .OnClick([](node::visual::Sprite& self) {
             if (self.IsPlaying())
                 self.Pause();
             else
                 self.Play();
         })
-        .OnFrameEvent([&turns, count = 0](shapes::Sprite&, const std::string&) mutable {
-            turns.Content("obroty: " + std::to_string(++count / 2));
+        .OnFrameEvent([&turns, count = 0](node::visual::Sprite&, const std::string&) mutable {
+            turns.Content("obroty: {}", ++count / 2);
         });
-    scene.Spawn<shapes::Sprite>()
+    scene.Spawn<node::visual::Sprite>()
         .Sheet(wheel)
         .Play("waha")
         .Speed(0.5f)
         .Origin({kFrame / 2, kFrame / 2})
         .Position({230, 140})
         .Paint(SKYBLUE)
-        .OnKeyPressed(KEY_X, [](shapes::Sprite& self) { self.FlipX(!self.IsFlipX()); });
+        .OnKeyPressed(KEY_X, [](node::visual::Sprite& self) { self.FlippedX(!self.IsFlippedX()); });
     title({40, 230}, "drugie: PingPong, Speed(0.5), Paint(SKYBLUE)").FontSize(16);
 
     // ---------------- przycinanie ----------------
-    title({370, 30}, "Clip(): kółko myszy przewija");
-    auto& panel = scene.Spawn<shapes::Group>().Position({370, 70}).Clip({0, 0, 260, 200});
-    panel.Spawn<shapes::Rect>().Size({260, 200}).Paint(LIGHTGRAY);
-    auto& list = panel.Spawn<shapes::Group>();
+    title({370, 30}, "ClipRect(): kółko myszy przewija");
+    auto& panel = scene.Spawn<node::Group>().Position({370, 70}).ClipRect({0, 0, 260, 200});
+    panel.Spawn<node::shapes::Rect>().Size({260, 200}).Paint(LIGHTGRAY);
+    auto& list = panel.Spawn<node::Group>();
     for (int i = 0; i < 12; ++i) {
-        list.Spawn<shapes::Rect>()
+        list.Spawn<node::shapes::Rect>()
             .Position({10, 10.0f + static_cast<float>(i) * 40})
             .Size({240, 32})
             .Paint(i % 2 ? BEIGE : Color{245, 222, 179, 255})
-            .Fill()
-            .OnClick([](shapes::Rect& self) { self.Paint(GOLD); })
-            .Children([i](shapes::Rect& row) {
-                row.Spawn<shapes::Text>()
-                    .Content("Wiersz " + std::to_string(i + 1) + " (LPM)")
+            .Filled()
+            .OnClick([](node::shapes::Rect& self) { self.Paint(GOLD); })
+            .Children([i](node::shapes::Rect& row) {
+                row.Spawn<node::visual::Text>()
+                    .Content("Wiersz {} (LPM)", i + 1)
                     .FontSize(18)
                     .Paint(DARKBROWN)
                     .Position({10, 7});
             });
     }
     // zdarzenie na tle panelu: przewijanie listy w granicach
-    panel.OnScroll([&list](shapes::Group&, float wheelMove) {
+    panel.OnScroll([&list](node::Group&, float wheelMove) {
         Vector2 position = list.Position();
         position.y = std::clamp(position.y + wheelMove * 30, -290.0f, 0.0f);
         list.Position(position);
     });
-    panel.Spawn<shapes::Rect>().Size({260, 200}).Paint(DARKGRAY).Layer(1); // ramka nad listą
+    panel.Spawn<node::shapes::Rect>().Size({260, 200}).Paint(DARKGRAY).Layer(1); // ramka nad listą
 
     // ---------------- shadery ----------------
-    title({690, 30}, "Shader na Surface, G - szarość");
+    title({690, 30}, "Shader na RenderGroup, G - szarość");
     auto wave = Shared(ShaderProgram::FromCode("", kWaveShader));
     auto gray = Shared(ShaderProgram::FromCode("", kGrayShader));
     if (!wave || !gray) engine.Log(LogLevel::Warning, "shader demo nie dziala");
-    scene.Spawn<shapes::Surface>()
+    scene.Spawn<node::visual::RenderGroup>()
         .Size({260, 200})
-        .Background(Fade(SKYBLUE, 0.4f))
+        .Background(::Fade(SKYBLUE, 0.4f))
         .Position({690, 70})
         .Shader(wave)
-        .Children([](shapes::Surface& surface) {
-            surface.Spawn<shapes::Circle>().Position({70, 100}).Radius(50).Paint(RED).Fill();
-            surface.Spawn<shapes::Rect>()
+        .Children([](node::visual::RenderGroup& surface) {
+            surface.Spawn<node::shapes::Circle>()
+                .Position({70, 100})
+                .Radius(50)
+                .Paint(RED)
+                .Filled();
+            surface.Spawn<node::shapes::Rect>()
                 .Position({130, 40})
                 .Size({100, 120})
                 .Paint(DARKBLUE)
-                .Fill();
+                .Filled();
             for (int x = 0; x < 260; x += 20)
-                surface.Spawn<shapes::Line>()
+                surface.Spawn<node::shapes::Line>()
                     .From({static_cast<float>(x), 0})
                     .To({static_cast<float>(x), 200});
         });
 
     // ---------------- usuwanie obiektów i krok stały ----------------
     title({40, 300}, "Krok stały + Destroy(): LPM usuwa piłkę, B / podwójne kliknięcie dodaje");
-    scene.Spawn<shapes::Rect>()
+    scene.Spawn<node::shapes::Rect>()
         .Position({kField.x, kField.y})
         .Size({kField.width, kField.height})
         .Paint(DARKGRAY);
@@ -247,21 +248,19 @@ SCENE("efekty") {
 
     // tekst powiększany Scale() zostaje ostry (atlas w rozmiarze na ekranie), a znaki spoza
     // przygotowanego zestawu (×, ·, €) czcionka dokłada sama przy pierwszym użyciu
-    scene.Spawn<shapes::Text>()
+    scene.Spawn<node::visual::Text>()
         .Content("Skala ×2 · 50 €")
         .FontSize(18)
         .Anchor({0.5f, 0.5f})
         .Paint(DARKBLUE)
         .Position({870, 660})
-        .OnUpdate([previous = 1.0f](shapes::Text& self, float) mutable {
-            const float time = static_cast<float>(Engine::Get().Time());
+        .OnUpdate([&engine](node::visual::Text& self, float) {
+            const float time = static_cast<float>(engine.Time());
             const float scale = 1.4f + 0.4f * std::sin(time * 2.0f);
-            // Scale() mnoży bieżącą skalę - podajemy zmianę względem poprzedniej klatki
-            self.Scale({scale / previous, scale / previous});
-            previous = scale;
+            self.Scale({scale, scale}); // skala bezwzględna (ScaleBy() mnożyłby bieżącą)
         });
 
-    engine.BindAction("nowa pilka", {bind::Key(KEY_B), bind::Gesture(GESTURE_DOUBLETAP)});
+    engine.Input().BindAction("nowa pilka", {bind::Key(KEY_B), bind::Gesture(GESTURE_DOUBLETAP)});
 
     scene.OnFixedUpdate([&scene](float step) {
         // fizyka w kroku stałym: wynik nie zależy od liczby klatek na sekundę
@@ -288,22 +287,20 @@ SCENE("efekty") {
         }
     });
 
-    scene.OnUpdate([&scene, &counter, wave, gray](float) {
-        Engine& e = Engine::Get();
-        if (wave) wave->Uniform("time", static_cast<float>(e.Time()));
-        if (e.KeyPressed(KEY_G)) e.PostShader(e.PostShader() ? nullptr : gray);
+    scene.OnUpdate([&engine, &scene, &counter, wave, gray](float) {
+        if (wave) wave->Uniform("time", static_cast<float>(engine.Time()));
+        if (engine.Input().KeyPressed(KEY_G))
+            engine.PostShader(engine.PostShader() ? nullptr : gray);
 
-        if (e.ActionPressed("nowa pilka")) {
-            const Vector2 mouse = e.MousePosition();
+        if (engine.Input().ActionPressed("nowa pilka")) {
+            const Vector2 mouse = engine.Input().MousePosition();
             const bool inField = ::CheckCollisionPointRec(mouse, kField);
             SpawnBall(scene, inField ? mouse : Vector2{kField.x + kField.width / 2, kField.y + 40});
         }
         const Balls* balls = scene.Context<Balls>();
         counter.Content(
-            "Piłki: " + std::to_string(balls->list.size()) +
-            "   usunięte: " + std::to_string(balls->removed) +
-            "   kroki stałe: " + std::to_string(std::lround(1.0f / e.FixedStep())) +
-            "/s   FPS: " + std::to_string(e.CurrentFps())
+            "Piłki: {}   usunięte: {}   kroki stałe: {}/s   FPS: {}", balls->list.size(),
+            balls->removed, std::lround(1.0f / engine.FixedStep()), engine.CurrentFps()
         );
     });
 }

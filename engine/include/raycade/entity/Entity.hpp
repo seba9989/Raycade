@@ -15,14 +15,15 @@
 #include <utility>
 #include <vector>
 
-#include <raycade/entity/Contextable.hpp>
-#include <raycade/entity/Drawable.hpp>
-#include <raycade/entity/Focusable.hpp>
-#include <raycade/entity/Transformable.hpp>
-#include <raycade/entity/Updatable.hpp>
+#include <raycade/entity/traits/Contextable.hpp>
+#include <raycade/entity/traits/Drawable.hpp>
+#include <raycade/entity/traits/Focusable.hpp>
+#include <raycade/entity/traits/Transformable.hpp>
+#include <raycade/entity/traits/Updatable.hpp>
 
 class Scene;
 class SceneCamera;
+class PhysicsWorld;
 class Entity;
 
 /**
@@ -35,16 +36,17 @@ struct SceneLinks {
     const Contextable* context = nullptr; /**< Scena jako poziom kontekstu. */
     const SceneCamera* camera = nullptr;  /**< Kamera sceny. */
     FocusState* focus = nullptr;          /**< Fokus klawiatury sceny. */
+    PhysicsWorld* physics = nullptr;      /**< Świat fizyki sceny (kolizje). */
 };
 
 /**
- * @brief Wynik trafiania myszą w jednej klatce, liczony przez scenę.
+ * @brief Wynik trafiania myszą w jednej klatce, liczony przez PointerSystem sceny.
  * @details Patrz @ref entity_trafienia.
  */
 struct PointerFrame {
     const Entity* target = nullptr;   /**< Najwyżej narysowany obiekt pod kursorem. */
     const Entity* press = nullptr;    /**< Odbiorca OnClick. */
-    const Entity* release = nullptr;  /**< Odbiorca OnMouseUp. */
+    const Entity* release = nullptr;  /**< Odbiorca OnMouseReleased. */
     const Entity* scroll = nullptr;   /**< Odbiorca OnScroll. */
     const Entity* drag = nullptr;     /**< Obiekt, który zaczyna przeciąganie. */
     const Focusable* focus = nullptr; /**< Obiekt, który dostaje fokus po kliknięciu. */
@@ -65,7 +67,7 @@ struct PointerFrame {
  * - OnUpdate - co klatkę,
  * - OnClick - kliknięcie lewym przyciskiem myszy na obiekcie,
  * - OnMouseEnter / OnMouseLeave - kursor wszedł na obiekt / zszedł z niego,
- * - OnMouseUp - puszczenie lewego przycisku nad obiektem,
+ * - OnMouseReleased - puszczenie lewego przycisku nad obiektem,
  * - OnScroll - kółko myszy nad obiektem,
  * - OnDragStart / OnDrag / OnDragEnd - przeciąganie lewym przyciskiem,
  * - OnKeyPressed / OnKeyReleased - naciśnięcie / puszczenie konkretnego klawisza.
@@ -75,11 +77,11 @@ struct PointerFrame {
  * jawnego parametru obiektu z C++23 (`this Self& self`). Zwracają więc konkretny typ, na którym
  * je wywołano, a callbacki zdarzeń dostają ten typ jako argument:
  * @code{.cpp}
- * scene.Spawn<shapes::Circle>()
+ * scene.Spawn<node::shapes::Circle>()
  *     .Position({400, 300})
- *     .Rotate(PI / 4)                   // nadal shapes::Circle&
+ *     .Rotate(PI / 4)                   // nadal node::shapes::Circle&
  *     .Radius(30)                       // setter samego okręgu
- *     .OnClick([](shapes::Circle& self) { self.Radius(50); });
+ *     .OnClick([](node::shapes::Circle& self) { self.Radius(50); });
  * @endcode
  *
  * @section entity_wlasne Własny kształt
@@ -96,7 +98,7 @@ struct PointerFrame {
  * };
  * } // namespace shapes
  *
- * scene.Spawn<shapes::Star>().Position({100, 100}).Paint(GOLD);
+ * scene.Spawn<Star>().Position({100, 100}).Paint(GOLD);
  * @endcode
  *
  * @section entity_komponent Własny komponent wielokrotnego użytku
@@ -109,9 +111,9 @@ struct PointerFrame {
  * Update() nie jest wirtualna, a Render() jest `final` - zdarzenia, dzieci i macierz obsługuje
  * zawsze Entity.
  * @code{.cpp}
- * class Player : public shapes::Group {
+ * class Player : public node::Group {
  *   public:
- *     Player() { Spawn<shapes::Rect>().Position({-15, -20}).Size({30, 40}).Fill(); }
+ *     Player() { Spawn<node::shapes::Rect>().Position({-15, -20}).Size({30, 40}).Filled(); }
  *     template <typename Self> Self& Speed(this Self& self, float speed) {
  *         self.speed_ = speed;
  *         return self;
@@ -129,13 +131,13 @@ struct PointerFrame {
  * @endcode
  *
  * @section entity_trafienia Trafianie myszą
- * Scena raz na klatkę zbiera obiekty pod kursorem (te, których Contains() zwraca true)
- * w kolejności od najwyżej narysowanego: obiekty ekranu (ScreenSpace()) nad obiektami świata,
- * wyższa warstwa nad niższą, dziecko nad rodzicem, a w tej samej warstwie - później dodany
+ * Scena (jej PointerSystem) raz na klatkę zbiera obiekty pod kursorem (te, których Contains()
+ * zwraca true) w kolejności od najwyżej narysowanego: obiekty ekranu (ScreenSpace()) nad obiektami
+ * świata, wyższa warstwa nad niższą, dziecko nad rodzicem, a w tej samej warstwie - później dodany
  * nad wcześniejszym. Dla obiektów świata kursor jest najpierw przeliczany przez kamerę sceny.
  * - IsHovered(), OnMouseEnter i OnMouseLeave dotyczą najwyższego trafionego obiektu i jego
  *   przodków (jak :hover w CSS) - obiekt zasłonięty przez inny nie jest najechany.
- * - OnClick, OnMouseUp, OnScroll i przeciąganie dostaje jeden obiekt: pierwszy z takim
+ * - OnClick, OnMouseReleased, OnScroll i przeciąganie dostaje jeden obiekt: pierwszy z takim
  *   zdarzeniem, szukając od najwyższego trafionego w górę jego przodków. Obiekt bez tego
  *   zdarzenia (np. ozdobny kontur albo część gracza) przepuszcza je do przodka, a gdy żaden
  *   przodek go nie obsługuje - do obiektów pod spodem.
@@ -144,7 +146,7 @@ struct PointerFrame {
  * puste zdarzenie: `.OnClick([](auto&) {})`.
  *
  * @section entity_fokus Fokus klawiatury
- * Fokus mają tylko obiekty z cechą Focusable (np. ui::TextField) - patrz jej opis.
+ * Fokus mają tylko obiekty z cechą Focusable (np. node::ui::TextField) - patrz jej opis.
  *
  * @section entity_uklady Układy współrzędnych i kamera
  * - lokalny - względem pozycji obiektu (w nim rysuje Draw()),
@@ -163,9 +165,9 @@ struct PointerFrame {
  * @code{.cpp}
  * struct Theme { Color accent = RED; };
  *
- * scene.Spawn<shapes::Group>()
+ * scene.Spawn<node::Group>()
  *     .ProvideContext<Theme>(Theme{GOLD})                 // całe menu w złotym kolorze
- *     .Children([](shapes::Group& menu) { menu.Spawn<Button>(); });
+ *     .Children([](node::Group& menu) { menu.Spawn<Button>(); });
  *
  * // w Button::OnMount() albo Button::Tick():
  * if (const Theme* theme = Context<Theme>()) Paint(theme->accent);
@@ -180,8 +182,8 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
 
     /**
      * @brief Tworzy dziecko wybranego typu.
-     * @tparam T Kształt z przestrzeni nazw @ref shapes albo własna klasa dziedzicząca
-     * po Entity, np. `Spawn<shapes::Circle>()`.
+     * @tparam T Kształt z przestrzeni nazw @ref node::shapes albo własna klasa dziedzicząca
+     * po Entity, np. `Spawn<node::shapes::Circle>()`.
      * @return Referencja do nowego dziecka, do dalszej konfiguracji.
      */
     template <typename T> T& Spawn() {
@@ -228,21 +230,22 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
     }
 
     /**
-     * @brief Obsługuje własne zdarzenia, a następnie aktualizuje dzieci.
-     * @details Wywoływana przez scenę. Logikę klasy pochodnej umieszcza się w Tick().
-     * @param dt Czas od poprzedniej klatki w sekundach.
-     * @param input Stan klawiatury i myszy.
-     * @param pointer Trafienia myszą policzone przez scenę w tej klatce.
-     */
-    void Update(float dt, const Input& input, const PointerFrame& pointer);
-
-    /**
      * @brief Nakłada lokalną macierz i rysuje zawartość obiektu (RenderContent()).
      * @details Metoda jest `final`: własny wygląd klasy pochodnej rysuje się w Draw(),
      * a zmiana sposobu rysowania dzieci - w RenderContent().
      * @param renderer Renderer prymitywów.
      */
     void Render(PrimitiveRenderer& renderer) const final;
+
+    /**
+     * @brief Sprawdza trafienie punktem w obiekt.
+     * @details Punkt jest w układzie sceny (po przeliczeniu kursora przez kamerę), czyli w tym
+     * samym co World() i TryToLocal() - patrz @ref entity_uklady. Domyślnie obiekt nie ma
+     * obszaru trafienia; kształty i własne klasy nadpisują tę metodę.
+     * @param point Punkt w układzie sceny.
+     * @return true, gdy punkt należy do obiektu.
+     */
+    virtual bool Contains([[maybe_unused]] Vector2 point) const { return false; }
 
     /**
      * @brief Oznacza obiekt jako obiekt ekranu (HUD, menu): bez kamery i nad światem.
@@ -264,6 +267,15 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
      * @return Pozycja w świecie.
      */
     Vector2 WorldPosition() const { return World({0.0f, 0.0f}); }
+
+    /**
+     * @brief Oblicza kąt obrotu obiektu w układzie sceny (z uwzględnieniem rodziców).
+     * @return Kąt w radianach; dla obrotu lokalnego służy Rotation().
+     */
+    float WorldRotation() const {
+        const AffineMatrix2D world = WorldTransform();
+        return std::atan2(world.b, world.a);
+    }
 
     /**
      * @brief Oblicza pozycję obiektu w oknie (po przejściu przez kamerę sceny).
@@ -322,6 +334,12 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
     Vector2 DragDelta(Vector2 screenFrom, Vector2 screenTo) const override;
 
     /**
+     * @brief Świat fizyki sceny, do której należy obiekt.
+     * @return Wskaźnik albo nullptr, gdy obiekt nie jest jeszcze podpięty do sceny.
+     */
+    PhysicsWorld* Physics() const { return links_ ? links_->physics : nullptr; }
+
+    /**
      * @brief Wywoływana raz, gdy obiekt zostaje podpięty do sceny.
      * @details W tym momencie znani są już rodzic, przodkowie i scena, więc to miejsce na
      * odczyt kontekstu przy starcie (odpowiednik getContext przy inicjalizacji komponentu
@@ -330,9 +348,17 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
     virtual void OnMount() {}
 
     /**
+     * @brief Przekształcenie, z którym obiekt jest rysowany.
+     * @details Domyślnie to samo co przy logice i trafieniach. Obiekty fizyki (CollisionObject)
+     * rysują się w położeniu pośrednim między krokami stałymi - patrz
+     * CollisionObject::DrawTransform().
+     */
+    virtual AffineMatrix2D DrawTransform() const { return transform_; }
+
+    /**
      * @brief Rysuje zawartość obiektu w jego układzie lokalnym (macierz jest już nałożona).
      * @details Domyślnie: własny kształt (Draw()), a nad nim dzieci według warstw. Klasa
-     * pochodna może to zmienić, np. shapes::Surface rysuje dzieci do tekstury.
+     * pochodna może to zmienić, np. node::visual::RenderGroup rysuje dzieci do tekstury.
      * @param renderer Renderer prymitywów.
      */
     virtual void RenderContent(PrimitiveRenderer& renderer) const {
@@ -348,8 +374,9 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
 
     /**
      * @brief Czy dzieci mogą zostać trafione myszą w tym punkcie.
-     * @details Domyślnie zawsze. Obiekt, który przycina rysunek dzieci (np. shapes::Surface),
-     * zwraca false poza swoim obszarem - niewidocznych części nie da się kliknąć.
+     * @details Domyślnie zawsze. Obiekt, który przycina rysunek dzieci (np.
+     * node::visual::RenderGroup), zwraca false poza swoim obszarem - niewidocznych części nie da
+     * się kliknąć.
      * @param point Punkt w układzie sceny.
      * @return Czy sprawdzać trafienia w dzieci.
      */
@@ -387,54 +414,26 @@ class Entity : public Updatable, public Drawable, public Transformable, public C
     bool AnyChildContains(Vector2 point) const;
 
   private:
-    friend class Scene;
+    friend class Scene;         // aktualizuje, podpina (Attach()) i usuwa zniszczone obiekty
+    friend class PointerSystem; // czyta drzewo (dzieci, rodzic, ScreenSpace) przy trafieniach
+    friend class PhysicsWorld;  // zbiera ciała i collidery z drzewa
 
     /**
-     * @brief Dopisuje obiekty pod punktem w kolejności od najwyżej narysowanego.
-     * @details Kolejność odwrotna do Render(): najpierw dzieci (od najwyższej warstwy, w niej
-     * od ostatnio dodanego), potem sam obiekt, bo dzieci są rysowane nad rodzicem.
-     * @param point Punkt w układzie sceny.
-     * @param hits Lista, do której dopisywane są trafienia.
+     * @brief Obsługuje własne zdarzenia, a następnie aktualizuje dzieci.
+     * @details Wywołuje ją tylko scena (i Entity dla swoich dzieci), więc nie jest częścią API
+     * gry. Logikę klasy pochodnej umieszcza się w Tick(), a z zewnątrz - w OnUpdate().
+     * @param dt Czas od poprzedniej klatki w sekundach.
+     * @param input Stan klawiatury i myszy.
+     * @param pointer Trafienia myszą z tej klatki (PointerSystem::Pick()).
      */
-    void CollectHits(Vector2 point, std::vector<const Entity*>& hits) const;
+    void Update(float dt, const Input& input, const PointerFrame& pointer);
 
     /**
-     * @brief Porządkuje obiekty od najwyżej narysowanego (odwrotnie niż Render()).
-     * @param entities Obiekty jednego poziomu drzewa.
-     * @return Wskaźniki od najwyższej warstwy, w warstwie od ostatnio dodanego.
+     * @brief Wykonuje krok stały obiektu (FixedTick(), OnFixedUpdate()), a następnie dzieci.
+     * @param step Stały krok w sekundach.
+     * @param input Stan klawiatury i myszy.
      */
-    static std::vector<const Entity*> TopFirst(
-        const std::vector<std::unique_ptr<Entity>>& entities
-    );
-
-    /**
-     * @brief Wybiera odbiorcę zdarzenia myszy (patrz @ref entity_trafienia).
-     * @param hits Trafienia od najwyżej narysowanego.
-     * @param handles Czy obiekt obsługuje zdarzenie.
-     * @return Odbiorca albo nullptr.
-     */
-    template <typename Predicate>
-    static const Entity* Receiver(const std::vector<const Entity*>& hits, Predicate handles) {
-        for (const Entity* hit : hits)
-            for (const Entity* entity = hit; entity; entity = entity->parent_)
-                if (handles(*entity)) return entity;
-        return nullptr;
-    }
-
-    /**
-     * @brief Liczy trafienia myszą dla jednej klatki.
-     * @details Obiekty ekranu są sprawdzane pierwsze (leżą nad światem) z kursorem w układzie
-     * okna, a obiekty świata - z kursorem przeliczonym przez kamerę.
-     * @param roots Obiekty najwyższego poziomu sceny.
-     * @param input Stan wejścia.
-     * @param camera Kamera sceny.
-     * @return Najwyższy trafiony obiekt i odbiorcy zdarzeń.
-     */
-    static PointerFrame Pointer(
-        const std::vector<std::unique_ptr<Entity>>& roots,
-        const Input& input,
-        const SceneCamera& camera
-    );
+    void FixedUpdate(float step, const Input& input);
 
     /** @brief Sprawdza, czy obiekt to podany obiekt albo jego przodek. */
     bool IsSelfOrAncestorOf(const Entity* entity) const;

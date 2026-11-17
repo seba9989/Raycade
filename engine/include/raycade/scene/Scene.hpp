@@ -11,11 +11,13 @@
 #include <utility>
 #include <vector>
 
-#include <raycade/entity/Contextable.hpp>
 #include <raycade/entity/Entity.hpp>
+#include <raycade/entity/traits/Contextable.hpp>
 #include <raycade/input/Input.hpp>
-#include <raycade/render/PrimitiveRenderer.hpp>
-#include <raycade/scene/SceneCamera.hpp>
+#include <raycade/render/primitives/PrimitiveRenderer.hpp>
+#include <raycade/scene/camera/SceneCamera.hpp>
+#include <raycade/scene/physics/PhysicsWorld.hpp>
+#include <raycade/scene/pointer/PointerSystem.hpp>
 
 /**
  * @brief Zbiór obiektów i funkcji logicznych jednego ekranu silnika.
@@ -30,8 +32,8 @@ class Scene : public Contextable {
   public:
     /**
      * @brief Dodaje obiekt do sceny.
-     * @tparam T Kształt z przestrzeni nazw @ref shapes albo własna klasa dziedzicząca
-     * po Entity, np. `Spawn<shapes::Rect>()`.
+     * @tparam T Kształt z przestrzeni nazw @ref node::shapes albo własna klasa dziedzicząca
+     * po Entity, np. `Spawn<node::shapes::Rect>()`.
      * @return Referencja do nowego obiektu, ważna przez cały czas życia sceny.
      */
     template <typename T> T& Spawn() {
@@ -143,14 +145,135 @@ class Scene : public Contextable {
 
     /** @} */
 
+    /** @name Fizyka */
+    /** @{ */
+
     /**
-     * @brief Wykonuje jeden krok stały sceny (OnFixedUpdate()).
+     * @brief Ustawia grawitację sceny w pikselach/s² (domyślnie {0, 980}).
+     * @details Czyta ją CollisionObject::Gravity(); postać dodaje ją sama do swojej prędkości.
+     * @param gravity Wektor grawitacji (oś y w dół).
+     * @return Ta sama scena.
+     */
+    Scene& Gravity(Vector2 gravity) {
+        physics_.Gravity(gravity);
+        return *this;
+    }
+
+    /** @brief Podaje grawitację sceny. */
+    Vector2 Gravity() const { return physics_.Gravity(); }
+
+    /**
+     * @brief Rysuje obrysy wszystkich colliderów (jak „Visible Collision Shapes” w Godocie).
+     * @details StaticBody - błękitne, CharacterBody - zielone, RigidBody - fioletowe (z kropką
+     * w środku masy), Area - pomarańczowe, wyłączone collidery - szare.
+     * @param value Czy rysować.
+     * @return Ta sama scena.
+     */
+    Scene& DebugColliders(bool value = true) {
+        physics_.DebugColliders(value);
+        return *this;
+    }
+
+    /** @brief Sprawdza, czy obrysy colliderów są rysowane. */
+    bool IsDebugColliders() const { return physics_.IsDebugColliders(); }
+
+    /**
+     * @brief Włącza płynne rysowanie obiektów fizyki między krokami stałymi (domyślnie włączone).
+     * @details Patrz CollisionObject::DrawTransform(). Wyłączenie pokazuje dokładne położenia
+     * z kroków fizyki, ale przy częstotliwości obrazu wyższej niż kroków ruch szarpie.
+     * @param value Czy interpolować.
+     * @return Ta sama scena.
+     */
+    Scene& PhysicsInterpolated(bool value = true) {
+        physics_.Interpolated(value);
+        return *this;
+    }
+
+    /** @brief Sprawdza, czy obiekty fizyki są interpolowane przy rysowaniu. */
+    bool IsPhysicsInterpolated() const { return physics_.IsInterpolated(); }
+
+    /**
+     * @brief Szuka pierwszego ciała na odcinku from-to (RayCast2D z Godota).
+     * @details Trafia ciała (StaticBody, CharacterBody, RigidBody), nie obszary. Promień
+     * zaczynający się wewnątrz collidera go nie trafia; platformę jednostronną trafia tylko od jej
+     * „góry”. Współrzędne są w układzie sceny (świata).
+     * @code{.cpp}
+     * // czy przeciwnik widzi gracza - nic z warstwy World nie stoi między nimi
+     * const bool sees = !scene.Raycast(enemy.WorldPosition(), player.WorldPosition(), World);
+     * @endcode
+     * @param from Początek promienia.
+     * @param to Koniec promienia.
+     * @param mask Warstwy, które promień trafia (domyślnie wszystkie).
+     * @param exclude Obiekt pomijany (np. ten, który strzela).
+     * @return Najbliższe trafienie albo std::nullopt.
+     */
+    std::optional<RayHit> Raycast(
+        Vector2 from,
+        Vector2 to,
+        std::uint32_t mask = kAllLayers,
+        const node::physics::CollisionObject* exclude = nullptr
+    ) const {
+        return physics_.Raycast(from, to, mask, exclude);
+    }
+
+    /**
+     * @brief Ciała nachodzące na prostokąt (np. „czy jest tu miejsce”, zaznaczenie obszarem).
+     * @param area Prostokąt w układzie sceny.
+     * @param mask Warstwy, które są sprawdzane (domyślnie wszystkie).
+     * @param exclude Obiekt pomijany.
+     */
+    std::vector<node::physics::PhysicsBody*> Overlap(
+        Rectangle area,
+        std::uint32_t mask = kAllLayers,
+        const node::physics::CollisionObject* exclude = nullptr
+    ) const {
+        const ConvexPart part = ConvexPart::Polygon(
+            {{area.x, area.y},
+             {area.x + area.width, area.y},
+             {area.x + area.width, area.y + area.height},
+             {area.x, area.y + area.height}}
+        );
+        return physics_.Overlap(part, mask, exclude);
+    }
+
+    /**
+     * @brief Ciała nachodzące na koło (np. zasięg wybuchu).
+     * @param center Środek w układzie sceny.
+     * @param radius Promień.
+     * @param mask Warstwy, które są sprawdzane (domyślnie wszystkie).
+     * @param exclude Obiekt pomijany.
+     */
+    std::vector<node::physics::PhysicsBody*> Overlap(
+        Vector2 center,
+        float radius,
+        std::uint32_t mask = kAllLayers,
+        const node::physics::CollisionObject* exclude = nullptr
+    ) const {
+        return physics_.Overlap(ConvexPart::Ellipse(center, {radius, radius}), mask, exclude);
+    }
+
+    /** @} */
+
+  protected:
+    /** @brief Poziom wyżej w łańcuchu kontekstu sceny to silnik. */
+    const Contextable* ContextParent() const override { return ContextRoot(); }
+
+  private:
+    friend class Engine; // wywołuje FixedAlpha(), FixedUpdate(), Update() i Draw()
+
+    /**
+     * @brief Ustawia ułamek drogi do następnego kroku stałego - wywołuje silnik przed Draw().
+     * @param alpha Engine::FixedAlpha() (1, gdy krok stały jest wyłączony).
+     */
+    void FixedAlpha(float alpha) { physics_.Alpha(alpha); }
+
+    /**
+     * @brief Wykonuje jeden krok stały sceny: OnFixedUpdate(), krok obiektów i zdarzenia fizyki.
      * @details Wywoływana przez silnik w pętli kroku stałego.
      * @param step Stały krok w sekundach.
+     * @param input Stan wejścia.
      */
-    void FixedUpdate(float step) {
-        if (fixedUpdate_) fixedUpdate_(step);
-    }
+    void FixedUpdate(float step, const Input& input);
 
     /**
      * @brief Aktualizuje logikę sceny i jej obiekty.
@@ -168,11 +291,6 @@ class Scene : public Contextable {
      */
     void Draw(PrimitiveRenderer& renderer) const;
 
-  protected:
-    /** @brief Poziom wyżej w łańcuchu kontekstu sceny to silnik. */
-    const Contextable* ContextParent() const override { return ContextRoot(); }
-
-  private:
     /** @brief Wywołuje OnBlur() / OnFocus(), jeśli fokus zmienił się od ostatniego razu. */
     void NotifyFocus();
     /**
@@ -198,8 +316,11 @@ class Scene : public Contextable {
     SceneCamera camera_;
     FocusState
         focus_; /**< Fokus klawiatury (niszczony po obiektach, które się z niego wypisują). */
+    /** Świat fizyki; zna listę obiektów sceny (entities_), ale używa jej dopiero w klatce. */
+    PhysicsWorld physics_{entities_};
     /** Powiązania ze sceną wspólne dla wszystkich jej obiektów (patrz SceneLinks). */
-    SceneLinks links_{this, this, &camera_, &focus_};
+    SceneLinks links_{this, this, &camera_, &focus_, &physics_};
+    PointerSystem pointer_;     /**< Wybór obiektów pod kursorem i odbiorców zdarzeń myszy. */
     bool tabNavigation_ = true; /**< Czy Tab przenosi fokus. */
     /** Obiekty najwyższego poziomu. Pole jest niszczone przed klasą bazową Contextable,
      *  więc obiekty znikają przed kontekstem sceny. */

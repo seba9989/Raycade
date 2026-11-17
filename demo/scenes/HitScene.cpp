@@ -11,7 +11,9 @@
 
 #include <raycade>
 
+#include <format>
 #include <string>
+#include <utility>
 
 namespace {
 
@@ -21,13 +23,32 @@ int topLayer = 0;
 /** @brief Prostokątny przycisk z napisem, podświetlany pod kursorem. */
 class Button : public Entity {
   public:
+    /** @brief Tworzy napis - dziecko bez zdarzeń, więc kliknięcie trafia w przycisk. */
+    Button() {
+        label_ = &Spawn<node::visual::Text>().FontSize(18).Paint(WHITE).Anchor({0, 0.5f});
+        Size(size_);
+    }
+
     template <typename Self> Self& Label(this Self& self, std::string label) {
-        self.label_ = std::move(label);
+        self.label_->Content(std::move(label));
+        return self;
+    }
+
+    /** @brief Ustawia napis sformatowany jak std::format. */
+    template <typename Self, typename Arg, typename... Args>
+    Self& Label(
+        this Self& self,
+        std::format_string<Arg, Args...> format,
+        Arg&& arg,
+        Args&&... args
+    ) {
+        self.label_->Content(format, std::forward<Arg>(arg), std::forward<Args>(args)...);
         return self;
     }
 
     template <typename Self> Self& Size(this Self& self, Vector2 size) {
         self.size_ = size;
+        self.label_->Position({12, size.y / 2});
         return self;
     }
 
@@ -39,26 +60,31 @@ class Button : public Entity {
   protected:
     void Draw(PrimitiveRenderer& renderer) const override {
         renderer.Paint(IsHovered() ? ::ColorBrightness(color_, 0.3f) : color_)
-            .Fill()
+            .Filled()
             .Rect({0, 0}, size_);
-        ::DrawText(label_.c_str(), 12, static_cast<int>(size_.y / 2) - 9, 18, WHITE);
     }
 
   private:
-    std::string label_;     /**< Napis. */
-    Vector2 size_{200, 50}; /**< Rozmiar. */
+    node::visual::Text* label_ = nullptr; /**< Napis (dziecko). */
+    Vector2 size_{200, 50};               /**< Rozmiar. */
 };
 
 /** @brief Karta do przeciągania; chwycona wychodzi na wierzch. */
 class Card : public Entity {
   public:
     Card() {
-        OnDragStart([](Card& self) { self.Layer(++topLayer); });
+        title_ = &Spawn<node::visual::Text>().FontSize(20).Paint(WHITE).Position({10, 10});
+        auto* state = &Spawn<node::visual::Text>().FontSize(16).Paint(WHITE).Position({10, 60});
+        OnDragStart([state](Card& self) {
+            self.Layer(++topLayer);
+            state->Content("przeciągana");
+        });
         OnDrag([](Card& self, Vector2 delta) { self.Translate(delta); });
+        OnDragEnd([state](Card&) { state->Content(""); });
     }
 
     template <typename Self> Self& Title(this Self& self, std::string title) {
-        self.title_ = std::move(title);
+        self.title_->Content(std::move(title));
         return self;
     }
 
@@ -69,20 +95,18 @@ class Card : public Entity {
 
   protected:
     void Draw(PrimitiveRenderer& renderer) const override {
-        renderer.Paint(color_).Fill().Rect({0, 0}, kSize);
+        renderer.Paint(color_).Filled().Rect({0, 0}, kSize);
         // grubsza ramka tylko na karcie, którą naprawdę widać pod kursorem
         if (IsHovered()) {
-            renderer.Paint(BLACK).Fill(false);
+            renderer.Paint(BLACK).Filled(false);
             for (float i = 0; i < 3; ++i)
                 renderer.Rect({-i, -i}, {kSize.x + 2 * i, kSize.y + 2 * i});
         }
-        ::DrawText(title_.c_str(), 10, 10, 20, WHITE);
-        ::DrawText(IsDragging() ? "przeciagana" : "", 10, 60, 16, WHITE);
     }
 
   private:
     static constexpr Vector2 kSize{150, 95}; /**< Rozmiar karty. */
-    std::string title_;                      /**< Napis na karcie. */
+    node::visual::Text* title_ = nullptr;    /**< Napis na karcie (dziecko). */
 };
 
 /**
@@ -91,15 +115,15 @@ class Card : public Entity {
  * OnClick ani OnDrag, zdarzenie idzie do rodzica - robota. IsHovered() robota jest prawdą,
  * gdy kursor jest nad którąkolwiek częścią.
  */
-class Robot : public shapes::Group {
+class Robot : public node::Group {
   public:
     Robot() {
-        body_ = &Spawn<shapes::Rect>().Position({-40, 0}).Size({80, 90}).Paint(GRAY).Fill();
-        Spawn<shapes::Circle>().Position({0, -30}).Radius(28).Paint(LIGHTGRAY).Fill();
-        Spawn<shapes::Circle>().Position({-10, -34}).Radius(5).Paint(DARKBLUE).Fill();
-        Spawn<shapes::Circle>().Position({10, -34}).Radius(5).Paint(DARKBLUE).Fill();
-        Spawn<shapes::Rect>().Position({-60, 10}).Size({18, 60}).Paint(GRAY).Fill();
-        Spawn<shapes::Rect>().Position({42, 10}).Size({18, 60}).Paint(GRAY).Fill();
+        body_ = &Spawn<node::shapes::Rect>().Position({-40, 0}).Size({80, 90}).Paint(GRAY).Filled();
+        Spawn<node::shapes::Circle>().Position({0, -30}).Radius(28).Paint(LIGHTGRAY).Filled();
+        Spawn<node::shapes::Circle>().Position({-10, -34}).Radius(5).Paint(DARKBLUE).Filled();
+        Spawn<node::shapes::Circle>().Position({10, -34}).Radius(5).Paint(DARKBLUE).Filled();
+        Spawn<node::shapes::Rect>().Position({-60, 10}).Size({18, 60}).Paint(GRAY).Filled();
+        Spawn<node::shapes::Rect>().Position({42, 10}).Size({18, 60}).Paint(GRAY).Filled();
         OnDrag([](Robot& self, Vector2 delta) { self.Translate(delta); });
     }
 
@@ -107,7 +131,7 @@ class Robot : public shapes::Group {
     void Tick(float, const Input&) override { body_->Paint(IsHovered() ? ORANGE : GRAY); }
 
   private:
-    shapes::Rect* body_ = nullptr; /**< Tułów - zmienia kolor pod kursorem. */
+    node::shapes::Rect* body_ = nullptr; /**< Tułów - zmienia kolor pod kursorem. */
 };
 
 } // namespace
@@ -124,56 +148,58 @@ SCENE("trafienia") {
         .Label("Klik: 0")
         .Position({380, 110})
         .Paint(DARKGREEN)
-        .OnClick([count = 0](Button& self) mutable {
-            self.Label("Klik: " + std::to_string(++count));
-        });
+        .OnClick([count = 0](Button& self) mutable { self.Label("Klik: {}", ++count); });
     // ozdobna ramka bez zdarzeń nad przyciskiem - przepuszcza kliknięcia
-    scene.Spawn<shapes::Rect>().Position({370, 100}).Size({220, 70}).Paint(GOLD).Layer(1);
+    scene.Spawn<node::shapes::Rect>().Position({370, 100}).Size({220, 70}).Paint(GOLD).Layer(1);
 
     scene.Spawn<Button>()
         .Label("Lewy: 0")
         .Position({380, 260})
         .Paint(DARKBLUE)
-        .OnClick([count = 0](Button& self) mutable {
-            self.Label("Lewy: " + std::to_string(++count));
-        });
+        .OnClick([count = 0](Button& self) mutable { self.Label("Lewy: {}", ++count); });
     scene.Spawn<Button>()
         .Label("Prawy: 0")
         .Position({380, 330})
         .Paint(DARKBLUE)
-        .OnClick([count = 0](Button& self) mutable {
-            self.Label("Prawy: " + std::to_string(++count));
-        });
+        .OnClick([count = 0](Button& self) mutable { self.Label("Prawy: {}", ++count); });
     // okno nad prawą połową przycisków: puste OnClick blokuje kliknięcia pod spodem
     scene.Spawn<Button>()
         .Label("Okno")
         .Size({140, 170})
         .Position({500, 240})
-        .Paint(Fade(BLACK, 0.6f))
+        .Paint(::Fade(BLACK, 0.6f))
         .Layer(2)
         .OnClick([](Button&) {})
         .OnDrag([](Button& self, Vector2 delta) { self.Translate(delta); });
 
     // --- kolumna 3: zdarzenia idą do rodzica ---
-    scene.Spawn<Robot>().Position({820, 250}).OnClick([](Robot&) {
-        Engine::Get().Log("Robot klikniety (przez czesc)");
+    scene.Spawn<Robot>().Position({820, 250}).OnClick([&engine](Robot&) {
+        engine.Log("Robot klikniety (przez czesc)");
     });
 
-    scene.OnDraw([](PrimitiveRenderer&) {
-        ::DrawText("Trafianie mysza: zdarzenie dostaje najwyzszy obiekt", 30, 20, 22, DARKGRAY);
+    // ---------------- podpisy ----------------
+    const auto label =
+        [&scene](Vector2 position, std::string text, float size, Color color = GRAY) {
+            scene.Spawn<node::visual::Text>()
+                .Content(std::move(text))
+                .FontSize(size)
+                .Paint(color)
+                .Position(position);
+        };
+    label({30, 20}, "Trafianie myszą: zdarzenie dostaje najwyższy obiekt", 22, DARKGRAY);
 
-        ::DrawText("Karty", 40, 70, 20, DARKGRAY);
-        ::DrawText("przeciagasz tylko gorna karte,", 40, 440, 16, GRAY);
-        ::DrawText("chwycona wychodzi na wierzch", 40, 460, 16, GRAY);
+    label({40, 70}, "Karty", 20, DARKGRAY);
+    label({40, 440}, "przeciągasz tylko górną kartę,\nchwycona wychodzi na wierzch", 16);
 
-        ::DrawText("Przepuszczanie i blokowanie", 370, 70, 20, DARKGRAY);
-        ::DrawText("zolta ramka nie ma zdarzen - przepuszcza", 370, 180, 16, GRAY);
-        ::DrawText("okno ma puste OnClick - blokuje", 370, 430, 16, GRAY);
-        ::DrawText("(okno mozna przesuwac)", 370, 450, 16, GRAY);
+    label({370, 70}, "Przepuszczanie i blokowanie", 20, DARKGRAY);
+    label({370, 180}, "żółta ramka nie ma zdarzeń - przepuszcza", 16);
+    label({370, 430}, "okno ma puste OnClick - blokuje\n(okno można przesuwać)", 16);
 
-        ::DrawText("Zdarzenie idzie do rodzica", 690, 70, 20, DARKGRAY);
-        ::DrawText("glowa, tulow i rece nie maja zdarzen:", 690, 400, 16, GRAY);
-        ::DrawText("najechanie i przeciaganie dostaje robot", 690, 420, 16, GRAY);
-        ::DrawText("(klik zapisuje sie w logu)", 690, 440, 16, GRAY);
-    });
+    label({690, 70}, "Zdarzenie idzie do rodzica", 20, DARKGRAY);
+    label(
+        {690, 400},
+        "głowa, tułów i ręce nie mają zdarzeń:\nnajechanie i przeciąganie dostaje robot\n"
+        "(klik zapisuje się w logu)",
+        16
+    );
 }

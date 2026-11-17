@@ -10,33 +10,57 @@
 
 /** @brief Konfiguruje scenę menu po otwarciu okna. */
 SCENE("menu") {
-    scene.Spawn<shapes::Rect>().Position({300, 200}).Size({400, 300}).Paint(DARKBLUE);
+    scene.Spawn<node::shapes::Rect>().Position({300, 200}).Size({400, 300}).Paint(DARKBLUE);
 
     // piłka z własną logiką ruchu
-    scene.Spawn<shapes::Circle>()
+    scene.Spawn<node::shapes::Circle>()
         .Position({500, 440})
         .Radius(20)
         .Paint(ORANGE)
-        .Fill()
-        .OnUpdate([time = 0.0f](shapes::Circle& self, float dt) mutable {
+        .Filled()
+        .OnUpdate([time = 0.0f](node::shapes::Circle& self, float dt) mutable {
             time += dt;
             self.Position({500 + 150 * std::sin(time * 2), 440});
         });
 
+    scene.Spawn<node::visual::Text>()
+        .Content("MENU")
+        .FontSize(40)
+        .Paint(DARKBLUE)
+        .Anchor({0.5f, 0})
+        .Position({500, 230});
+
     // przycisk: podświetla się pod kursorem, kliknięcie przełącza scenę
-    scene.Spawn<shapes::Rect>()
+    scene.Spawn<node::shapes::Rect>()
         .Position({400, 300})
         .Size({200, 60})
         .Paint(DARKBLUE)
-        .OnMouseEnter([](shapes::Rect& self) { self.Fill(); })
-        .OnMouseLeave([](shapes::Rect& self) { self.Fill(false); })
-        .OnClick([](shapes::Rect&) { Engine::Get().SwitchScene("prymitywy"); });
+        .OnMouseEnter([](node::shapes::Rect& self) { self.Filled(); })
+        .OnMouseLeave([](node::shapes::Rect& self) { self.Filled(false); })
+        .OnClick([&engine](node::shapes::Rect&) { engine.SwitchScene("prymitywy"); })
+        .Children([](node::shapes::Rect& button) {
+            // napis bez zdarzeń - kliknięcie w niego trafia w przycisk
+            button.Spawn<node::visual::Text>()
+                .Content("START")
+                .FontSize(24)
+                .Paint(GRAY)
+                .Anchor({0.5f, 0.5f})
+                .Position({100, 30});
+        });
 
-    scene.OnDraw([](PrimitiveRenderer&) {
-        ::DrawText("MENU", 455, 230, 40, DARKBLUE);
-        ::DrawText("START", 470, 320, 24, GRAY);
-        ::DrawText("Klawisze scen:", 240, 530, 20, DARKGRAY);
-        ::DrawText("1 menu     2 prymitywy     3 figury     4 transformacje", 240, 560, 18, GRAY);
-        ::DrawText("5 kontekst     6 trafienia     7 kamera     8 efekty", 240, 586, 18, GRAY);
-    });
+    scene.Spawn<node::visual::Text>()
+        .Content("Klawisze scen:")
+        .FontSize(20)
+        .Paint(DARKGRAY)
+        .Position({240, 530});
+    scene.Spawn<node::visual::Text>()
+        .Content(
+            "1 menu     2 prymitywy     3 figury     4 transformacje\n"
+            "5 kontekst     6 trafienia     7 kamera     8 efekty\n"
+            "9 formularz     0 sprite     - fizyka     = dźwięk     ` światło"
+        )
+        .FontSize(18)
+        .Paint(GRAY)
+        .LineHeight(1.45f)
+        .Position({240, 560});
 }

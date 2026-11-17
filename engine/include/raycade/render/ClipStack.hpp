@@ -19,12 +19,12 @@
  *
  * Przy obrocie przycinana jest obwiednia (prostokąt równoległy do osi ekranu) - scissor
  * w OpenGL nie potrafi przyciąć do obróconego prostokąta. Do dokładnego przycinania obróconej
- * grupy służy shapes::Surface.
+ * grupy służy node::visual::RenderGroup.
  *
  * Zwykle wystarczy Drawable::Clip() - Entity samo woła Push() i Pop() przy rysowaniu.
  * @code{.cpp}
  * ClipStack::Push({0, 0, 200, 100});
- * renderer.Paint(RED).Fill().Circle({200, 100}, 80); // widać tylko ćwiartkę
+ * renderer.Paint(RED).Filled().Circle({200, 100}, 80); // widać tylko ćwiartkę
  * ClipStack::Pop();
  * @endcode
  */

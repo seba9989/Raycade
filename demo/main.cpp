@@ -8,9 +8,9 @@
  *
  * @section cel Cel projektu
  * Raycade (ray + cascade + arcade) to silnik 2D napisany w C++23 z użyciem raylib,
- * z API opartym na kaskadzie wywołań: `scene.Spawn<shapes::Circle>().Radius(20).Fill()`. Biblioteka
- * udostępnia sceny, obiekty z hierarchią dzieci, wejście z klawiatury i myszy oraz renderer
- * prymitywów. Program zawiera demonstrację funkcji z laboratoriów 1-4.
+ * z API opartym na kaskadzie wywołań: `scene.Spawn<node::shapes::Circle>().Radius(20).Filled()`.
+ * Biblioteka udostępnia sceny, obiekty z hierarchią dzieci, wejście z klawiatury i myszy oraz
+ * renderer prymitywów. Program zawiera demonstrację funkcji z laboratoriów 1-4.
  *
  * @section uruchomienie Kompilacja i uruchomienie
  * W katalogu głównym projektu należy wykonać:
@@ -25,7 +25,7 @@
  * - `engine/` - biblioteka statyczna Raycade (cel CMake `raycade::raycade`):
  *   nagłówek zbiorczy `engine/umbrella/raycade`, pozostałe publiczne nagłówki
  *   w `engine/include/raycade/` w katalogach-warstwach (`math`, `render`, `input`, `entity`,
- *   `shapes`, `ui`, `scene`), implementacja w `engine/src/` w tym samym układzie.
+ *   `shapes`, `visual`, `ui`, `scene`), implementacja w `engine/src/` w tym samym układzie.
  * - `demo/` - program demonstracyjny: ten plik i sceny z laboratoriów (`demo/scenes/`).
  * - `docs/` - konfiguracja Doxygena i @ref konwencje "konwencje kodu".
  *
@@ -43,7 +43,7 @@
  * - @ref Entity łączy drzewo obiektów z @ref Updatable, @ref Drawable i @ref Transformable;
  *   ich settery i zdarzenia zwracają konkretny typ figury dzięki deducing this (C++23).
  * - @ref PrimitiveRenderer rysuje na ekranie albo na @ref Bitmap.
- * - @ref shapes::Canvas udostępnia bitmapę do algorytmów wypełniania.
+ * - @ref node::visual::Canvas udostępnia bitmapę do algorytmów wypełniania.
  *
  * @section algorytmy Algorytmy laboratoriów
  * Własny algorytm przyrostowy odcinka, okrąg z ośmiokrotną symetrią, elipsa
@@ -52,14 +52,14 @@
  * @ref PrimitiveRenderer. W scenie `figury` porównano krzywe z raylib.
  *
  * @section obsluga Sceny demonstracyjne
- * Klawisze 1-8 wybierają `menu`, `prymitywy`, `figury`, `transformacje`, `kontekst`,
- * `trafienia`, `kamera` i `efekty` (lista jest też na scenie `menu`). F11 przełącza pełny ekran.
- * Okno ma zmienny rozmiar: gra rysuje zawsze w 1000x700, a obraz jest skalowany do okna
- * z zachowaniem proporcji (Engine::ScaleMode(Scaling::Fit)), więc układ scen i kliknięcia
- * działają przy każdym rozmiarze okna i na pełnym ekranie.
- * Na scenie `prymitywy` strzałki przesuwają prostokąt, L zmienia warstwę,
- * PPM przesuwa koniec odcinka, a spacja przełącza jego algorytm.
- * Na scenie `figury` LPM uruchamia flood fill na płótnie, Shift+LPM
+ * Klawisze 1-9 wybierają `menu`, `prymitywy`, `figury`, `transformacje`, `kontekst`,
+ * `trafienia`, `kamera`, `efekty` i `formularz`, 0 - `sprite`, minus - `fizyka`, a znak
+ * równości - `dzwiek`, a klawisz `` ` `` (tylda, na lewo od 1) - `swiatlo` (lista jest też na
+ * scenie `menu`). F11 przełącza pełny ekran. Okno ma zmienny rozmiar: gra rysuje zawsze w 1000x700,
+ * a obraz jest skalowany do okna z zachowaniem proporcji (Engine::ScaleMode(Scaling::Fit)), więc
+ * układ scen i kliknięcia działają przy każdym rozmiarze okna i na pełnym ekranie. Na scenie
+ * `prymitywy` strzałki przesuwają prostokąt, L zmienia warstwę, PPM przesuwa koniec odcinka, a
+ * spacja przełącza jego algorytm. Na scenie `figury` LPM uruchamia flood fill na płótnie, Shift+LPM
  * uruchamia boundary fill, a R przywraca kontury.
  * Na scenie `transformacje` szary kontur pokazuje stan przed obrotem lub skalowaniem,
  * a kolorowa figura stan po; grupa obraca się razem z dziećmi. LPM zmienia kolor
@@ -75,13 +75,59 @@
  * przybliża, Q/E obracają widok, F przełącza podążanie, a R resetuje kamerę. Skrzynie można
  * przeciągać, a monety klikać przy dowolnym przybliżeniu i obrocie; przyciski w rogu są
  * obiektami ekranu (HUD).
- * Na scenie `efekty` koło z arkusza klatek (shapes::Sprite) obraca się animacją - LPM ją
- * wstrzymuje, X odbija drugie koło; lista w panelu z Clip() przewija się kółkiem myszy;
+ * Na scenie `efekty` koło z arkusza klatek (node::visual::Sprite) obraca się animacją - LPM ją
+ * wstrzymuje, X odbija drugie koło; lista w panelu z ClipRect() przewija się kółkiem myszy;
  * powierzchnia faluje shaderem, a G włącza szarość całego obrazu (Engine::PostShader());
  * piłki odbijają się z fizyką w kroku stałym (OnFixedUpdate()), LPM usuwa piłkę (Destroy()),
- * a B albo podwójne kliknięcie (gest) dodaje nową. Napisy sceny mają polskie znaki dzięki
- * czcionce `demo/assets/font.ttf` (DejaVu Sans, licencja w `demo/assets/FONT-LICENSE.txt`);
- * można ją podmienić na dowolny inny plik TTF (Typeface).
+ * a B albo podwójne kliknięcie (gest) dodaje nową.
+ * Napisy wszystkich scen (node::visual::Text) i HUD mają polskie znaki dzięki czcionce
+ * `demo/assets/font.ttf` (DejaVu Sans, licencja w `demo/assets/FONT-LICENSE.txt`), którą main()
+ * udostępnia całej grze jako DefaultTypeface w kontekście silnika; można ją podmienić na dowolny
+ * inny plik TTF (Typeface).
+ * Na scenie `formularz` dwa pola tekstowe (node::ui::TextField) zbierają imię i e-mail: Tab
+ * przechodzi między polami, Enter w imieniu przenosi do e-maila, a w e-mailu - tak jak
+ * przycisk "Zapisz" - sprawdza dane i dopisuje osobę do listy. Pole z fokusem przejmuje
+ * klawiaturę (cyfry nie przełączają wtedy scen), Escape zdejmuje fokus.
+ * Scena `sprite` służy do testowania node::visual::Sprite i SpriteSheet. Arkusz wczytuje przez
+ * Engine::Assets() z pliku `demo/assets/sprite-test.json` w formacie eksportu Aseprite (klatki
+ * z czasami i tagi animacji), a obraz - z `sprite-test.png` wskazanego w JSON; podgląd arkusza
+ * pokazuje ramką bieżącą klatkę. Postać sterują klawisze: Q, W, E, R, C animacje z tagów
+ * (forward, pingpong, repeat, reverse), T lista klatek dopisana w kodzie, spacja pauza, S stop,
+ * strzałki klatka i szybkość, X/Y odbicie, Z obrót, a L wczytuje obraz od nowa - po edycji PNG
+ * w programie graficznym wszystkie sprite'y ze wspólnym arkuszem pokazują nową wersję. Są też
+ * dziennik zdarzeń klatek, 16 sprite'ów z jednym arkuszem oraz przypadki brzegowe: prywatna
+ * kopia opisu, Sheet() z nazwą obrazu i z nazwą JSON (te same obiekty z Assets), brakujący
+ * plik i obrót wokół Origin().
+ * Scena `fizyka` pokazuje kolizje: postać (CharacterBody) chodzi A/D albo strzałkami i skacze
+ * spacją, a MoveAndSlide() zatrzymuje ją na colliderach różnych kształtów (Collider\<S\>:
+ * prostokąty, trójkątna pochylnia, koło, obrócona platforma). Ruchoma platforma to StaticBody
+ * przesuwany w kodzie, który wiezie stojącą na nim postać, szary blok zmienia kolor przy
+ * zderzeniu, a monety i lawa to obszary (Area). Na brązową półkę (OneWay()) wskakuje się od
+ * dołu, a S zeskakuje przez nią. Skrzynie i piłki to bryły sztywne (RigidBody) - spadają,
+ * obracają się i układają w stos; gracz pcha skrzynie, a B tworzy piłkę pod kursorem.
+ * Fioletowe oko rzuca promień do gracza (Scene::Raycast()) -
+ * linia jest zielona, gdy nic go nie zasłania. F1 pokazuje obrysy colliderów, R wczytuje scenę
+ * od nowa.
+ * Scena `dzwiek` pokazuje dźwięk (Engine::Audio(): audio::Sound, audio::Music, audio::Voice,
+ * szyny audio::Bus): przyciski albo
+ * klawisze odtwarzają monetę, kroki (losowy plik z trzech) i uderzenie, P wstrzymuje szynę
+ * efektów, N ją wycisza, a strzałki zmieniają głośność główną. Muzyka gra ze strumienia w pętli;
+ * M przełącza ścieżkę z przenikaniem (szyna "music" z Exclusive()), a S ją wycisza
+ * i zatrzymuje. Enter wstrzymuje samą ścieżkę (Music::Pause()), a Backspace ucina ostatnią monetę;
+ * napis pokazuje czas jej odtwarzania i liczbę skończonych monet (Voice::OnFinish()). Na dole sceny
+ * postać (strzałki w lewo/prawo) nosi słuchacza (node::sound::Listener) i stawia kroki ze zdarzeń
+ * klatek; ognisko to emiter (node::sound::Emitter) - słychać je głośniej i z właściwej strony, gdy
+ * postać podejdzie. C zrzuca skrzynię z dźwiękiem uderzenia zależnym od prędkości, X wywołuje
+ * wybuch (emiter usuwający się po dźwięku), a R wczytuje scenę od nowa - ognisko cichnie,
+ * a muzyka gra dalej. Próbki WAV w `demo/assets/`
+ * są syntezowane skryptem `demo/tools/generate_sounds.py`.
+ * Scena `swiatlo` pokazuje dynamiczne oświetlenie liczone shaderem fragmentów na całym świecie
+ * sceny (node::visual::RenderGroup): światła punktowe i stożkowe, cienie od prostokątów i kół
+ * (twarde albo miękkie z półcieniem), mieszanie kolorów i mapowanie tonów. Światła i przeszkody
+ * trafiają do shadera co klatkę tablicami uniformów (ShaderProgram::Uniform() ze std::span).
+ * WASD porusza graczem z latarką celowaną myszą, F ją wyłącza, T zmienia tryb cieni, O wstrzymuje
+ * krążenie kolorowych świateł, L wyłącza shader dla porównania, PPM stawia nowe światło, C usuwa
+ * postawione, kółko myszy zmienia światło otoczenia, a LPM przeciąga skrzynie razem z ich cieniem.
  *
  * @section dokumentacja Dokumentacja
  * Dokumentację HTML generuje polecenie `docs` (devenv) albo, w katalogu głównym projektu:
@@ -91,13 +137,13 @@
  * Wynik trafia do `docs/html/index.html`.
  */
 
-#include <string>
+#include <format>
 
 #include <raycade>
 
 /**
  * @brief Konfiguruje silnik, ustawia logikę globalną i uruchamia pętlę gry.
- * @details Sceny rejestrują się same - patrz makro SCENE w plikach katalogu src/scenes.
+ * @details Sceny rejestrują się same - patrz makro SCENE w plikach katalogu demo/scenes.
  * @return Kod wyjścia zwrócony przez Engine::Run().
  */
 int main() {
@@ -114,25 +160,69 @@ int main() {
 
     if (!engine.IsReady()) return 1;
 
+    // czcionka z polskimi znakami dla wszystkich napisów gry (node::visual::Text,
+    // node::ui::TextField i HUD); brakujący plik daje font raylib (bez polskich liter) i jeden wpis
+    // w logu
+    const auto font = engine.Assets().Font("font.ttf");
+    engine.ProvideContext<DefaultTypeface>(font);
+
+    // dźwięk (scena "dzwiek"): szyny i dźwięki konfiguruje się raz, a odtwarza w dowolnym miejscu
+    Audio& audio = engine.Audio();
+    audio.Volume(0.8f); // szyna główna
+    audio.Bus("efekty").MaxVoices(24);
+    audio.Bus("kroki").Parent("efekty").Volume(0.6f);
+    audio.Bus("interfejs");                   // nie pauzuje się razem z efektami
+    audio.Bus(Audio::kMusicBus).Volume(0.6f); // szyna muzyki: jedna ścieżka naraz, z przenikaniem
+    audio.Music("theme.wav").FadeInTime(1.5f).FadeOutTime(1.5f);
+    audio.Music("boss.wav").FadeInTime(0.5f).FadeOutTime(1.0f);
+    audio.Sound("coin.wav")
+        .Volume(0.7f)
+        .PitchVariation(0.08f)
+        .MaxVoices(4)       // najwyżej 4 monety naraz - kolejna ucina najstarszą
+        .MinInterval(0.03f) // seria w jednej klatce to jeden dźwięk
+        .Bus("efekty");
+    audio.Sound("kroki")
+        .Files({"step1.wav", "step2.wav", "step3.wav"})
+        .PitchVariation(0.05f)
+        .Bus("kroki");
+    audio.Sound("uderzenie").Files({"hit.wav"}).MaxVoices(6).Bus("efekty");
+    audio.Sound("klik").Files({"click.wav"}).Volume(0.5f).Bus("interfejs");
+    audio.Sound("ogien")
+        .Files({"fire.wav"})
+        .Looped()
+        .FadeInTime(0.5f)
+        .FadeOutTime(0.3f)
+        .Bus("efekty");
+
     return engine
         .OnUpdate([&](float) {
-            if (engine.KeyPressed(KEY_ONE)) engine.SwitchScene("menu");
-            if (engine.KeyPressed(KEY_TWO)) engine.SwitchScene("prymitywy");
-            if (engine.KeyPressed(KEY_THREE)) engine.SwitchScene("figury");
-            if (engine.KeyPressed(KEY_FOUR)) engine.SwitchScene("transformacje");
-            if (engine.KeyPressed(KEY_FIVE)) engine.SwitchScene("kontekst");
-            if (engine.KeyPressed(KEY_SIX)) engine.SwitchScene("trafienia");
-            if (engine.KeyPressed(KEY_SEVEN)) engine.SwitchScene("kamera");
-            if (engine.KeyPressed(KEY_EIGHT)) engine.SwitchScene("efekty");
+            const Input& input = engine.Input();
+            if (input.KeyPressed(KEY_ONE)) engine.SwitchScene("menu");
+            if (input.KeyPressed(KEY_TWO)) engine.SwitchScene("prymitywy");
+            if (input.KeyPressed(KEY_THREE)) engine.SwitchScene("figury");
+            if (input.KeyPressed(KEY_FOUR)) engine.SwitchScene("transformacje");
+            if (input.KeyPressed(KEY_FIVE)) engine.SwitchScene("kontekst");
+            if (input.KeyPressed(KEY_SIX)) engine.SwitchScene("trafienia");
+            if (input.KeyPressed(KEY_SEVEN)) engine.SwitchScene("kamera");
+            if (input.KeyPressed(KEY_EIGHT)) engine.SwitchScene("efekty");
+            if (input.KeyPressed(KEY_NINE)) engine.SwitchScene("formularz");
+            if (input.KeyPressed(KEY_ZERO)) engine.SwitchScene("sprite");
+            if (input.KeyPressed(KEY_MINUS)) engine.SwitchScene("fizyka");
+            if (input.KeyPressed(KEY_EQUAL)) engine.SwitchScene("dzwiek");
+            if (input.KeyPressed(KEY_GRAVE)) engine.SwitchScene("swiatlo");
             // szarość całego obrazu (G) jest częścią sceny efektów - poza nią ją wyłączamy
             if (engine.ActiveScene() != "efekty" && engine.PostShader()) engine.PostShader(nullptr);
-            if (engine.KeyPressed(KEY_F11)) engine.Fullscreen(!engine.IsFullscreen());
+            if (input.KeyPressed(KEY_F11)) engine.Fullscreen(!engine.IsFullscreen());
         })
         .OnDraw([&](PrimitiveRenderer&) {
-            const std::string hud = "Scena: " + engine.ActiveScene() +
-                                    "   [1-8] zmiana sceny (lista w menu)   [F11] pelny ekran";
-            const int bottom = static_cast<int>(engine.ViewSize().y);
-            ::DrawText(hud.c_str(), 20, bottom - 32, 18, DARKGRAY);
+            // HUD nad każdą sceną: globalne OnDraw() nie ma obiektów, więc rysuje czcionką wprost
+            font->Draw(
+                std::format(
+                    "Scena: {}   [0-9, -, =, `] zmiana sceny (lista w menu)   [F11] pełny ekran",
+                    engine.ActiveScene()
+                ),
+                {20, engine.ViewSize().y - 32}, TextStyle{.size = 18}, DARKGRAY
+            );
         })
         .Run();
 }

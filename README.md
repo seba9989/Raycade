@@ -7,12 +7,12 @@ Nazwa: **ray**lib + cas**cade** (łańcuch metod) + **arcade**.
 #include <raycade>
 
 SCENE("menu") {
-    scene.Spawn<shapes::Circle>()
+    scene.Spawn<node::shapes::Circle>()
         .Position({400, 300})
         .Radius(20)
         .Paint(ORANGE)
-        .Fill()
-        .OnClick([](shapes::Circle& self) { self.Paint(RED); });
+        .Filled()
+        .OnClick([](node::shapes::Circle& self) { self.Paint(RED); });
 }
 
 int main() { return Engine::Get().StartScene("menu").Run(); }
@@ -21,13 +21,17 @@ int main() { return Engine::Get().StartScene("menu").Run(); }
 Projekt na zajęcia z Podstaw Grafiki Komputerowej. Program `demo/` pokazuje funkcje
 z laboratoriów: własne algorytmy odcinka, okręgu i elipsy, wypełnianie scanline, flood fill
 i boundary fill, przekształcenia, hierarchię obiektów, kamerę, obsługę wejścia, animację
-bitmap, przycinanie, shadery i krok stały.
+bitmap, przycinanie, shadery, krok stały, fizykę (Box2D) i dźwięk (szyny miksera, muzyka,
+dźwięk przestrzenny).
 
 ## Wymagania
 
 - CMake 3.24+
 - kompilator z C++23 (deducing this): Clang 18+, GCC 14+ albo MSVC 19.32+
-- raylib 5.x - jeśli nie ma go w systemie, CMake pobiera wersję 5.5
+- raylib 5.x albo 6.x - jeśli nie ma go w systemie, CMake pobiera wersję 5.5
+- nlohmann/json 3.11+ (arkusze sprite'ów z JSON) - jeśli nie ma go w systemie, CMake pobiera
+  wersję 3.12
+- Box2D 3.1+ (fizyka) - jeśli nie ma go w systemie, CMake pobiera wersję 3.1.1
 
 ## Kompilacja
 
@@ -39,7 +43,7 @@ cmake --build build
 
 Z [devenv](https://devenv.sh/): `build`, `run`, `fmt`, `docs`, `clean`.
 
-Klawisze 1-8 przełączają sceny demo, F11 - pełny ekran. Opis każdej sceny jest na stronie
+Klawisze 0-9, minus, znak równości i ` (tylda) przełączają sceny demo, F11 - pełny ekran. Opis każdej sceny jest na stronie
 głównej dokumentacji.
 
 ## Użycie we własnym projekcie
@@ -58,15 +62,25 @@ w plikach programu, nie w bibliotece.
 engine/
   umbrella/raycade        nagłówek zbiorczy <raycade>
   include/raycade/        nagłówki publiczne, w warstwach:
-    math/                   macierz przekształceń, Point2D, geometria
-    render/                 Bitmap, RenderTarget, PrimitiveRenderer
+    core/                   Shared, typy ustawień silnika (LogLevel, Scaling)
+    math/                   transform/ macierz przekształceń, geometry/ Point2D i geometria
+    assets/                 Assets; image/ font/ shader/ sound/ - zasoby z plików
+    render/                 RenderTarget, ClipStack, primitives/ PrimitiveRenderer
     input/                  klawiatura, mysz, pad, akcje i osie
-    entity/                 Entity i klasy bazowe
-    shapes/  shapes.hpp     kształty (namespace shapes)
-    ui/      ui.hpp         interfejs (namespace ui)
-    scene/                  Scene, SceneCamera
-    engine/                 typy ustawień silnika, makro SCENE
-    Engine.hpp              okno, pętla, sceny
+    audio/   audio.hpp      mikser (namespace audio): Audio (fasada), playback/ Sound, Music,
+                              Voice, mixing/ Bus
+    entity/                 Entity i traits/ - klasy bazowe
+    node/    node.hpp       wszystko, co tworzy Spawn<T>() (namespace node):
+      Group.hpp               node::Group - pusty węzeł grupujący
+      shapes/  shapes.hpp     figury geometryczne (node::shapes)
+      visual/  visual.hpp     obrazy, tekst, płótno, RenderGroup (node::visual)
+      ui/      ui.hpp         interfejs (node::ui)
+      sound/   sound.hpp      dźwięk w scenie: Emitter, Listener (node::sound)
+      collider/ collider.hpp  Collider<S> i aliasy: collider::Rect... (node::collider)
+      physics/ physics.hpp    ciała i obszary: StaticBody, CharacterBody, RigidBody, Area
+                              (node::physics)
+    scene/                  Scene, camera/, pointer/ (trafienia myszą), physics/ (PhysicsWorld)
+    engine/                 Engine (okno, pętla, sceny, dźwięk), makro SCENE
   src/                    implementacja w tym samym układzie
     engine/                 Engine podzielony na pliki: okno, sceny, wejście, pliki...
 demo/                     program demonstracyjny i sceny laboratoriów

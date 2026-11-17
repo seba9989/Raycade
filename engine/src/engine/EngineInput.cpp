@@ -3,7 +3,7 @@
  * @brief Kursor, pady oraz nagrywanie i odtwarzanie wejścia.
  */
 
-#include <raycade/Engine.hpp>
+#include <raycade/engine/Engine.hpp>
 
 Engine& Engine::ExitKey(int key) {
     exitKey_ = key;
@@ -12,21 +12,23 @@ Engine& Engine::ExitKey(int key) {
     return *this;
 }
 
-Engine& Engine::MousePosition(Vector2 position) {
-    if (!RequireWindow("MousePosition")) return *this;
+Engine& Engine::MoveCursor(Vector2 position) {
+    if (!RequireWindow("MoveCursor")) return *this;
     // pozycja podawana jest we współrzędnych gry; raylib oczekuje pikseli okna
     if (target_.IsValid()) position = input_.GameToWindow(position);
     ::SetMousePosition(static_cast<int>(position.x), static_cast<int>(position.y));
     return *this;
 }
 
-Engine& Engine::MouseCursor(int cursor) {
-    if (RequireWindow("MouseCursor")) ::SetMouseCursor(cursor);
+Engine& Engine::CursorShape(int cursor) {
+    if (!RequireWindow("CursorShape")) return *this;
+    cursorShape_ = cursor;
+    ::SetMouseCursor(cursor);
     return *this;
 }
 
-Engine& Engine::HideCursor(bool value) {
-    if (!RequireWindow("HideCursor")) return *this;
+Engine& Engine::CursorHidden(bool value) {
+    if (!RequireWindow("CursorHidden")) return *this;
     if (value)
         ::HideCursor();
     else
@@ -34,8 +36,9 @@ Engine& Engine::HideCursor(bool value) {
     return *this;
 }
 
-Engine& Engine::LockCursor(bool value) {
-    if (!RequireWindow("LockCursor")) return *this;
+Engine& Engine::CursorLocked(bool value) {
+    if (!RequireWindow("CursorLocked")) return *this;
+    cursorLocked_ = value;
     if (value)
         ::DisableCursor();
     else
@@ -51,7 +54,7 @@ bool Engine::IsCursorOnScreen() const {
     return initialized_ && ::IsCursorOnScreen();
 }
 
-Engine& Engine::GamepadVibration(int gamepad, float left, float right, float seconds) {
+Engine& Engine::GamepadVibration(float left, float right, float seconds, int gamepad) {
     if (RequireWindow("GamepadVibration")) ::SetGamepadVibration(gamepad, left, right, seconds);
     return *this;
 }

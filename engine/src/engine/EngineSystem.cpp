@@ -3,7 +3,7 @@
  * @brief Schowek, czas, losowość, zrzuty ekranu i inne usługi systemowe.
  */
 
-#include <raycade/Engine.hpp>
+#include <raycade/engine/Engine.hpp>
 
 #include <rlgl.h>
 
@@ -19,6 +19,7 @@ Engine& Engine::ClipboardText(const std::string& text) {
 }
 
 Engine& Engine::EventWaiting(bool value) {
+    eventWaiting_ = value;
     if (value)
         ::EnableEventWaiting();
     else
@@ -44,7 +45,7 @@ Engine& Engine::RandomSeed(unsigned int seed) {
     return *this;
 }
 
-int Engine::RandomValue(int min, int max) const {
+int Engine::RandomInt(int min, int max) const {
     return ::GetRandomValue(min, max);
 }
 

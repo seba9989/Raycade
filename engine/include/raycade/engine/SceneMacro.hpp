@@ -6,7 +6,7 @@
  */
 #pragma once
 
-#include <raycade/Engine.hpp>
+#include <raycade/engine/Engine.hpp>
 
 /**
  * @brief Pomocniczy rejestrator scen wykorzystywany przez makro SCENE.
@@ -17,10 +17,10 @@ struct SceneRegistration {
     /**
      * @brief Zapamiętuje funkcję konfigurującą scenę.
      * @param name Nazwa sceny.
-     * @param setup Funkcja konfigurująca.
+     * @param setup Funkcja konfigurująca; dostaje scenę i silnik.
      */
-    SceneRegistration(const char* name, void (*setup)(Scene&)) {
-        Engine::Get().RegisterScene(name, setup);
+    SceneRegistration(const char* name, void (*setup)(Scene&, Engine&)) {
+        Engine::Get().RegisterScene(name, [setup](Scene& scene) { setup(scene, Engine::Get()); });
     }
 };
 
@@ -28,21 +28,25 @@ struct SceneRegistration {
 #define SCENE_CONCAT_(a, b) a##b
 #define SCENE_CONCAT(a, b) SCENE_CONCAT_(a, b)
 #define SCENE_IMPL_(name, setup)                                                                   \
-    static void setup(Scene& scene);                                                               \
+    static void setup(Scene& scene, [[maybe_unused]] Engine& engine);                              \
     static const SceneRegistration SCENE_CONCAT(setup, _registration){name, setup};                \
-    static void setup(Scene& scene)
+    static void setup(Scene& scene, [[maybe_unused]] Engine& engine)
 /** @endcond */
 
 /**
  * @def SCENE(name)
  * @brief Rejestruje scenę z bloku kodu wykonywanego po inicjalizacji okna.
- * @details Wewnątrz bloku dostępna jest zmienna `scene` (Scene&). Blok wykona się przy
- * pierwszym wejściu na scenę (wczytywanie leniwe), a scenę startową wybiera
- * Engine::StartScene(). Makro jest przeznaczone dla plików .cpp gry - nie należy go używać
- * w bibliotece statycznej, bo linker może pominąć plik, do którego nic się nie odwołuje.
+ * @details Wewnątrz bloku dostępne są zmienne `scene` (Scene&) i `engine` (Engine&, to samo co
+ * Engine::Get()). Lambdy z bloku mogą przechwycić `[&engine]` - silnik żyje do końca programu,
+ * więc ta referencja nigdy się nie unieważni. Blok wykona się przy pierwszym wejściu na scenę
+ * (wczytywanie leniwe), a scenę startową wybiera Engine::StartScene(). Makro jest przeznaczone dla
+ * plików .cpp gry - nie należy go używać w bibliotece statycznej, bo linker może pominąć plik, do
+ * którego nic się nie odwołuje.
  * @code{.cpp}
  * SCENE("menu") {
- *     scene.Spawn<shapes::Rect>().Position({300, 200}).Size({400, 300});
+ *     scene.ProvideContext<DefaultTypeface>(engine.Assets().Font("font.ttf"));
+ *     scene.Spawn<node::shapes::Rect>().Position({300, 200}).Size({400, 300})
+ *         .OnClick([&engine](node::shapes::Rect&) { engine.SwitchScene("gra"); });
  * }
  * @endcode
  * @param name Nazwa sceny używana przez StartScene() i SwitchScene().

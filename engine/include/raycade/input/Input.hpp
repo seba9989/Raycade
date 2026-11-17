@@ -19,15 +19,16 @@
  * urządzenie zachowuje się tak, jakby nic nie było wciśnięte: zapytania o wciśnięcie zwracają
  * false, zapytania „Up” - true, a pozycje i ruchy - {0, 0}.
  *
- * Gdy obiekt z fokusem przejmuje klawiaturę (np. ui::TextField), wszyscy inni widzą ją jak
+ * Gdy obiekt z fokusem przejmuje klawiaturę (np. node::ui::TextField), wszyscy inni widzą ją jak
  * wyłączoną - IsKeyboardCaptured() mówi, czy tak jest w tej klatce.
  *
  * Akcje i osie (ActionPressed(), Axis()) to nazwy zamiast konkretnych klawiszy - patrz
- * Engine::BindAction() i Engine::BindAxis().
+ * BindAction() i BindAxis().
  *
- * Klasa tylko odczytuje stan. Sterowanie (pozycja i wygląd kursora, wibracja pada) jest
- * w Engine. Obiekty sceny dostają Input w Tick(), a z dowolnego miejsca jest dostępny przez
- * Engine::Get().Input().
+ * Klasa odczytuje stan i trzyma jego konfigurację (wyłączniki urządzeń, akcje, osie).
+ * Sterowanie oknem (pozycja i wygląd kursora, wibracja pada) jest w Engine. Obiekty sceny
+ * dostają Input w Tick() (tylko do odczytu), a z dowolnego miejsca jest dostępny przez
+ * Engine::Get().Input() - silnik nie dubluje jego metod.
  */
 class Input {
   public:
@@ -39,7 +40,7 @@ class Input {
      * @param value Czy włączyć klawiaturę.
      * @return Ten sam obiekt.
      */
-    Input& Keyboard(bool value = true) {
+    Input& KeyboardEnabled(bool value = true) {
         keyboard_ = value;
         return *this;
     }
@@ -49,7 +50,7 @@ class Input {
      * @param value Czy włączyć mysz.
      * @return Ten sam obiekt.
      */
-    Input& Mouse(bool value = true) {
+    Input& MouseEnabled(bool value = true) {
         mouse_ = value;
         return *this;
     }
@@ -59,7 +60,7 @@ class Input {
      * @param value Czy włączyć pady.
      * @return Ten sam obiekt.
      */
-    Input& Gamepad(bool value = true) {
+    Input& GamepadEnabled(bool value = true) {
         gamepad_ = value;
         return *this;
     }
@@ -69,7 +70,7 @@ class Input {
      * @param value Czy włączyć dotyk.
      * @return Ten sam obiekt.
      */
-    Input& Touch(bool value = true) {
+    Input& TouchEnabled(bool value = true) {
         touch_ = value;
         return *this;
     }
@@ -198,34 +199,40 @@ class Input {
      * @brief Pobiera ruch kółka myszy w obu osiach (np. touchpad, kółko poziome).
      * @return Ruch w osi X i Y.
      */
-    Vector2 MouseWheelV() const { return mouse_ ? ::GetMouseWheelMoveV() : Vector2{0, 0}; }
+    Vector2 MouseWheelVector() const { return mouse_ ? ::GetMouseWheelMoveV() : Vector2{0, 0}; }
 
     /** @} */
 
     /** @name Pady */
     /** @{ */
+    /*
+     * Numer pada jest zawsze ostatnim parametrem i domyślnie wynosi 0 - tak jak w bind::Pad()
+     * i bind::PadAxis() oraz indeks w TouchPosition().
+     */
 
     /**
      * @brief Sprawdza, czy pad o podanym numerze jest podłączony.
      * @param gamepad Numer pada (od 0).
      * @return Dostępność pada.
      */
-    bool GamepadAvailable(int gamepad) const { return gamepad_ && ::IsGamepadAvailable(gamepad); }
+    bool GamepadAvailable(int gamepad = 0) const {
+        return gamepad_ && ::IsGamepadAvailable(gamepad);
+    }
 
     /**
      * @brief Pobiera nazwę pada.
      * @param gamepad Numer pada.
      * @return Nazwa albo pusty napis, gdy pad jest niedostępny.
      */
-    std::string GamepadName(int gamepad) const;
+    std::string GamepadName(int gamepad = 0) const;
 
     /**
      * @brief Sprawdza, czy przycisk pada jest wciśnięty.
-     * @param gamepad Numer pada.
      * @param button Kod przycisku raylib (GAMEPAD_BUTTON_*).
+     * @param gamepad Numer pada (domyślnie 0).
      * @return Stan przycisku.
      */
-    bool GamepadDown(int gamepad, int button) const {
+    bool GamepadDown(int button, int gamepad = 0) const {
         return gamepad_ && ::IsGamepadButtonDown(gamepad, button);
     }
 
@@ -233,7 +240,7 @@ class Input {
      * @brief Sprawdza, czy przycisk pada nie jest wciśnięty.
      * @return true także przy wyłączonych padach.
      */
-    bool GamepadUp(int gamepad, int button) const {
+    bool GamepadUp(int button, int gamepad = 0) const {
         return !gamepad_ || ::IsGamepadButtonUp(gamepad, button);
     }
 
@@ -241,7 +248,7 @@ class Input {
      * @brief Sprawdza naciśnięcie przycisku pada w bieżącej klatce.
      * @return Stan naciśnięcia.
      */
-    bool GamepadPressed(int gamepad, int button) const {
+    bool GamepadPressed(int button, int gamepad = 0) const {
         return gamepad_ && ::IsGamepadButtonPressed(gamepad, button);
     }
 
@@ -249,7 +256,7 @@ class Input {
      * @brief Sprawdza puszczenie przycisku pada w bieżącej klatce.
      * @return Stan puszczenia.
      */
-    bool GamepadReleased(int gamepad, int button) const {
+    bool GamepadReleased(int button, int gamepad = 0) const {
         return gamepad_ && ::IsGamepadButtonReleased(gamepad, button);
     }
 
@@ -264,17 +271,17 @@ class Input {
      * @param gamepad Numer pada.
      * @return Liczba osi albo 0.
      */
-    int GamepadAxisCount(int gamepad) const {
+    int GamepadAxisCount(int gamepad = 0) const {
         return gamepad_ ? ::GetGamepadAxisCount(gamepad) : 0;
     }
 
     /**
      * @brief Pobiera wychylenie osi pada.
-     * @param gamepad Numer pada.
      * @param axis Kod osi raylib (GAMEPAD_AXIS_*).
+     * @param gamepad Numer pada (domyślnie 0).
      * @return Wartość od -1 do 1 (spusty: od -1 do 1, zwolniony = -1).
      */
-    float GamepadAxis(int gamepad, int axis) const {
+    float GamepadAxis(int axis, int gamepad = 0) const {
         return gamepad_ ? ::GetGamepadAxisMovement(gamepad, axis) : 0.0f;
     }
 
@@ -306,7 +313,7 @@ class Input {
     /**
      * @brief Sprawdza, czy raylib wykrył teraz gest (dotyk albo mysz).
      * @details Gesty rozpoznaje raylib (moduł rgestures); na komputerze działają też myszą
-     * (lewy przycisk). Wyłącznik Touch(false) wyłącza także gesty. Które gesty są
+     * (lewy przycisk). Wyłącznik TouchEnabled(false) wyłącza także gesty. Które gesty są
      * rozpoznawane, ustawia Engine::Gestures().
      * @param gesture Gest (GESTURE_TAP, GESTURE_DOUBLETAP, GESTURE_HOLD, GESTURE_DRAG,
      * GESTURE_SWIPE_*, GESTURE_PINCH_IN, GESTURE_PINCH_OUT).
@@ -349,8 +356,8 @@ class Input {
 
     /**
      * @name Akcje i osie
-     * Powiązania ustawia się przez BindAction() i BindAxis() (zwykle przez skróty
-     * Engine::BindAction() i Engine::BindAxis()). Obiekty sceny dostają Input jako `const`,
+     * Powiązania ustawia się przez BindAction() i BindAxis() (zwykle
+     * `Engine::Get().Input().BindAction(...)`). Obiekty sceny dostają Input jako `const`,
      * więc mogą powiązania tylko odczytywać. Akcje respektują wyłączniki urządzeń i przejęcie
      * klawiatury przez pole tekstowe. Nieznana nazwa daje false albo 0.
      */
@@ -455,7 +462,7 @@ class Input {
     /**
      * @brief Naciśnięcie klawisza systemowego - działa także przy przejętej klawiaturze.
      * @details Dla klawiszy, które silnik obsługuje zawsze, np. Tab przenoszący fokus
-     * (inaczej z pola tekstowego nie dałoby się przejść dalej). Respektuje Keyboard(false).
+     * (inaczej z pola tekstowego nie dałoby się przejść dalej). Respektuje KeyboardEnabled(false).
      */
     bool SystemKeyPressed(int key) const { return keyboard_ && ::IsKeyPressed(key); }
 

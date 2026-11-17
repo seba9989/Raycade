@@ -3,18 +3,13 @@
  * @brief Pliki, katalogi, ścieżki zasobów i pamięć podręczna zasobów.
  */
 
-#include <raycade/Engine.hpp>
+#include <raycade/engine/Engine.hpp>
 
 /**
  * @details Katalog zasobów jest znany od razu (nie wymaga okna), a Assets trafia do kontekstu
- * silnika, żeby obiekty sceny (np. shapes::Sprite::Sheet() z nazwą pliku) korzystały z tej
+ * silnika, żeby obiekty sceny (np. node::visual::Sprite::Sheet() z nazwą pliku) korzystały z tej
  * samej pamięci podręcznej. Init() odnawia wpis po Shutdown(), które czyści kontekst.
  */
-Engine::Engine() {
-    assets_.Directory(AssetPath(""));
-    SetContext(assets_);
-}
-
 std::string Engine::ApplicationDirectory() const {
     return ::GetApplicationDirectory();
 }
@@ -36,7 +31,7 @@ long Engine::FileModTime(const std::string& path) const {
 }
 
 std::string Engine::AssetPath(const std::string& name) const {
-    return ApplicationDirectory() + "assets/" + name;
+    return assets_.Path(name);
 }
 
 std::optional<std::string> Engine::LoadText(const std::string& path) const {

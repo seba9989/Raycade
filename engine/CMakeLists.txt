@@ -1,47 +1,8 @@
-# Biblioteka Raycade (bez scen - te należą do gry, patrz makro SCENE).
-add_library(raycade STATIC
-    src/engine/Engine.cpp
-    src/engine/EngineFiles.cpp
-    src/engine/EngineInput.cpp
-    src/engine/EngineScaling.cpp
-    src/engine/EngineScenes.cpp
-    src/engine/EngineSystem.cpp
-    src/engine/EngineWindow.cpp
-    src/math/Geometry.cpp
-    src/render/Assets.cpp
-    src/render/Bitmap.cpp
-    src/render/ClipStack.cpp
-    src/render/RenderTarget.cpp
-    src/render/ShaderProgram.cpp
-    src/render/SpriteSheet.cpp
-    src/render/Typeface.cpp
-    src/render/primitive_renderer/Fill.cpp
-    src/render/primitive_renderer/Polygon.cpp
-    src/render/primitive_renderer/Primitives.cpp
-    src/render/primitive_renderer/RoundShapes.cpp
-    src/input/Input.cpp
-    src/entity/Drawable.cpp
-    src/entity/Entity.cpp
-    src/entity/Focusable.cpp
-    src/entity/Updatable.cpp
-    src/shapes/Canvas.cpp
-    src/shapes/Circle.cpp
-    src/shapes/Ellipse.cpp
-    src/shapes/Line.cpp
-    src/shapes/Lines.cpp
-    src/shapes/Point.cpp
-    src/shapes/Points.cpp
-    src/shapes/Polygon.cpp
-    src/shapes/Polyline.cpp
-    src/shapes/Rect.cpp
-    src/shapes/Sprite.cpp
-    src/shapes/Surface.cpp
-    src/shapes/Text.cpp
-    src/shapes/Triangle.cpp
-    src/ui/TextField.cpp
-    src/scene/Scene.cpp
-    src/scene/SceneCamera.cpp
-)
+# Biblioteka Raycade (bez scen - te należą do gry, patrz makro SCENE). Źródła zbiera glob jak
+# w demo; CONFIGURE_DEPENDS sprawia, że nowy albo usunięty plik .cpp w src/ jest wykrywany przy
+# kolejnej kompilacji, bez ręcznego ponownego uruchamiania CMake.
+file(GLOB_RECURSE RAYCADE_SOURCES CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
+add_library(raycade STATIC ${RAYCADE_SOURCES})
 add_library(raycade::raycade ALIAS raycade)
 
 # PUBLIC: gra dołącza <raycade> albo <raycade/...> i dostaje te same ustawienia co biblioteka.
@@ -56,7 +17,11 @@ target_include_directories(raycade PUBLIC
 target_compile_features(raycade PUBLIC cxx_std_23)
 
 # raylib jest częścią API (Color, Vector2, KEY_*), dlatego PUBLIC.
-target_link_libraries(raycade PUBLIC raylib PRIVATE raycade_warnings)
+# nlohmann/json (SpriteSheet.cpp) i Box2D (src/scene/physics) tylko w implementacji - nie trafiają
+# do nagłówków API, więc gra ich nie widzi.
+target_link_libraries(
+    raycade PUBLIC raylib PRIVATE raycade_warnings nlohmann_json::nlohmann_json box2d::box2d
+)
 
 # Nagłówki zawierają polskie znaki (UTF-8) - MSVC bez /utf-8 czyta je w stronie kodowej
 # systemu, więc opcja musi trafić także do każdego pliku gry, który je dołącza.

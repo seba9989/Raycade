@@ -8,14 +8,13 @@
  *   i obrocie, bo scena przelicza kursor przez kamerę,
  * - przyciski w rogu są obiektami ekranu (ScreenSpace()): kamera ich nie przesuwa i leżą
  *   nad światem, więc kliknięcie w nie nie trafia w świat pod spodem,
- * - siatka świata jest rysowana w OnDrawWorld(), a napisy w OnDraw() (układ okna).
+ * - siatka świata jest rysowana w OnDrawWorld(), a napisy to obiekty ekranu (node::visual::Text).
  */
 
 #include <raycade>
 
 #include <algorithm>
 #include <cmath>
-#include <cstdio>
 #include <string>
 
 namespace {
@@ -27,7 +26,7 @@ constexpr float kWorld = 1200.0f;
 int coins = 0;
 
 /** @brief Gracz sterowany WASD/strzałkami, ograniczony do świata. */
-class Walker : public shapes::Circle {
+class Walker : public node::shapes::Circle {
   protected:
     void Tick(float dt, const Input& input) override {
         Vector2 direction{};
@@ -49,8 +48,13 @@ class Walker : public shapes::Circle {
 /** @brief Prostokątny przycisk HUD z napisem. */
 class HudButton : public Entity {
   public:
+    /** @brief Tworzy napis - dziecko bez zdarzeń, więc kliknięcie trafia w przycisk. */
+    HudButton() {
+        label_ = &Spawn<node::visual::Text>().FontSize(20).Paint(WHITE).Position({10, 8});
+    }
+
     template <typename Self> Self& Label(this Self& self, std::string label) {
-        self.label_ = std::move(label);
+        self.label_->Content(std::move(label));
         return self;
     }
 
@@ -62,36 +66,35 @@ class HudButton : public Entity {
   protected:
     void Draw(PrimitiveRenderer& renderer) const override {
         renderer.Paint(IsHovered() ? ::ColorBrightness(color_, 0.3f) : color_)
-            .Fill()
+            .Filled()
             .Rect({0, 0}, kSize);
-        ::DrawText(label_.c_str(), 10, 8, 20, WHITE);
     }
 
   private:
     static constexpr Vector2 kSize{110, 36}; /**< Rozmiar przycisku. */
-    std::string label_;                      /**< Napis. */
+    node::visual::Text* label_ = nullptr;    /**< Napis (dziecko). */
 };
 
 /** @brief Skrzynia do przeciągania (z ramką pod kursorem). */
-class Crate : public shapes::Rect {
+class Crate : public node::shapes::Rect {
   public:
     Crate() {
-        Size({60, 60}).Paint(BROWN).Fill();
+        Size({60, 60}).Paint(BROWN).Filled();
         OnDrag([](Crate& self, Vector2 delta) { self.Translate(delta); });
     }
 
   protected:
     void Draw(PrimitiveRenderer& renderer) const override {
-        shapes::Rect::Draw(renderer);
-        if (IsHovered()) renderer.Paint(BLACK).Fill(false).Rect({-3, -3}, {66, 66});
+        node::shapes::Rect::Draw(renderer);
+        if (IsHovered()) renderer.Paint(BLACK).Filled(false).Rect({-3, -3}, {66, 66});
     }
 };
 
 /** @brief Moneta: kliknięta przenosi się w losowe miejsce świata. */
-class Coin : public shapes::Circle {
+class Coin : public node::shapes::Circle {
   public:
     Coin() {
-        Radius(14).Paint(GOLD).Fill();
+        Radius(14).Paint(GOLD).Filled();
         OnClick([](Coin& self) {
             ++coins;
             Engine& engine = Engine::Get();
@@ -111,8 +114,6 @@ void ResetCamera(SceneCamera& camera, const Walker& player) {
 
 /** @brief Konfiguruje scenę pokazu kamery. */
 SCENE("kamera") {
-    Engine& engine = Engine::Get();
-
     // --- świat ---
     for (int i = 0; i < 8; ++i) {
         const float angle = static_cast<float>(i) * PI / 4.0f;
@@ -126,7 +127,7 @@ SCENE("kamera") {
         );
 
     auto& player = scene.Spawn<Walker>();
-    player.Position({0, 0}).Paint(DARKBLUE).Fill().Radius(20);
+    player.Position({0, 0}).Paint(DARKBLUE).Filled().Radius(20);
     ResetCamera(scene.Camera(), player);
 
     // --- HUD: obiekty ekranu, kamera ich nie przesuwa ---
@@ -167,35 +168,49 @@ SCENE("kamera") {
     });
 
     // --- siatka świata: przesuwa się, przybliża i obraca razem ze światem ---
-    scene.OnDrawWorld([](PrimitiveRenderer&) {
+    scene.OnDrawWorld([](PrimitiveRenderer& renderer) {
         for (float x = -kWorld; x <= kWorld; x += 100.0f)
-            ::DrawLineV({x, -kWorld}, {x, kWorld}, x == 0 ? GRAY : LIGHTGRAY);
+            renderer.Paint(x == 0 ? GRAY : LIGHTGRAY).Line({x, -kWorld}, {x, kWorld});
         for (float y = -kWorld; y <= kWorld; y += 100.0f)
-            ::DrawLineV({-kWorld, y}, {kWorld, y}, y == 0 ? GRAY : LIGHTGRAY);
-        ::DrawRectangleLinesEx({-kWorld, -kWorld, 2 * kWorld, 2 * kWorld}, 4.0f, DARKGRAY);
+            renderer.Paint(y == 0 ? GRAY : LIGHTGRAY).Line({-kWorld, y}, {kWorld, y});
+        renderer.Paint(DARKGRAY).Filled(false);
+        for (float i = 0; i < 4; ++i) // ramka grubości 4 px
+            renderer.Rect({-kWorld + i, -kWorld + i}, {2 * (kWorld - i), 2 * (kWorld - i)});
     });
 
-    // --- napisy w układzie okna ---
-    scene.OnDraw([&engine, &camera](PrimitiveRenderer&) {
-        const Vector2 mouse = camera.ScreenToWorld(engine.MousePosition());
-        char info[160];
-        std::snprintf(
-            info, sizeof info,
-            "zoom %.2f   obrot %.0f st.   podazanie: %s   kursor w swiecie: (%.0f, %.0f)",
+    // --- napisy: obiekty ekranu, jak przyciski HUD ---
+    scene.Spawn<node::shapes::Rect>()
+        .ScreenSpace()
+        .Size({850, 70})
+        .Paint(::Fade(RAYWHITE, 0.85f))
+        .Filled();
+    const auto label =
+        [&scene](Vector2 position, std::string text, float size) -> node::visual::Text& {
+        return scene.Spawn<node::visual::Text>()
+            .ScreenSpace()
+            .Content(std::move(text))
+            .FontSize(size)
+            .Paint(DARKGRAY)
+            .Position(position)
+            .Layer(1);
+    };
+    label({20, 12}, "Kamera 2D", 22);
+    label({20, 42}, "", 16).OnUpdate([&engine, &camera](node::visual::Text& self, float) {
+        const Vector2 mouse = camera.ScreenToWorld(engine.Input().MousePosition());
+        self.Content(
+            "zoom {:.2f}   obrót {:.0f}°   podążanie: {}   kursor w świecie: ({:.0f}, {:.0f})",
             camera.Zoom(), camera.Rotation() * RAD2DEG, camera.IsFollowing() ? "tak" : "nie",
             mouse.x, mouse.y
         );
-        ::DrawRectangle(0, 0, 850, 70, Fade(RAYWHITE, 0.85f));
-        ::DrawText("Kamera 2D", 20, 12, 22, DARKGRAY);
-        ::DrawText(info, 20, 42, 16, DARKGRAY);
-        ::DrawText(("Monety: " + std::to_string(coins)).c_str(), 870, 160, 20, DARKGRAY);
-        ::DrawText(
-            "WASD/strzalki - ruch   kolko - zoom   Q/E - obrot   F - podazanie   R - reset", 20,
-            618, 16, DARKGRAY
-        );
-        ::DrawText(
-            "przeciagnij skrzynie, kliknij monete - trafienia dzialaja przy kazdym zoomie", 20, 640,
-            16, DARKGRAY
-        );
     });
+    label({870, 160}, "", 20).OnUpdate([](node::visual::Text& self, float) {
+        self.Content("Monety: {}", coins);
+    });
+    label(
+        {20, 618},
+        "WASD/strzałki - ruch   kółko - zoom   Q/E - obrót   F - podążanie   R - reset\n"
+        "przeciągnij skrzynię, kliknij monetę - trafienia działają przy każdym zoomie",
+        16
+    )
+        .LineHeight(1.375f);
 }

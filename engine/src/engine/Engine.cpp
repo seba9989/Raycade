@@ -3,16 +3,18 @@
  * @brief Inicjalizacja, pętla gry, zamykanie i log silnika.
  * @details Pozostałe metody Engine są w plikach Engine*.cpp w tym katalogu, pogrupowane
  * jak w dokumentacji klasy: okno (EngineWindow.cpp), skalowanie (EngineScaling.cpp), sceny
- * (EngineScenes.cpp), wejście (EngineInput.cpp), pliki (EngineFiles.cpp) oraz schowek, czas
- * i losowość (EngineSystem.cpp).
+ * (EngineScenes.cpp), wejście (EngineInput.cpp), pliki (EngineFiles.cpp), dźwięk
+ * (EngineAudio.cpp) oraz schowek, czas i losowość (EngineSystem.cpp).
  */
 
-#include <raycade/Engine.hpp>
+#include <raycade/engine/Engine.hpp>
 
 #include <algorithm>
 #include <cstdarg>
 #include <cstdio>
 #include <iostream>
+
+#include "../audio/AudioMixer.hpp"
 
 namespace {
 
@@ -68,6 +70,22 @@ Contextable* ContextRoot() {
     return &Engine::Get();
 }
 
+Engine::Engine()
+    : mixer_(
+          std::make_unique<AudioMixer>(
+              [this](LogLevel level, const std::string& message) { Log(level, message); },
+              assets_
+          )
+      ) {
+    assets_.Directory(ApplicationDirectory() + "assets/");
+    assets_.Logger([this](LogLevel level, const std::string& message) { Log(level, message); });
+    SetContext(assets_);
+}
+
+Engine::~Engine() {
+    Shutdown();
+}
+
 Engine& Engine::Init() {
     if (initialized_) return *this;
     if (!logFile_.empty()) log_.open(logFile_);
@@ -108,6 +126,7 @@ Engine& Engine::Init() {
     SetContext(assets_); // Shutdown() czyści kontekst - po ponownym Init() wpis wraca
     ApplyIcon();
     if (scaling_ != Scaling::None) CreateTarget();
+    mixer_->Open();
     Log("Silnik zainicjalizowany (podwojne buforowanie, V-Sync: " +
         std::string(IsVSync() ? "tak" : "nie") + ")");
     return *this;
@@ -150,7 +169,9 @@ int Engine::Run() {
             int steps = 0;
             while (fixedAccumulator_ >= fixedStep_ && steps < maxFixedSteps_) {
                 if (fixedUpdate_) fixedUpdate_(fixedStep_);
-                if (scene) scene->FixedUpdate(fixedStep_);
+                mixer_->Owner(scene); // dźwięki z logiki sceny należą do sceny
+                if (scene) scene->FixedUpdate(fixedStep_, input_);
+                mixer_->Owner(nullptr);
                 fixedAccumulator_ -= fixedStep_;
                 ++steps;
             }
@@ -159,24 +180,31 @@ int Engine::Run() {
                 fixedAccumulator_ = std::min(fixedAccumulator_, fixedStep_);
         }
         if (update_) update_(dt);
+        mixer_->Owner(scene);
         if (scene) scene->Update(dt, input_);
+        mixer_->Owner(nullptr);
 
         // dopiero teraz: OnUpdate albo scena mogły w tej klatce włączyć lub wyłączyć skalowanie
         const bool scaled = target_.IsValid();
         // przy skalowaniu gra rysuje do tekstury w swojej rozdzielczości, a nie na ekran;
-        // RenderTarget, bo tekstury obiektów (shapes::Surface) muszą wracać do niej, nie na ekran
+        // RenderTarget, bo tekstury obiektów (node::visual::RenderGroup) muszą wracać do niej, nie
+        // na ekran
         if (scaled)
             target_.Begin();
         else
             ::BeginDrawing();
         ::ClearBackground(background_);
-        if (scene) scene->Draw(primitives_);
+        if (scene) {
+            // położenie obiektów fizyki między krokami stałymi (interpolacja rysowania)
+            scene->FixedAlpha(fixedStep_ > 0.0f ? FixedAlpha() : 1.0f);
+            scene->Draw(primitives_);
+        }
         if (draw_) draw_(primitives_.Reset().TargetScreen());
         if (scaled) {
             target_.End();
             ::BeginDrawing();
             ::ClearBackground(letterbox_);
-            const bool post = postShader_ && postShader_->IsValid();
+            const bool post = postShader_ && postShader_->IsLoaded();
             if (post) ::BeginShaderMode(postShader_->Raw());
             target_.Draw(destination_);
             if (post) ::EndShaderMode();
@@ -187,6 +215,8 @@ int Engine::Run() {
 
         // zmiany scen między klatkami, poza pętlą po obiektach
         ApplySceneChanges();
+        // głosy zgłoszone w tej klatce (Sound::Play(), Music::Play()) ruszają z kompletem ustawień
+        mixer_->Update(dt);
         ++frameCount_;
     }
 
@@ -203,8 +233,10 @@ void Engine::Shutdown() {
     pending_.clear();
     unload_.clear();
     reload_.clear();
+    // głosy oddają klipy przed Assets::Clear(); zdarzenia końca mogłyby sięgać do scen
+    mixer_->StopAll();
     ClearContext();  // wartości globalne też mogą trzymać tekstury
-    assets_.Clear(); // na końcu: sceny i kontekst mogły trzymać zasoby z pamięci podręcznej
+    assets_.Clear(); // na końcu: sceny, głosy i kontekst mogły trzymać zasoby z pamięci podręcznej
     if (recording_) {
         ::StopAutomationEventRecording();
         ::UnloadAutomationEventList(recordList_);
@@ -216,17 +248,13 @@ void Engine::Shutdown() {
         ::UnloadAutomationEventList(replayList_);
         replaying_ = false;
     }
-    postShader_.reset(); // zasób GPU - przed zamknięciem okna
+    mixer_->CloseDevice(); // po Assets::Clear() - klipy zwalniają próbki przy otwartym urządzeniu
+    postShader_.reset();   // zasób GPU - przed zamknięciem okna
     ReleaseTarget();
     ::CloseWindow();
     // komunikaty raylib po zamknięciu znów idą prosto na konsolę (silnik może już nie istnieć)
     ::SetTraceLogCallback(nullptr);
     initialized_ = false;
-}
-
-Engine& Engine::Clear(const RenderTarget& target, Color color) {
-    target.Clear(color);
-    return *this;
 }
 
 Engine& Engine::Log(LogLevel level, const std::string& message) {

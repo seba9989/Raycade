@@ -27,7 +27,8 @@ struct InputBinding {
 /**
  * @brief Funkcje tworzące powiązania akcji.
  * @code{.cpp}
- * engine.BindAction("skok", {bind::Key(KEY_SPACE), bind::Pad(GAMEPAD_BUTTON_RIGHT_FACE_DOWN)});
+ * engine.Input().BindAction("skok", {bind::Key(KEY_SPACE),
+ * bind::Pad(GAMEPAD_BUTTON_RIGHT_FACE_DOWN)});
  * @endcode
  */
 namespace bind {
@@ -63,7 +64,7 @@ inline InputBinding PadAxis(int axis, float direction, float threshold = 0.5f, i
  * @details Gest trwa, dopóki raylib go zgłasza (Down), a Pressed/Released są liczone ze zmiany
  * między klatkami - jak przy osiach pada. Na komputerze gesty działają też myszą.
  * @code{.cpp}
- * engine.BindAction("skok", {bind::Key(KEY_SPACE), bind::Gesture(GESTURE_SWIPE_UP)});
+ * engine.Input().BindAction("skok", {bind::Key(KEY_SPACE), bind::Gesture(GESTURE_SWIPE_UP)});
  * @endcode
  * @param gesture Gest (GESTURE_*).
  */

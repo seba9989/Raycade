@@ -62,8 +62,8 @@ class Tile : public Entity {
 
     void Draw(PrimitiveRenderer& renderer) const override {
         const Color color = theme_ ? kPalette[static_cast<std::size_t>(theme_->color)] : GRAY;
-        renderer.Paint(color).Fill().Rect({0, 0}, {kSize, kSize});
-        if (IsHovered()) renderer.Paint(BLACK).Fill(false).Rect({-2, -2}, {kSize + 4, kSize + 4});
+        renderer.Paint(color).Filled().Rect({0, 0}, {kSize, kSize});
+        if (IsHovered()) renderer.Paint(BLACK).Filled(false).Rect({-2, -2}, {kSize + 4, kSize + 4});
     }
 
   private:
@@ -87,7 +87,7 @@ class Tile : public Entity {
  * @brief Panel z trzema kafelkami, który udostępnia im własny Theme.
  * @details Domyślny Theme powstaje w konstruktorze; scena może go nadpisać po Spawn.
  */
-class Panel : public shapes::Group {
+class Panel : public node::Group {
   public:
     Panel() {
         ProvideContext<Theme>(Theme{0, "panel (domyslny)"});
@@ -97,7 +97,7 @@ class Panel : public shapes::Group {
 };
 
 /** @brief Gracz sterowany strzałkami w obrębie areny. */
-class Player : public shapes::Circle {
+class Player : public node::shapes::Circle {
   public:
     static constexpr Rectangle kArena{540, 110, 420, 300}; /**< Obszar ruchu. */
 
@@ -116,7 +116,7 @@ class Player : public shapes::Circle {
 };
 
 /** @brief Kółko goniące gracza znalezionego przez Context<Player>(). */
-class Follower : public shapes::Circle {
+class Follower : public node::shapes::Circle {
   public:
     template <typename Self> Self& Speed(this Self& self, float speed) {
         self.speed_ = speed;
@@ -149,12 +149,12 @@ class ScoreBar : public Entity {
         constexpr float kMax = 20.0f; // tyle kliknięć wypełnia pasek
         const auto fraction = [&](int value) { return std::min(value / kMax, 1.0f) * kWidth; };
 
-        renderer.Paint(LIGHTGRAY).Fill().Rect({0, 0}, {kWidth, 24});
+        renderer.Paint(LIGHTGRAY).Filled().Rect({0, 0}, {kWidth, 24});
         if (const Score* score = Context<Score>())
-            renderer.Paint(DARKGREEN).Fill().Rect({0, 0}, {fraction(score->value), 24});
+            renderer.Paint(DARKGREEN).Filled().Rect({0, 0}, {fraction(score->value), 24});
         if (const BestScore* best = Context<BestScore>()) {
             const float x = fraction(best->value);
-            renderer.Paint(MAROON).Fill().Rect({x - 2, -6}, {4, 36});
+            renderer.Paint(MAROON).Filled().Rect({x - 2, -6}, {4, 36});
         }
     }
 };
@@ -163,8 +163,6 @@ class ScoreBar : public Entity {
 
 /** @brief Konfiguruje scenę pokazu kontekstu. */
 SCENE("kontekst") {
-    Engine& engine = Engine::Get();
-
     // Poziom silnika: zwykle udostępnia się go w main(); tu tylko wtedy, gdy jeszcze go nie ma,
     // żeby rekord przetrwał ReloadScene (konfiguracja sceny wykonuje się wtedy ponownie).
     if (!engine.Context<BestScore>()) engine.ProvideContext<BestScore>();
@@ -180,36 +178,49 @@ SCENE("kontekst") {
 
     // SetContext: gracza udostępniamy przez referencję, bez kopiowania.
     auto& player = scene.Spawn<Player>();
-    player.Position({750, 260}).Radius(16).Paint(DARKBLUE).Fill();
+    player.Position({750, 260}).Radius(16).Paint(DARKBLUE).Filled();
     scene.SetContext(player);
 
-    // Radius() z shapes::Circle zwraca Circle&, dlatego jest na końcu łańcucha
-    scene.Spawn<Follower>().Speed(60).Position({560, 130}).Paint(RED).Fill().Radius(10);
-    scene.Spawn<Follower>().Speed(90).Position({940, 130}).Paint(MAROON).Fill().Radius(10);
-    scene.Spawn<Follower>().Speed(120).Position({940, 390}).Paint(PINK).Fill().Radius(10);
+    // Radius() z node::shapes::Circle zwraca Circle&, dlatego jest na końcu łańcucha
+    scene.Spawn<Follower>().Speed(60).Position({560, 130}).Paint(RED).Filled().Radius(10);
+    scene.Spawn<Follower>().Speed(90).Position({940, 130}).Paint(MAROON).Filled().Radius(10);
+    scene.Spawn<Follower>().Speed(120).Position({940, 390}).Paint(PINK).Filled().Radius(10);
 
     scene.Spawn<ScoreBar>().Position({60, 520});
 
-    scene.OnUpdate([&engine](float) {
-        if (engine.KeyPressed(KEY_R)) engine.ReloadScene("kontekst");
-    });
+    scene.Spawn<node::shapes::Rect>()
+        .Position({Player::kArena.x, Player::kArena.y})
+        .Size({Player::kArena.width, Player::kArena.height})
+        .Paint(LIGHTGRAY);
 
-    scene.OnDraw([&scene](PrimitiveRenderer&) {
-        ::DrawText("Kontekst poddrzewa: panel -> kafelki", 60, 70, 20, DARKGRAY);
-        ::DrawText("panel A", 290, 130, 18, GRAY);
-        ::DrawText("panel B", 290, 250, 18, GRAY);
-        ::DrawText("kafelek bez panelu: Theme sceny", 140, 370, 18, GRAY);
-        ::DrawText("LPM na kafelku - zmiana Theme calego panelu", 60, 430, 16, GRAY);
+    // ---------------- podpisy ----------------
+    const auto label = [&scene](
+                           Vector2 position, std::string text, float size, Color color = GRAY
+                       ) -> node::visual::Text& {
+        return scene.Spawn<node::visual::Text>()
+            .Content(std::move(text))
+            .FontSize(size)
+            .Paint(color)
+            .Position(position);
+    };
+    label({60, 70}, "Kontekst poddrzewa: panel -> kafelki", 20, DARKGRAY);
+    label({290, 130}, "panel A", 18);
+    label({290, 250}, "panel B", 18);
+    label({140, 370}, "kafelek bez panelu: Theme sceny", 18);
+    label({60, 430}, "LPM na kafelku - zmiana Theme całego panelu", 16);
+    label({540, 70}, "SetContext(gracz): pościgowcy znajdują gracza", 18, DARKGRAY);
+    label({540, 420}, "strzałki - ruch gracza", 16);
+    label({60, 560}, "R - ReloadScene: wynik sceny od zera, rekord zostaje", 16);
+    auto& scoreText = label({60, 490}, "", 20, DARKGRAY);
 
-        ::DrawText("SetContext(gracz): poscigowcy znajduja gracza", 540, 70, 18, DARKGRAY);
-        ::DrawRectangleLinesEx(Player::kArena, 1.0f, LIGHTGRAY);
-        ::DrawText("strzalki - ruch gracza", 540, 420, 16, GRAY);
+    scene.OnUpdate([&engine, &scene, &scoreText](float) {
+        if (engine.Input().KeyPressed(KEY_R)) engine.ReloadScene("kontekst");
 
         const Score* score = scene.Context<Score>();
         const BestScore* best = scene.Context<BestScore>(); // scena -> silnik
-        const std::string text = "Wynik (scena): " + std::to_string(score ? score->value : 0) +
-                                 "   Rekord (silnik): " + std::to_string(best ? best->value : 0);
-        ::DrawText(text.c_str(), 60, 490, 20, DARKGRAY);
-        ::DrawText("R - ReloadScene: wynik sceny od zera, rekord zostaje", 60, 560, 16, GRAY);
+        scoreText.Content(
+            "Wynik (scena): {}   Rekord (silnik): {}", score ? score->value : 0,
+            best ? best->value : 0
+        );
     });
 }
