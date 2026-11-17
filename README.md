@@ -43,7 +43,7 @@ cmake --build build
 
 Z [devenv](https://devenv.sh/): `build`, `run`, `fmt`, `docs`, `clean`.
 
-Klawisze 0-9, minus i znak równości przełączają sceny demo, F11 - pełny ekran. Opis każdej sceny jest na stronie
+Klawisze 0-9, minus, znak równości i ` (tylda) przełączają sceny demo, F11 - pełny ekran. Opis każdej sceny jest na stronie
 głównej dokumentacji.
 
 ## Użycie we własnym projekcie

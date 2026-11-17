@@ -54,13 +54,12 @@
  * @section obsluga Sceny demonstracyjne
  * Klawisze 1-9 wybierają `menu`, `prymitywy`, `figury`, `transformacje`, `kontekst`,
  * `trafienia`, `kamera`, `efekty` i `formularz`, 0 - `sprite`, minus - `fizyka`, a znak
- * równości - `dzwiek` (lista jest też na scenie `menu`). F11 przełącza pełny ekran. Okno ma
- * zmienny rozmiar: gra rysuje zawsze w
- * 1000x700, a obraz jest skalowany do okna z zachowaniem proporcji
- * (Engine::ScaleMode(Scaling::Fit)), więc układ scen i kliknięcia działają przy każdym rozmiarze
- * okna i na pełnym ekranie. Na scenie `prymitywy` strzałki przesuwają prostokąt, L zmienia warstwę,
- * PPM przesuwa koniec odcinka, a spacja przełącza jego algorytm.
- * Na scenie `figury` LPM uruchamia flood fill na płótnie, Shift+LPM
+ * równości - `dzwiek`, a klawisz `` ` `` (tylda, na lewo od 1) - `swiatlo` (lista jest też na
+ * scenie `menu`). F11 przełącza pełny ekran. Okno ma zmienny rozmiar: gra rysuje zawsze w 1000x700,
+ * a obraz jest skalowany do okna z zachowaniem proporcji (Engine::ScaleMode(Scaling::Fit)), więc
+ * układ scen i kliknięcia działają przy każdym rozmiarze okna i na pełnym ekranie. Na scenie
+ * `prymitywy` strzałki przesuwają prostokąt, L zmienia warstwę, PPM przesuwa koniec odcinka, a
+ * spacja przełącza jego algorytm. Na scenie `figury` LPM uruchamia flood fill na płótnie, Shift+LPM
  * uruchamia boundary fill, a R przywraca kontury.
  * Na scenie `transformacje` szary kontur pokazuje stan przed obrotem lub skalowaniem,
  * a kolorowa figura stan po; grupa obraca się razem z dziećmi. LPM zmienia kolor
@@ -122,6 +121,13 @@
  * wybuch (emiter usuwający się po dźwięku), a R wczytuje scenę od nowa - ognisko cichnie,
  * a muzyka gra dalej. Próbki WAV w `demo/assets/`
  * są syntezowane skryptem `demo/tools/generate_sounds.py`.
+ * Scena `swiatlo` pokazuje dynamiczne oświetlenie liczone shaderem fragmentów na całym świecie
+ * sceny (node::visual::RenderGroup): światła punktowe i stożkowe, cienie od prostokątów i kół
+ * (twarde albo miękkie z półcieniem), mieszanie kolorów i mapowanie tonów. Światła i przeszkody
+ * trafiają do shadera co klatkę tablicami uniformów (ShaderProgram::Uniform() ze std::span).
+ * WASD porusza graczem z latarką celowaną myszą, F ją wyłącza, T zmienia tryb cieni, O wstrzymuje
+ * krążenie kolorowych świateł, L wyłącza shader dla porównania, PPM stawia nowe światło, C usuwa
+ * postawione, kółko myszy zmienia światło otoczenia, a LPM przeciąga skrzynie razem z ich cieniem.
  *
  * @section dokumentacja Dokumentacja
  * Dokumentację HTML generuje polecenie `docs` (devenv) albo, w katalogu głównym projektu:
@@ -203,6 +209,7 @@ int main() {
             if (input.KeyPressed(KEY_ZERO)) engine.SwitchScene("sprite");
             if (input.KeyPressed(KEY_MINUS)) engine.SwitchScene("fizyka");
             if (input.KeyPressed(KEY_EQUAL)) engine.SwitchScene("dzwiek");
+            if (input.KeyPressed(KEY_GRAVE)) engine.SwitchScene("swiatlo");
             // szarość całego obrazu (G) jest częścią sceny efektów - poza nią ją wyłączamy
             if (engine.ActiveScene() != "efekty" && engine.PostShader()) engine.PostShader(nullptr);
             if (input.KeyPressed(KEY_F11)) engine.Fullscreen(!engine.IsFullscreen());
@@ -211,7 +218,7 @@ int main() {
             // HUD nad każdą sceną: globalne OnDraw() nie ma obiektów, więc rysuje czcionką wprost
             font->Draw(
                 std::format(
-                    "Scena: {}   [0-9, -, =] zmiana sceny (lista w menu)   [F11] pełny ekran",
+                    "Scena: {}   [0-9, -, =, `] zmiana sceny (lista w menu)   [F11] pełny ekran",
                     engine.ActiveScene()
                 ),
                 {20, engine.ViewSize().y - 32}, TextStyle{.size = 18}, DARKGRAY

@@ -6,7 +6,9 @@
 
 #include <raylib.h>
 
+#include <cstddef>
 #include <optional>
+#include <span>
 #include <string>
 #include <unordered_map>
 
@@ -118,6 +120,29 @@ class ShaderProgram {
     ShaderProgram& Uniform(const std::string& name, const Bitmap& bitmap);
     /** @} */
 
+    /**
+     * @name Tablice uniformów (brak uniformu o tej nazwie albo pusta tablica jest pomijana)
+     * @details Ustawiają kolejne elementy tablicy GLSL od indeksu 0, np. `uniform vec4 lights[16];`
+     * przyjmuje do 16 wartości - reszta tablicy zachowuje poprzednią zawartość, więc liczbę
+     * użytych elementów zwykle przekazuje się osobnym uniformem `int`:
+     * @code{.cpp}
+     * std::vector<Vector4> lights = ...;
+     * shader->Uniform("lights", lights).Uniform("lightCount", static_cast<int>(lights.size()));
+     * @endcode
+     */
+    /** @{ */
+    /** @brief Ustawia tablicę `float[]`. */
+    ShaderProgram& Uniform(const std::string& name, std::span<const float> values);
+    /** @brief Ustawia tablicę `int[]`. */
+    ShaderProgram& Uniform(const std::string& name, std::span<const int> values);
+    /** @brief Ustawia tablicę `vec2[]`. */
+    ShaderProgram& Uniform(const std::string& name, std::span<const Vector2> values);
+    /** @brief Ustawia tablicę `vec3[]`. */
+    ShaderProgram& Uniform(const std::string& name, std::span<const Vector3> values);
+    /** @brief Ustawia tablicę `vec4[]`. */
+    ShaderProgram& Uniform(const std::string& name, std::span<const Vector4> values);
+    /** @} */
+
     /** @brief Udostępnia shader raylib (np. do BeginShaderMode() we własnym rysowaniu). */
     const ::Shader& Raw() const { return shader_; }
 
@@ -127,6 +152,14 @@ class ShaderProgram {
 
     /** @brief Ustawia wartość uniformu typu SHADER_UNIFORM_*. */
     ShaderProgram& Set(const std::string& name, const void* value, int type);
+
+    /** @brief Ustawia `count` elementów tablicy uniformów typu SHADER_UNIFORM_*. */
+    ShaderProgram& SetArray(
+        const std::string& name,
+        const void* values,
+        int type,
+        std::size_t count
+    );
 
     void Release();
 

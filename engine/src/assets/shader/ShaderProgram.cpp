@@ -88,6 +88,38 @@ ShaderProgram& ShaderProgram::Set(const std::string& name, const void* value, in
     return *this;
 }
 
+ShaderProgram& ShaderProgram::SetArray(
+    const std::string& name,
+    const void* values,
+    int type,
+    std::size_t count
+) {
+    // tablica GLSL ma położenie swojego pierwszego elementu - SetShaderValueV() wypełnia kolejne
+    const int location = count > 0 ? Location(name) : -1;
+    if (location >= 0) ::SetShaderValueV(shader_, location, values, type, static_cast<int>(count));
+    return *this;
+}
+
+ShaderProgram& ShaderProgram::Uniform(const std::string& name, std::span<const float> values) {
+    return SetArray(name, values.data(), SHADER_UNIFORM_FLOAT, values.size());
+}
+
+ShaderProgram& ShaderProgram::Uniform(const std::string& name, std::span<const int> values) {
+    return SetArray(name, values.data(), SHADER_UNIFORM_INT, values.size());
+}
+
+ShaderProgram& ShaderProgram::Uniform(const std::string& name, std::span<const Vector2> values) {
+    return SetArray(name, values.data(), SHADER_UNIFORM_VEC2, values.size());
+}
+
+ShaderProgram& ShaderProgram::Uniform(const std::string& name, std::span<const Vector3> values) {
+    return SetArray(name, values.data(), SHADER_UNIFORM_VEC3, values.size());
+}
+
+ShaderProgram& ShaderProgram::Uniform(const std::string& name, std::span<const Vector4> values) {
+    return SetArray(name, values.data(), SHADER_UNIFORM_VEC4, values.size());
+}
+
 ShaderProgram& ShaderProgram::Uniform(const std::string& name, float value) {
     return Set(name, &value, SHADER_UNIFORM_FLOAT);
 }

@@ -57,7 +57,7 @@ SCENE("menu") {
         .Content(
             "1 menu     2 prymitywy     3 figury     4 transformacje\n"
             "5 kontekst     6 trafienia     7 kamera     8 efekty\n"
-            "9 formularz     0 sprite     - fizyka     = dźwięk"
+            "9 formularz     0 sprite     - fizyka     = dźwięk     ` światło"
         )
         .FontSize(18)
         .Paint(GRAY)
