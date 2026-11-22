@@ -274,25 +274,41 @@ class PrimitiveRenderer {
 
     /** @} */
 
-    /** @name Wyświetlanie bitmap */
+    /** @name Bitmapy */
     /** @{ */
 
     /**
-     * @brief Wyświetla na ekranie całą bitmapę jako teksturę.
+     * @brief Rysuje całą bitmapę w bieżącym celu (ekran albo bitmapa).
      * @details Skrót dla Blit() z fragmentem obejmującym całą bitmapę.
      * @param bitmap Bitmapa źródłowa; pusta jest pomijana.
-     * @param position Lewy górny róg na ekranie.
+     * @param position Lewy górny róg w układzie celu.
      * @param tint Kolor mnożący piksele (WHITE - bez zmian).
      * @return Ten sam renderer.
      */
     PrimitiveRenderer& Blit(const Bitmap& bitmap, Point2D position, Color tint = WHITE);
 
     /**
-     * @brief Wyświetla na ekranie fragment bitmapy (np. klatkę z arkusza animacji).
+     * @brief Rysuje fragment bitmapy w bieżącym celu (np. klatkę z arkusza animacji).
+     * @details Działanie zależy od celu (Target()):
+     * - ekran - fragment jest rysowany jako tekstura, z kamerą i przycinaniem sceny,
+     * - bitmapa - piksele fragmentu są kopiowane do bitmapy docelowej z mieszaniem alfa
+     *   i kolorem @p tint, bez skalowania. Część wystająca poza którąkolwiek bitmapę jest
+     *   pomijana. Kopia na tę samą bitmapę (źródło = cel) też działa poprawnie.
+     *
+     * Kopiowanie do bitmapy liczy każdy piksel na procesorze, więc nadaje się do składania
+     * obrazu raz (kafelki, naklejki na płótnie), a nie do rysowania dużych obszarów co klatkę.
+     * @code{.cpp}
+     * auto tiles = engine.Assets().Bitmap("tiles.png");
+     * Bitmap map{640, 480};
+     * renderer.Target(map)
+     *     .Blit(*tiles, {0, 0, 32, 32}, {64, 96})  // kafelek 32x32 w punkt (64, 96)
+     *     .Blit(*tiles, {32, 0, 32, 32}, {96, 96})
+     *     .TargetScreen();
+     * @endcode
      * @param bitmap Bitmapa źródłowa; pusta jest pomijana.
      * @param source Fragment w pikselach bitmapy; ujemna szerokość / wysokość odbija obraz
      * w poziomie / pionie.
-     * @param position Lewy górny róg na ekranie.
+     * @param position Lewy górny róg w układzie celu.
      * @param tint Kolor mnożący piksele (WHITE - bez zmian, Fade(WHITE, 0.5f) - półprzezroczysty).
      * @return Ten sam renderer.
      */
