@@ -20,8 +20,9 @@
  * algorytm włącza się w której figurze, jest przy PrimitiveRenderer::Raster().
  */
 enum class Rasterizer {
-    Raylib, /**< Funkcje raylib (domyślnie). */
-    Custom, /**< Własne algorytmy: przyrostowy odcinka, punktu środkowego okręgu i elipsy. */
+    Raylib,   /**< Funkcje raylib (domyślnie). */
+    Custom,   /**< Algorytmy z instrukcji: przyrostowy odcinka, parametryczne okręgu i elipsy. */
+    Midpoint, /**< Jak Custom, ale okrąg i elipsa algorytmem punktu środkowego (całkowitym). */
 };
 
 /**
@@ -68,13 +69,19 @@ class PrimitiveRenderer {
 
     /**
      * @brief Wybiera algorytm rasteryzacji kolejnych figur.
-     * @details Rasterizer::Custom włącza własne algorytmy:
+     * @details Rasterizer::Custom włącza algorytmy z instrukcji laboratoryjnych:
      * - przyrostowy algorytm odcinka (LineIncremental()) dla wszystkiego, co składa się
      *   z odcinków: Line(), Lines(), Polyline() oraz konturów Rect(), Triangle() i Polygon();
      *   wypełnień nie zmienia,
-     * - algorytm punktu środkowego z symetrią ośmiokrotną dla Circle() (CircleSymmetric()),
-     * - algorytm punktu środkowego z symetrią czterokrotną dla Ellipse() (EllipseSymmetric()).
-     * @param raster Rasterizer::Raylib (domyślnie) albo Rasterizer::Custom.
+     * - parametryczny algorytm okręgu x = x0 + R cos(a), y = y0 + R sin(a) z symetrią
+     *   ośmiokrotną dla Circle() (CircleParametric()),
+     * - parametryczny algorytm elipsy x = x0 + RX cos(a), y = y0 + RY sin(a) z symetrią
+     *   czterokrotną dla Ellipse() (EllipseParametric()).
+     *
+     * Rasterizer::Midpoint działa jak Custom, ale okrąg i elipsę rysuje algorytmem punktu
+     * środkowego (CircleMidpoint(), EllipseMidpoint()) - bez funkcji trygonometrycznych,
+     * na liczbach całkowitych, z tą samą symetrią.
+     * @param raster Rasterizer::Raylib (domyślnie), Rasterizer::Custom albo Rasterizer::Midpoint.
      * @return Ten sam renderer.
      */
     PrimitiveRenderer& Raster(Rasterizer raster) {
@@ -150,18 +157,20 @@ class PrimitiveRenderer {
      * @param center Środek.
      * @param radius Promień.
      * @return Ten sam renderer.
-     * @see CircleSymmetric() - algorytm punktu środkowego z symetrią ośmiokrotną.
+     * @see CircleParametric() - algorytm parametryczny z symetrią ośmiokrotną.
+     * @see CircleMidpoint() - algorytm punktu środkowego z symetrią ośmiokrotną.
      */
     PrimitiveRenderer& Circle(Point2D center, float radius);
 
     /**
      * @brief Rysuje elipsę wybranym algorytmem (patrz Raster()).
-     * @details Na bitmapie używany jest zawsze algorytm własny, także przy Rasterizer::Raylib,
+     * @details Przy Rasterizer::Raylib na bitmapie używany jest algorytm punktu środkowego,
      * bo raylib nie ma funkcji rysującej elipsę na obrazie w RAM.
      * @param center Środek.
      * @param radius Promienie {poziomy, pionowy}.
      * @return Ten sam renderer.
-     * @see EllipseSymmetric() - algorytm punktu środkowego z symetrią czterokrotną.
+     * @see EllipseParametric() - algorytm parametryczny z symetrią czterokrotną.
+     * @see EllipseMidpoint() - algorytm punktu środkowego z symetrią czterokrotną.
      */
     PrimitiveRenderer& Ellipse(Point2D center, Vector2 radius);
 
@@ -320,24 +329,43 @@ class PrimitiveRenderer {
     void LineIncremental(Vector2 from, Vector2 to);
 
     /**
+     * @brief Rysuje okrąg lub koło algorytmem parametrycznym z symetrią ośmiokrotną.
+     * @details Algorytm z instrukcji: x = R cos(a), y = R sin(a) liczone tylko dla a z przedziału
+     * <0, pi/4>, resztę okręgu dają zamiana x i y oraz zmiany znaków. Środek i promień są
+     * zaokrąglane do pikseli. Każdy piksel jest rysowany raz.
+     * @param center Środek.
+     * @param radius Promień.
+     */
+    void CircleParametric(Vector2 center, float radius);
+
+    /**
      * @brief Rysuje okrąg lub koło algorytmem punktu środkowego z symetrią ośmiokrotną.
      * @details Arytmetyka całkowita: środek i promień są zaokrąglane do pikseli, a zmienna
      * decyzyjna wybiera w każdym kroku piksel E albo SE. Każdy piksel jest rysowany raz.
      * @param center Środek.
      * @param radius Promień.
      */
-    void CircleSymmetric(Vector2 center, float radius);
+    void CircleMidpoint(Vector2 center, float radius);
 
     /**
-     * @brief Rysuje elipsę algorytmem punktu środkowego z symetrią czterokrotną.
-     * @details Arytmetyka całkowita jak w CircleSymmetric(): środek i promienie są zaokrąglane
-     * do pikseli, a ćwiartka jest liczona w dwóch obszarach - tam, gdzie krzywa jest bardziej
-     * pozioma (krok w x), i tam, gdzie bardziej pionowa (krok w y). Dla równych promieni
-     * wynik jest taki sam jak okrąg z CircleSymmetric(). Każdy piksel jest rysowany raz.
+     * @brief Rysuje elipsę algorytmem parametrycznym z symetrią czterokrotną.
+     * @details Algorytm z instrukcji: x = RX cos(a), y = RY sin(a) liczone tylko dla a
+     * z przedziału <0, pi/2>, resztę elipsy dają zmiany znaków. Każdy piksel jest rysowany raz.
      * @param center Środek.
      * @param radius Promienie {poziomy, pionowy}.
      */
-    void EllipseSymmetric(Vector2 center, Vector2 radius);
+    void EllipseParametric(Vector2 center, Vector2 radius);
+
+    /**
+     * @brief Rysuje elipsę algorytmem punktu środkowego z symetrią czterokrotną.
+     * @details Arytmetyka całkowita jak w CircleMidpoint(): środek i promienie są zaokrąglane
+     * do pikseli, a ćwiartka jest liczona w dwóch obszarach - tam, gdzie krzywa jest bardziej
+     * pozioma (krok w x), i tam, gdzie bardziej pionowa (krok w y). Dla równych promieni
+     * wynik jest taki sam jak okrąg z CircleMidpoint(). Każdy piksel jest rysowany raz.
+     * @param center Środek.
+     * @param radius Promienie {poziomy, pionowy}.
+     */
+    void EllipseMidpoint(Vector2 center, Vector2 radius);
 
     /**
      * @brief Wypełnia wielokąt algorytmem scanline z kontrolą parzystości.
@@ -345,8 +373,8 @@ class PrimitiveRenderer {
      */
     void ScanlineFill(std::span<const Point2D> vertices);
 
-    /** @brief Sprawdza, czy wybrano własne algorytmy (Rasterizer::Custom). */
-    bool IsCustom() const { return raster_ == Rasterizer::Custom; }
+    /** @brief Sprawdza, czy wybrano własne algorytmy (Rasterizer::Custom albo Midpoint). */
+    bool IsCustom() const { return raster_ != Rasterizer::Raylib; }
 
     Color color_ = BLACK;                    /**< Bieżący kolor. */
     bool filled_ = false;                    /**< Czy figury są wypełniane. */

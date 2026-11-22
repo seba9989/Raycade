@@ -46,8 +46,9 @@
  * - @ref node::visual::Canvas udostępnia bitmapę do algorytmów wypełniania.
  *
  * @section algorytmy Algorytmy laboratoriów
- * Własny algorytm przyrostowy odcinka, okrąg z ośmiokrotną symetrią, elipsa
- * z czterokrotną symetrią, kontrola przecięć wielokąta, wypełnianie scanline
+ * Własny algorytm przyrostowy odcinka, parametryczny okrąg z ośmiokrotną symetrią i elipsa
+ * z czterokrotną symetrią (oraz ich warianty punktu środkowego), kontrola przecięć wielokąta,
+ * wypełnianie scanline
  * oraz iteracyjne flood fill i boundary fill są opisane przy metodach
  * @ref PrimitiveRenderer. W scenie `figury` porównano krzywe z raylib.
  *

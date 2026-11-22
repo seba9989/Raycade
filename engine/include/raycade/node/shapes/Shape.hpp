@@ -22,15 +22,17 @@ namespace node::shapes {
  * Filled() działa w figurach z wnętrzem: Rect, Triangle, Polygon, Circle i Ellipse. Point, Points,
  * Line, Lines i Polyline je ignorują.
  *
- * Raster(Rasterizer::Custom) włącza własny algorytm z laboratorium zamiast raylib:
- * | Figura                         | Algorytm własny                                      |
- * |--------------------------------|------------------------------------------------------|
- * | Line, Lines, Polyline          | przyrostowy algorytm odcinka                         |
- * | kontur Rect, Triangle, Polygon | przyrostowy algorytm odcinka (wypełnienie bez zmian) |
- * | Circle                         | punktu środkowego z symetrią ośmiokrotną             |
- * | Ellipse                        | punktu środkowego z symetrią czterokrotną            |
- * | Point, Points                  | brak różnicy - piksel jest zawsze ten sam            |
- * Szczegóły algorytmów są przy PrimitiveRenderer::Raster().
+ * Raster(Rasterizer::Custom) włącza algorytm z instrukcji laboratoryjnej zamiast raylib,
+ * a Raster(Rasterizer::Midpoint) - wariant okręgu i elipsy bez trygonometrii:
+ * | Figura                         | Rasterizer::Custom                      | Rasterizer::Midpoint
+ * |
+ * |--------------------------------|-----------------------------------------|--------------------------|
+ * | Line, Lines, Polyline          | przyrostowy algorytm odcinka            | jak Custom | |
+ * kontur Rect, Triangle, Polygon | przyrostowy algorytm odcinka            | jak Custom | | Circle
+ * | parametryczny, symetria ośmiokrotna     | punktu środkowego, 8x    | | Ellipse | parametryczny,
+ * symetria czterokrotna    | punktu środkowego, 4x    | | Point, Points                  | brak
+ * różnicy - piksel jest zawsze ten sam | jak Custom             | Wypełnienia Rect, Triangle i
+ * Polygon nie zależą od wyboru algorytmu. Szczegóły algorytmów są przy PrimitiveRenderer::Raster().
  * @code{.cpp}
  * scene.Spawn<node::shapes::Circle>().Radius(40).Raster(Rasterizer::Custom).Paint(RED);
  * @endcode
@@ -52,7 +54,8 @@ class Shape : public Entity {
 
     /**
      * @brief Wybiera algorytm rasteryzacji figury.
-     * @param raster Rasterizer::Raylib (domyślnie) albo Rasterizer::Custom (algorytm własny).
+     * @param raster Rasterizer::Raylib (domyślnie), Rasterizer::Custom (algorytm z instrukcji)
+     * albo Rasterizer::Midpoint (okrąg i elipsa algorytmem punktu środkowego).
      * @return Ten sam obiekt jako jego konkretny typ.
      */
     template <typename Self> Self& Raster(this Self& self, Rasterizer raster) {
