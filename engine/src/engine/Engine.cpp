@@ -189,9 +189,10 @@ int Engine::Run() {
         // przy skalowaniu gra rysuje do tekstury w swojej rozdzielczości, a nie na ekran;
         // RenderTarget, bo tekstury obiektów (node::visual::RenderGroup) muszą wracać do niej, nie
         // na ekran
-        if (scaled)
+        if (scaled) {
             target_.Begin();
-        else
+            ApplyViewProjection(); // współrzędne gry w ViewSize(), niezależnie od Resolution()
+        } else
             ::BeginDrawing();
         ::ClearBackground(background_);
         if (scene) {

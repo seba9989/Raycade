@@ -167,7 +167,7 @@ w lambdzie nazywamy `fn`, nie tak samo jak parametr (projekt kompiluje się z `-
   Pojedynczy `Vector2` albo `{x, y}` konwertuje się na `Point2D` niejawnie.
 - **Rozmiar, promień i przesunięcie to `Vector2`**, bo to wektory, a nie punkty.
 - **Wymiary okna i monitora w pikselach są `int`**, jak w raylib: `Window(w, h)`,
-  `Resolution(w, h)`, `MinSize()`, `MaxSize()`, `ScreenWidth()`. Pozycje (okna, kursora) są
+  `ViewSize(w, h)`, `Resolution(w, h)`, `MinSize()`, `MaxSize()`, `ScreenWidth()`. Pozycje (okna, kursora) są
   `Vector2` - setter przyjmuje ten sam typ, który zwraca getter (`WindowPosition()`).
 - **API sceny i wejścia używa `Vector2`** (`Position()`, `Translate()`, `Contains()`,
   `MousePosition()`), bo wartości pochodzą wprost z raylib.

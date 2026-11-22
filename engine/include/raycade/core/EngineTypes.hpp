@@ -14,10 +14,10 @@ enum class LogLevel {
 
 /**
  * @brief Sposób dopasowania obrazu gry do okna (Engine::ScaleMode()).
- * @details Przy trybie innym niż None gra rysuje zawsze w stałej rozdzielczości
- * (Engine::Resolution()) do tekstury, która jest potem skalowana na okno. Współrzędne myszy
- * są przeliczane automatycznie, więc obiekty, kliknięcia i MousePosition() działają
- * w rozdzielczości gry niezależnie od rozmiaru okna.
+ * @details Przy trybie innym niż None gra ma stały układ współrzędnych (Engine::ViewSize())
+ * i rysuje do tekstury o rozdzielczości Engine::Resolution(), która jest potem skalowana na
+ * okno. Współrzędne myszy są przeliczane automatycznie, więc obiekty, kliknięcia
+ * i MousePosition() działają w jednostkach gry niezależnie od rozmiaru okna i rozdzielczości.
  */
 enum class Scaling {
     None,        /**< Bez skalowania - współrzędne gry to piksele okna (domyślnie). */
