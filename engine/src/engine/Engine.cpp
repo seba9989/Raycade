@@ -125,7 +125,7 @@ Engine& Engine::Init() {
     initialized_ = true;
     SetContext(assets_); // Shutdown() czyści kontekst - po ponownym Init() wpis wraca
     ApplyIcon();
-    if (scaling_ != Scaling::None) CreateTarget();
+    if (scaling_ != Scaling::None) UpdateScaling();
     mixer_->Open();
     Log("Silnik zainicjalizowany (podwojne buforowanie, V-Sync: " +
         std::string(IsVSync() ? "tak" : "nie") + ")");
@@ -154,7 +154,7 @@ int Engine::Run() {
         ::Scene* scene = found != scenes_.end() ? &found->second : nullptr;
 
         // rozmiar okna mógł się zmienić (pełny ekran, zmiana rozmiaru) - przed odczytem myszy
-        if (target_.IsValid()) UpdateScaling();
+        if (scaling_ != Scaling::None) UpdateScaling();
         // pole tekstowe z fokusem (z poprzedniej klatki) zabiera klawiaturę reszcie gry,
         // także globalnemu OnUpdate - np. cyfry nie przełączają wtedy scen
         const bool captured = scene && scene->IsKeyboardCaptured();
@@ -186,12 +186,12 @@ int Engine::Run() {
 
         // dopiero teraz: OnUpdate albo scena mogły w tej klatce włączyć lub wyłączyć skalowanie
         const bool scaled = target_.IsValid();
-        // przy skalowaniu gra rysuje do tekstury w swojej rozdzielczości, a nie na ekran;
-        // RenderTarget, bo tekstury obiektów (node::visual::RenderGroup) muszą wracać do niej, nie
-        // na ekran
+        // przy skalowaniu gra rysuje do tekstury (Viewport - w jednostkach gry, Canvas - w
+        // pikselach okna), a nie na ekran; RenderTarget, bo tekstury obiektów
+        // (node::visual::RenderGroup) muszą wracać do niej, nie na ekran
         if (scaled) {
             target_.Begin();
-            ApplyViewProjection(); // współrzędne gry w ViewSize(), niezależnie od Resolution()
+            ApplyViewProjection(); // współrzędne gry w VisibleSize(), niezależnie od tekstury
         } else
             ::BeginDrawing();
         ::ClearBackground(background_);

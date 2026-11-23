@@ -1,7 +1,7 @@
 /**
  * @file Engine.hpp
  * @brief Klasa Engine (okno, pętla gry, sceny, wejście).
- * @details Typy ustawień (LogLevel, Scaling) są w core/EngineTypes.hpp, który dołącza ten
+ * @details Typy ustawień (LogLevel, Scaling, Aspect) są w core/EngineTypes.hpp, który dołącza ten
  * nagłówek. Makro SCENE jest w engine/SceneMacro.hpp - ten z kolei dołącza Engine.hpp, a do
  * gry trafia przez nagłówek zbiorczy `<raycade>`.
  *
@@ -9,7 +9,8 @@
  * - Engine.cpp - cykl życia, pętla Run(), Log() i RaylibLogLevel(), Clear(),
  * - EngineWindow.cpp - konfiguracja okna (bez skalowania), stan okna i monitory, sterowanie
  *   oknem,
- * - EngineScaling.cpp - ViewSize(), Resolution(), ScaleMode(), SmoothScaling(), PostShader(),
+ * - EngineScaling.cpp - ViewSize(), VisibleSize(), ScaleMode(), AspectMode(), IntegerScaling(),
+ *   SmoothScaling(), PostShader(),
  * - EngineInput.cpp - ExitKey(), kursor i pady, MousePosition(), nagrywanie wejścia,
  * - EngineScenes.cpp - sceny,
  * - EngineSystem.cpp - schowek oraz czas, losowość i różne (w tym Screenshot(),
@@ -124,9 +125,9 @@ class Engine : public Contextable {
 
     /**
      * @brief Ustawia układ współrzędnych gry używany przy ScaleMode() innym niż None.
-     * @details Domyślnie równy rozmiarowi okna z Window() w chwili Init(). Pozycje obiektów,
-     * MousePosition() i ViewSize() są w tych jednostkach niezależnie od rozmiaru okna
-     * i od Resolution().
+     * @details Domyślnie równy rozmiarowi okna z Window() w chwili Init(). Pozycje obiektów
+     * i MousePosition() są w tych jednostkach niezależnie od rozmiaru okna. Przy AspectMode()
+     * pokazującym więcej niż ten obszar jego rzeczywisty rozmiar podaje VisibleSize().
      * @param width Szerokość obszaru gry w jednostkach.
      * @param height Wysokość obszaru gry w jednostkach.
      * @return Ten sam silnik.
@@ -134,32 +135,40 @@ class Engine : public Contextable {
     Engine& ViewSize(int width, int height);
 
     /**
-     * @brief Ustawia liczbę pikseli, w której gra jest rysowana (rozmiar tekstury).
-     * @details Nie zmienia układu współrzędnych: obraz w ViewSize() jest rysowany gęściej albo
-     * rzadziej, a potem skalowany na okno. Domyślnie równa ViewSize(). Proporcje powinny być
-     * takie same jak ViewSize() - inaczej piksele nie są kwadratowe (ostrzeżenie w logu).
-     * @param width Szerokość tekstury w pikselach.
-     * @param height Wysokość tekstury w pikselach.
-     * @return Ten sam silnik.
-     */
-    Engine& Resolution(int width, int height);
-
-    /**
-     * @brief Podaje rozmiar tekstury, do której rysuje gra (w pikselach).
-     * @return Rozdzielczość z Resolution() (albo ViewSize(), gdy jej nie ustawiono); bez
-     * skalowania - rozmiar okna.
-     */
-    Vector2 Resolution() const;
-
-    /**
-     * @brief Ustawia sposób dopasowania obrazu do okna (np. w trybie pełnoekranowym).
+     * @brief Ustawia sposób rysowania obrazu przy dopasowaniu do okna.
+     * @details Scaling::Canvas rysuje w rozdzielczości okna (ostry tekst), Scaling::Viewport -
+     * w rozdzielczości ViewSize() (grafika pikselowa). Proporcje wybiera AspectMode().
      * @param mode Tryb skalowania, patrz Scaling.
      * @return Ten sam silnik.
      */
     Engine& ScaleMode(Scaling mode);
 
-    /** @brief Podaje tryb dopasowania obrazu do okna. */
+    /** @brief Podaje sposób rysowania obrazu przy dopasowaniu do okna. */
     Scaling ScaleMode() const { return scaling_; }
+
+    /**
+     * @brief Ustawia zachowanie przy proporcjach okna innych niż ViewSize().
+     * @details Działa przy ScaleMode() innym niż None. Domyślnie Aspect::Keep (pasy).
+     * @param mode Tryb proporcji, patrz Aspect.
+     * @return Ten sam silnik.
+     */
+    Engine& AspectMode(Aspect mode);
+
+    /** @brief Podaje zachowanie przy proporcjach okna innych niż ViewSize(). */
+    Aspect AspectMode() const { return aspect_; }
+
+    /**
+     * @brief Ogranicza skalę obrazu do liczb całkowitych (2x, 3x...).
+     * @details Piksele mają wtedy jednakowy rozmiar, kosztem większych pasów. Przy oknie
+     * mniejszym niż obraz w skali 1 skala zostaje ułamkowa, zamiast ucinać obraz. Przy
+     * Aspect::Stretch każda oś jest zaokrąglana osobno.
+     * @param value Czy używać tylko całkowitych skal.
+     * @return Ten sam silnik.
+     */
+    Engine& IntegerScaling(bool value = true);
+
+    /** @brief Sprawdza, czy skala obrazu jest ograniczona do liczb całkowitych. */
+    bool IsIntegerScaling() const { return integerScaling_; }
 
     /**
      * @brief Wybiera filtr skalowania obrazu.
@@ -174,7 +183,8 @@ class Engine : public Contextable {
     bool IsSmoothScaling() const { return smoothScaling_; }
 
     /**
-     * @brief Ustawia kolor pasów wokół obrazu w trybach Fit i PixelPerfect.
+     * @brief Ustawia kolor pasów wokół obrazu (AspectMode() inny niż Expand i Stretch albo
+     * IntegerScaling()).
      * @param color Kolor pasów (domyślnie czarny).
      * @return Ten sam silnik.
      */
@@ -191,6 +201,14 @@ class Engine : public Contextable {
      * @return Rozmiar z ViewSize(w, h) przy włączonym skalowaniu, w przeciwnym razie rozmiar okna.
      */
     Vector2 ViewSize() const;
+
+    /**
+     * @brief Podaje rozmiar obszaru gry widocznego w oknie, w jednostkach.
+     * @details Równy ViewSize() przy Aspect::Keep i Aspect::Stretch. Przy Aspect::Expand,
+     * KeepWidth i KeepHeight może być większy - obszar rośnie w prawo i w dół od (0, 0), więc
+     * np. lewy dolny róg ekranu to {0, VisibleSize().y}. Bez skalowania - rozmiar okna.
+     */
+    Vector2 VisibleSize() const;
 
     /**
      * @brief Sprawdza, czy włączony jest tryb pełnoekranowy.
@@ -318,7 +336,7 @@ class Engine : public Contextable {
      * @brief Ustawia shader nakładany na cały obraz gry (post-processing: CRT, winieta,
      * skala szarości).
      * @details Działa przy skalowaniu (ScaleMode() inny niż Scaling::None): gra rysuje się
-     * wtedy do tekstury w swojej rozdzielczości, a shader działa przy przenoszeniu jej do okna.
+     * wtedy do tekstury, a shader działa przy przenoszeniu jej do okna.
      * Bez skalowania shader nie jest używany (silnik zapisuje ostrzeżenie w logu).
      * @param shader Shader albo nullptr - bez efektu.
      * @return Ten sam silnik.
@@ -754,7 +772,7 @@ class Engine : public Contextable {
     /**
      * @brief Szerokość okna (w punktach ekranu, bez skali DPI).
      * @details Przy ScaleMode() innym niż None gra używa układu współrzędnych ViewSize(), a nie
-     * rozmiaru okna - do układania obiektów służy wtedy ViewSize().
+     * rozmiaru okna - do układania obiektów służą wtedy ViewSize() i VisibleSize().
      */
     int ScreenWidth() const;
     /** @brief Wysokość okna (w punktach ekranu, bez skali DPI); patrz ScreenWidth(). */
@@ -1264,17 +1282,18 @@ class Engine : public Contextable {
     /** @brief Obsługuje upuszczone pliki i odtwarzanie nagrania na początku klatki. */
     void PollSystemEvents();
     void SaveScreenshot();
-    /** @brief Tworzy (albo odtwarza) teksturę gry zgodnie z bieżącymi ustawieniami. */
-    void CreateTarget();
-
     /** @brief Zwalnia teksturę gry i przywraca przeliczanie myszy 1:1. */
     void ReleaseTarget();
 
-    /** @brief Liczy prostokąt obrazu w oknie i przeliczenie myszy dla bieżącego rozmiaru okna. */
+    /**
+     * @brief Liczy widoczny obszar, prostokąt obrazu w oknie i przeliczenie myszy dla bieżącego
+     * rozmiaru okna; tworzy teksturę gry albo zmienia jej rozmiar.
+     */
     void UpdateScaling();
 
     /**
-     * @brief Ustawia projekcję tekstury gry na układ ViewSize() zamiast jej rozmiaru w pikselach.
+     * @brief Ustawia projekcję tekstury gry na układ VisibleSize() zamiast jej rozmiaru w
+     * pikselach.
      * @details Wołane zaraz po target_.Begin() - BeginTextureMode() ustawia ortho na piksele
      * tekstury. Zmienia tylko macierz projekcji, więc kamera (BeginMode2D()), przekształcenia
      * obiektów i przycięcia (ClipStack liczy przez projekcję) działają bez zmian.
@@ -1313,8 +1332,9 @@ class Engine : public Contextable {
     Scaling scaling_ = Scaling::None; /**< Tryb dopasowania obrazu do okna. */
     int viewWidth_ = 0;               /**< Szerokość układu gry; 0 = rozmiar okna przy Init(). */
     int viewHeight_ = 0;              /**< Wysokość układu gry; 0 = rozmiar okna przy Init(). */
-    int resolutionWidth_ = 0;         /**< Szerokość tekstury gry; 0 = jak viewWidth_. */
-    int resolutionHeight_ = 0;        /**< Wysokość tekstury gry; 0 = jak viewHeight_. */
+    Aspect aspect_ = Aspect::Keep;    /**< Zachowanie przy innych proporcjach okna. */
+    bool integerScaling_ = false;     /**< Czy tylko całkowite skale. */
+    Vector2 visible_{0, 0};           /**< Widoczny obszar w jednostkach (z UpdateScaling()). */
     bool smoothScaling_ = false;      /**< Czy wygładzać skalowany obraz. */
     Color letterbox_ = BLACK;         /**< Kolor pasów wokół obrazu. */
     RenderTarget target_;             /**< Tekstura, do której rysuje gra przy skalowaniu. */
