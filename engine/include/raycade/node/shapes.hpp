@@ -32,7 +32,7 @@
  *
  * Metody wspólne ma każda figura (z klas Shape, Transformable, Drawable, Updatable i Entity):
  * - przekształcenia: Position(), Translate(), Rotation(), Rotate(), Scale(), ScaleBy(),
- * - wygląd: Paint(), Filled(), Raster(), Visible(), Layer(), Blend(), ClipRect(), Shader(),
+ * - wygląd: Paint(), Filled(), Raster(), Visible(), DrawLayer(), Blend(), ClipRect(), Shader(),
  * - drzewo i układ: Spawn(), Children(), ScreenSpace(),
  * - zdarzenia: OnUpdate(), OnClick(), OnMouseReleased(), OnMouseEnter(), OnMouseLeave(), OnScroll(),
  *   OnDragStart(), OnDrag(), OnDragEnd(), OnKeyPressed(), OnKeyReleased(),

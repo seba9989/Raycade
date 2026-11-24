@@ -977,7 +977,7 @@ bool PhysicsWorld::MoveAndSlide(CharacterBody& body) {
     const Vector2 up = body.up_;
     const b2Vec2 upB2 = ToB2(up);
     const float floorCos = std::cos(body.floorMaxAngle_);
-    const b2QueryFilter collideFilter{kQueryBit | kOneWayBit, body.mask_};
+    const b2QueryFilter collideFilter{kQueryBit | kOneWayBit, body.collisionMask_};
 
     // postać nie może zderzać się sama ze sobą - jej ciało jest wyłączone na czas ruchu
     b2Body_Disable(record->id);
@@ -1022,7 +1022,9 @@ bool PhysicsWorld::MoveAndSlide(CharacterBody& body) {
             // platformy jednostronne blokują rzut tylko przy ruchu w dół i gdy postać na nie nie
             // nachodzi (inaczej zatrzymałaby się w środku platformy, przez którą przeskakuje)
             const bool oneWay = Dot(remaining, up) <= 0.0f && !context.insideOneWay;
-            const b2QueryFilter castFilter{kQueryBit | (oneWay ? kOneWayBit : 0), body.mask_};
+            const b2QueryFilter castFilter{
+                kQueryBit | (oneWay ? kOneWayBit : 0), body.collisionMask_
+            };
             const float fraction =
                 b2World_CastMover(impl_->world, &mover, solved.translation, castFilter);
             const Vector2 step = Scale(FromB2(solved.translation), fraction);
@@ -1063,7 +1065,7 @@ bool PhysicsWorld::MoveAndSlide(CharacterBody& body) {
         }
         const float drop = -vertical + body.floorSnapLength_;
         const b2Capsule mover = capsule(position);
-        const b2QueryFilter castFilter{kQueryBit | kOneWayBit, body.mask_};
+        const b2QueryFilter castFilter{kQueryBit | kOneWayBit, body.collisionMask_};
         const Vector2 down = Scale(up, -drop);
         const float fraction = b2World_CastMover(impl_->world, &mover, ToB2(down), castFilter);
         position = fraction < 1.0f ? Add(position, Scale(down, fraction))

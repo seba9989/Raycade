@@ -198,7 +198,10 @@ SCENE("efekty") {
         position.y = std::clamp(position.y + wheelMove * 30, -290.0f, 0.0f);
         list.Position(position);
     });
-    panel.Spawn<node::shapes::Rect>().Size({260, 200}).Paint(DARKGRAY).Layer(1); // ramka nad listą
+    panel.Spawn<node::shapes::Rect>()
+        .Size({260, 200})
+        .Paint(DARKGRAY)
+        .DrawLayer(1); // ramka nad listą
 
     // ---------------- shadery ----------------
     title({690, 30}, "Shader na RenderGroup, G - szarość");

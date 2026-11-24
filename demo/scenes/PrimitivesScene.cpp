@@ -30,7 +30,7 @@ SCENE("prymitywy") {
             self.Position(position);
         })
         .OnKeyPressed(
-            KEY_L, [](node::shapes::Rect& self) { self.Layer(self.Layer() == 0 ? 1 : 0); }
+            KEY_L, [](node::shapes::Rect& self) { self.DrawLayer(self.DrawLayer() == 0 ? 1 : 0); }
         )
         // dzieci jadą razem z prostokątem - ich pozycje są względem niego
         .Children([](node::shapes::Rect& self) {

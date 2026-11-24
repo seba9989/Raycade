@@ -34,7 +34,7 @@ SCENE("figury") {
                            .Radius(55)
                            .Raster(Rasterizer::Custom)
                            .Paint(RED)
-                           .Layer(1));
+                           .DrawLayer(1));
 
     curves->push_back(&scene.Spawn<node::shapes::Circle>()
                            .Position({90, 245})
@@ -57,7 +57,7 @@ SCENE("figury") {
                            .Radius({75, 40})
                            .Raster(Rasterizer::Custom)
                            .Paint(RED)
-                           .Layer(1));
+                           .DrawLayer(1));
 
     curves->push_back(&scene.Spawn<node::shapes::Ellipse>()
                            .Position({600, 245})

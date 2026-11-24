@@ -36,7 +36,7 @@ class Drawable {
      * @brief Pobiera warstwę rysowania wśród obiektów tego samego rodzica.
      * @return Numer warstwy; większa wartość oznacza rysowanie później.
      */
-    int Layer() const { return layer_; }
+    int DrawLayer() const { return drawLayer_; }
 
     /**
      * @brief Pokazuje albo ukrywa obiekt razem z dziećmi.
@@ -151,8 +151,8 @@ class Drawable {
      * @param layer Numer warstwy.
      * @return Ten sam obiekt jako jego konkretny typ (deducing this, C++23).
      */
-    template <typename Self> Self& Layer(this Self& self, int layer) {
-        self.layer_ = layer;
+    template <typename Self> Self& DrawLayer(this Self& self, int layer) {
+        self.drawLayer_ = layer;
         return self;
     }
 
@@ -192,7 +192,7 @@ class Drawable {
 
     Color color_ = BLACK;                   /**< Kolor obiektu. */
     bool visible_ = true;                   /**< Czy obiekt i dzieci są rysowane. */
-    int layer_ = 0;                         /**< Warstwa wśród rodzeństwa. */
+    int drawLayer_ = 0;                     /**< Warstwa wśród rodzeństwa. */
     int blend_ = BLEND_ALPHA;               /**< Tryb mieszania kolorów. */
     std::optional<Rectangle> clip_;         /**< Przycięcie rysunku (układ lokalny). */
     std::shared_ptr<ShaderProgram> shader_; /**< Shader własnego rysunku albo nullptr. */
