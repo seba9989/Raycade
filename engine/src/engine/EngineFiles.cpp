@@ -5,6 +5,22 @@
 
 #include <raycade/engine/Engine.hpp>
 
+#include <filesystem>
+#include <system_error>
+
+namespace {
+
+/// raylib nie odróżnia katalogu od pliku: fopen() na katalogu się udaje, a LoadFileText()
+/// wylicza z ftell() błędny rozmiar i wychodzi poza bufor. Dlatego sprawdzamy ścieżkę wcześniej.
+bool IsReadableFile(const std::string& path) {
+    std::error_code error;
+    if (std::filesystem::is_regular_file(path, error)) return true;
+    ::TraceLog(LOG_WARNING, "FILEIO: [%s] to nie jest zwykly plik", path.c_str());
+    return false;
+}
+
+} // namespace
+
 /**
  * @details Katalog zasobów jest znany od razu (nie wymaga okna), a Assets trafia do kontekstu
  * silnika, żeby obiekty sceny (np. node::visual::Sprite::Sheet() z nazwą pliku) korzystały z tej
@@ -35,6 +51,7 @@ std::string Engine::AssetPath(const std::string& name) const {
 }
 
 std::optional<std::string> Engine::LoadText(const std::string& path) const {
+    if (!IsReadableFile(path)) return std::nullopt;
     char* text = ::LoadFileText(path.c_str());
     if (text == nullptr) return std::nullopt;
     std::string result = text;
@@ -48,6 +65,7 @@ bool Engine::SaveText(const std::string& path, const std::string& text) const {
 }
 
 std::optional<std::vector<unsigned char>> Engine::LoadData(const std::string& path) const {
+    if (!IsReadableFile(path)) return std::nullopt;
     int size = 0;
     unsigned char* data = ::LoadFileData(path.c_str(), &size);
     if (data == nullptr) return std::nullopt;
