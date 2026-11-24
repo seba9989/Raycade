@@ -192,7 +192,7 @@ SCENE("kamera") {
             .FontSize(size)
             .Paint(DARKGRAY)
             .Position(position)
-            .Layer(1);
+            .DrawLayer(1);
     };
     label({20, 12}, "Kamera 2D", 22);
     label({20, 42}, "", 16).OnUpdate([&engine, &camera](node::visual::Text& self, float) {

@@ -46,8 +46,9 @@
  * - @ref node::visual::Canvas udostępnia bitmapę do algorytmów wypełniania.
  *
  * @section algorytmy Algorytmy laboratoriów
- * Własny algorytm przyrostowy odcinka, okrąg z ośmiokrotną symetrią, elipsa
- * z czterokrotną symetrią, kontrola przecięć wielokąta, wypełnianie scanline
+ * Własny algorytm przyrostowy odcinka, parametryczny okrąg z ośmiokrotną symetrią i elipsa
+ * z czterokrotną symetrią (oraz ich warianty punktu środkowego), kontrola przecięć wielokąta,
+ * wypełnianie scanline
  * oraz iteracyjne flood fill i boundary fill są opisane przy metodach
  * @ref PrimitiveRenderer. W scenie `figury` porównano krzywe z raylib.
  *
@@ -55,32 +56,28 @@
  * Klawisze 1-9 wybierają `menu`, `prymitywy`, `figury`, `transformacje`, `kontekst`,
  * `trafienia`, `kamera`, `efekty` i `formularz`, 0 - `sprite`, minus - `fizyka`, a znak
  * równości - `dzwiek`, a klawisz `` ` `` (tylda, na lewo od 1) - `swiatlo` (lista jest też na
- * scenie `menu`). F11 przełącza pełny ekran. Okno ma zmienny rozmiar: gra rysuje zawsze w 1000x700,
- * a obraz jest skalowany do okna z zachowaniem proporcji (Engine::ScaleMode(Scaling::Fit)), więc
- * układ scen i kliknięcia działają przy każdym rozmiarze okna i na pełnym ekranie. Na scenie
- * `prymitywy` strzałki przesuwają prostokąt, L zmienia warstwę, PPM przesuwa koniec odcinka, a
- * spacja przełącza jego algorytm. Na scenie `figury` LPM uruchamia flood fill na płótnie, Shift+LPM
- * uruchamia boundary fill, a R przywraca kontury.
- * Na scenie `transformacje` szary kontur pokazuje stan przed obrotem lub skalowaniem,
- * a kolorowa figura stan po; grupa obraca się razem z dziećmi. LPM zmienia kolor
- * obróconego prostokąta.
- * Na scenie `kontekst` LPM na kafelku zmienia motyw (Theme) całego panelu i podbija wynik
- * sceny, strzałki poruszają graczem, za którym gonią kółka znajdujące go przez kontekst,
- * a R wczytuje scenę od nowa - wynik sceny wraca do zera, a rekord z kontekstu silnika
- * zostaje.
- * Na scenie `trafienia` przeciąga się tylko najwyższą kartę, żółta ramka bez zdarzeń
- * przepuszcza kliknięcia do przycisku, okno z pustym OnClick blokuje przyciski pod sobą,
- * a robot złożony z kształtów reaguje jako całość (zdarzenia idą do rodzica).
- * Na scenie `kamera` WASD/strzałki poruszają graczem, za którym podąża kamera, kółko myszy
- * przybliża, Q/E obracają widok, F przełącza podążanie, a R resetuje kamerę. Skrzynie można
- * przeciągać, a monety klikać przy dowolnym przybliżeniu i obrocie; przyciski w rogu są
- * obiektami ekranu (HUD).
- * Na scenie `efekty` koło z arkusza klatek (node::visual::Sprite) obraca się animacją - LPM ją
- * wstrzymuje, X odbija drugie koło; lista w panelu z ClipRect() przewija się kółkiem myszy;
- * powierzchnia faluje shaderem, a G włącza szarość całego obrazu (Engine::PostShader());
- * piłki odbijają się z fizyką w kroku stałym (OnFixedUpdate()), LPM usuwa piłkę (Destroy()),
- * a B albo podwójne kliknięcie (gest) dodaje nową.
- * Napisy wszystkich scen (node::visual::Text) i HUD mają polskie znaki dzięki czcionce
+ * scenie `menu`). F11 przełącza pełny ekran. Okno ma zmienny rozmiar: układ współrzędnych gry ma
+ * zawsze 1000x700, a obraz jest skalowany do okna z zachowaniem proporcji
+ * (Engine::ScaleMode(Scaling::Canvas), Engine::AspectMode(Aspect::Keep)), więc układ scen i
+ * kliknięcia działają przy każdym rozmiarze okna i na pełnym ekranie. Na scenie `prymitywy`
+ * strzałki przesuwają prostokąt, L zmienia warstwę, PPM przesuwa koniec odcinka, a spacja przełącza
+ * jego algorytm. Na scenie `figury` LPM uruchamia flood fill na płótnie, Shift+LPM uruchamia
+ * boundary fill, a R przywraca kontury. Na scenie `transformacje` szary kontur pokazuje stan przed
+ * obrotem lub skalowaniem, a kolorowa figura stan po; grupa obraca się razem z dziećmi. LPM zmienia
+ * kolor obróconego prostokąta. Na scenie `kontekst` LPM na kafelku zmienia motyw (Theme) całego
+ * panelu i podbija wynik sceny, strzałki poruszają graczem, za którym gonią kółka znajdujące go
+ * przez kontekst, a R wczytuje scenę od nowa - wynik sceny wraca do zera, a rekord z kontekstu
+ * silnika zostaje. Na scenie `trafienia` przeciąga się tylko najwyższą kartę, żółta ramka bez
+ * zdarzeń przepuszcza kliknięcia do przycisku, okno z pustym OnClick blokuje przyciski pod sobą, a
+ * robot złożony z kształtów reaguje jako całość (zdarzenia idą do rodzica). Na scenie `kamera`
+ * WASD/strzałki poruszają graczem, za którym podąża kamera, kółko myszy przybliża, Q/E obracają
+ * widok, F przełącza podążanie, a R resetuje kamerę. Skrzynie można przeciągać, a monety klikać
+ * przy dowolnym przybliżeniu i obrocie; przyciski w rogu są obiektami ekranu (HUD). Na scenie
+ * `efekty` koło z arkusza klatek (node::visual::Sprite) obraca się animacją - LPM ją wstrzymuje, X
+ * odbija drugie koło; lista w panelu z ClipRect() przewija się kółkiem myszy; powierzchnia faluje
+ * shaderem, a G włącza szarość całego obrazu (Engine::PostShader()); piłki odbijają się z fizyką w
+ * kroku stałym (OnFixedUpdate()), LPM usuwa piłkę (Destroy()), a B albo podwójne kliknięcie (gest)
+ * dodaje nową. Napisy wszystkich scen (node::visual::Text) i HUD mają polskie znaki dzięki czcionce
  * `demo/assets/font.ttf` (DejaVu Sans, licencja w `demo/assets/FONT-LICENSE.txt`), którą main()
  * udostępnia całej grze jako DefaultTypeface w kontekście silnika; można ją podmienić na dowolny
  * inny plik TTF (Typeface).
@@ -152,8 +149,8 @@ int main() {
                          .VSync(false)      // V-Sync wyłączony; podwójne buforowanie działa zawsze
                          .Window(1000, 700) // albo .Fullscreen()
                          .MinSize(500, 350)
-                         .Resolution(1000, 700)
-                         .ScaleMode(Scaling::Fit)
+                         .ScaleMode(Scaling::Canvas) // ostry tekst przy każdym rozmiarze okna
+                         .AspectMode(Aspect::Keep)
                          .Background(RAYWHITE)
                          .StartScene("menu")
                          .Init();
@@ -221,7 +218,7 @@ int main() {
                     "Scena: {}   [0-9, -, =, `] zmiana sceny (lista w menu)   [F11] pełny ekran",
                     engine.ActiveScene()
                 ),
-                {20, engine.ViewSize().y - 32}, TextStyle{.size = 18}, DARKGRAY
+                {20, engine.VisibleSize().y - 32}, TextStyle{.size = 18}, DARKGRAY
             );
         })
         .Run();

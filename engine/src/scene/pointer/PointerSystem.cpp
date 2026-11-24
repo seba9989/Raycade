@@ -75,12 +75,12 @@ std::vector<const Entity*> PointerSystem::TopFirst(
     for (const auto& entity : entities)
         order.push_back(entity.get());
     std::stable_sort(order.begin(), order.end(), [](const Entity* a, const Entity* b) {
-        return a->Layer() > b->Layer();
+        return a->DrawLayer() > b->DrawLayer();
     });
     // w tej samej warstwie później dodany jest rysowany wyżej
     for (auto begin = order.begin(); begin != order.end();) {
         auto end = std::find_if(begin, order.end(), [&](const Entity* e) {
-            return e->Layer() != (*begin)->Layer();
+            return e->DrawLayer() != (*begin)->DrawLayer();
         });
         std::reverse(begin, end);
         begin = end;

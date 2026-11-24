@@ -10,7 +10,7 @@
 /** @brief Tworzy trzy porównania transformacji. */
 SCENE("transformacje") {
     // Warstwa 1 rysuje szare kontury stanu przed transformacją nad kolorowymi figurami.
-    scene.Spawn<node::shapes::Rect>().Position({170, 150}).Size({170, 90}).Paint(GRAY).Layer(1);
+    scene.Spawn<node::shapes::Rect>().Position({170, 150}).Size({170, 90}).Paint(GRAY).DrawLayer(1);
     scene.Spawn<node::shapes::Rect>()
         .Position({170, 150})
         .Size({170, 90})
@@ -19,7 +19,7 @@ SCENE("transformacje") {
         .Rotate(PI / 6.0f, {255, 195})
         .OnClick([](node::shapes::Rect& self) { self.Paint(RED); });
 
-    scene.Spawn<node::shapes::Circle>().Position({650, 200}).Radius(65).Paint(GRAY).Layer(1);
+    scene.Spawn<node::shapes::Circle>().Position({650, 200}).Radius(65).Paint(GRAY).DrawLayer(1);
     scene.Spawn<node::shapes::Circle>()
         .Position({650, 200})
         .Radius(65)
@@ -27,7 +27,7 @@ SCENE("transformacje") {
         .Filled()
         .ScaleBy({1.5f, 0.6f}); // względem własnej pozycji (650, 200)
 
-    scene.Spawn<node::Group>().Position({200, 440}).Layer(1).Children([](node::Group& self) {
+    scene.Spawn<node::Group>().Position({200, 440}).DrawLayer(1).Children([](node::Group& self) {
         self.Spawn<node::shapes::Rect>().Position({-50, -30}).Size({100, 60}).Paint(GRAY);
         self.Spawn<node::shapes::Circle>().Position({80, 0}).Radius(25).Paint(GRAY);
     });
@@ -46,9 +46,12 @@ SCENE("transformacje") {
 
     // Punkty obrotu i skalowania nad figurami.
     for (const Vector2 pivot : {Vector2{255, 195}, Vector2{650, 200}, Vector2{200, 440}})
-        scene.Spawn<node::shapes::Circle>().Position(pivot).Radius(3).Paint(MAROON).Filled().Layer(
-            2
-        );
+        scene.Spawn<node::shapes::Circle>()
+            .Position(pivot)
+            .Radius(3)
+            .Paint(MAROON)
+            .Filled()
+            .DrawLayer(2);
 
     const auto label = [&scene](Vector2 position, std::string text, float size, Color color) {
         scene.Spawn<node::visual::Text>()

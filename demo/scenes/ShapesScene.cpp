@@ -2,10 +2,13 @@
  * @file ShapesScene.cpp
  * @brief Demonstracja algorytmów okręgu, elipsy, wielokąta i wypełniania (lab 3).
  * @details Własne algorytmy okręgu i elipsy są porównywane z raylib: czerwone krzywe rysuje
- * algorytm własny, niebieskie - raylib. Płótno pozwala porównać flood fill i boundary fill.
+ * algorytm własny, niebieskie - raylib. Klawisz M przełącza czerwone krzywe między algorytmem
+ * parametrycznym z instrukcji (Rasterizer::Custom) a algorytmem punktu środkowego
+ * (Rasterizer::Midpoint). Płótno pozwala porównać flood fill i boundary fill.
  */
 
 #include <array>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -13,51 +16,55 @@
 
 /** @brief Konfiguruje scenę porównania algorytmów z raylib. */
 SCENE("figury") {
+    // czerwone krzywe - klawisz M przełącza je między algorytmem parametrycznym a punktu
+    // środkowego; wektor żyje tak długo jak scena, bo trzyma go wywołanie zwrotne etykiety
+    const auto curves = std::make_shared<std::vector<node::shapes::Shape*>>();
+
     // ---------------- okrąg: 8-krotna symetria vs raylib ----------------
-    scene.Spawn<node::shapes::Circle>()
-        .Position({90, 110})
-        .Radius(55)
-        .Raster(Rasterizer::Custom)
-        .Paint(RED);
+    curves->push_back(&scene.Spawn<node::shapes::Circle>()
+                           .Position({90, 110})
+                           .Radius(55)
+                           .Raster(Rasterizer::Custom)
+                           .Paint(RED));
     scene.Spawn<node::shapes::Circle>().Position({230, 110}).Radius(55).Paint(BLUE);
     // nałożone na siebie - widać różnice pojedynczych pikseli
     scene.Spawn<node::shapes::Circle>().Position({370, 110}).Radius(55).Paint(BLUE);
-    scene.Spawn<node::shapes::Circle>()
-        .Position({370, 110})
-        .Radius(55)
-        .Raster(Rasterizer::Custom)
-        .Paint(RED)
-        .Layer(1);
+    curves->push_back(&scene.Spawn<node::shapes::Circle>()
+                           .Position({370, 110})
+                           .Radius(55)
+                           .Raster(Rasterizer::Custom)
+                           .Paint(RED)
+                           .DrawLayer(1));
 
-    scene.Spawn<node::shapes::Circle>()
-        .Position({90, 245})
-        .Radius(45)
-        .Raster(Rasterizer::Custom)
-        .Paint(RED)
-        .Filled();
+    curves->push_back(&scene.Spawn<node::shapes::Circle>()
+                           .Position({90, 245})
+                           .Radius(45)
+                           .Raster(Rasterizer::Custom)
+                           .Paint(RED)
+                           .Filled());
     scene.Spawn<node::shapes::Circle>().Position({230, 245}).Radius(45).Paint(BLUE).Filled();
 
     // ---------------- elipsa: 4-krotna symetria vs raylib ----------------
-    scene.Spawn<node::shapes::Ellipse>()
-        .Position({600, 110})
-        .Radius({75, 40})
-        .Raster(Rasterizer::Custom)
-        .Paint(RED);
+    curves->push_back(&scene.Spawn<node::shapes::Ellipse>()
+                           .Position({600, 110})
+                           .Radius({75, 40})
+                           .Raster(Rasterizer::Custom)
+                           .Paint(RED));
     scene.Spawn<node::shapes::Ellipse>().Position({760, 110}).Radius({75, 40}).Paint(BLUE);
     scene.Spawn<node::shapes::Ellipse>().Position({910, 110}).Radius({75, 40}).Paint(BLUE);
-    scene.Spawn<node::shapes::Ellipse>()
-        .Position({910, 110})
-        .Radius({75, 40})
-        .Raster(Rasterizer::Custom)
-        .Paint(RED)
-        .Layer(1);
+    curves->push_back(&scene.Spawn<node::shapes::Ellipse>()
+                           .Position({910, 110})
+                           .Radius({75, 40})
+                           .Raster(Rasterizer::Custom)
+                           .Paint(RED)
+                           .DrawLayer(1));
 
-    scene.Spawn<node::shapes::Ellipse>()
-        .Position({600, 245})
-        .Radius({40, 48})
-        .Raster(Rasterizer::Custom)
-        .Paint(RED)
-        .Filled();
+    curves->push_back(&scene.Spawn<node::shapes::Ellipse>()
+                           .Position({600, 245})
+                           .Radius({40, 48})
+                           .Raster(Rasterizer::Custom)
+                           .Paint(RED)
+                           .Filled());
     scene.Spawn<node::shapes::Ellipse>().Position({760, 245}).Radius({40, 48}).Paint(BLUE).Filled();
 
     // ---------------- wielokąty ----------------
@@ -164,6 +171,26 @@ SCENE("figury") {
     };
     label({20, 20}, "Okrąg (8-krotna symetria)", 18, DARKGRAY);
     label({520, 20}, "Elipsa (4-krotna symetria)", 18, DARKGRAY);
+
+    // bieżący algorytm czerwonych krzywych; M przełącza
+    const auto algorithmName = [](Rasterizer raster) {
+        return std::string{
+            raster == Rasterizer::Custom ? "parametryczny (instrukcja)" : "punktu środkowego"
+        };
+    };
+    scene.Spawn<node::visual::Text>()
+        .Content("Algorytm własny: " + algorithmName(Rasterizer::Custom) + "  [M - zmień]")
+        .FontSize(14)
+        .Paint(MAROON)
+        .Position({20, 300})
+        .OnKeyPressed(KEY_M, [curves, algorithmName](node::visual::Text& self) {
+            const Rasterizer next = curves->front()->Raster() == Rasterizer::Custom
+                                        ? Rasterizer::Midpoint
+                                        : Rasterizer::Custom;
+            for (node::shapes::Shape* curve : *curves)
+                curve->Raster(next);
+            self.Content("Algorytm własny: " + algorithmName(next) + "  [M - zmień]");
+        });
     label({50, 175}, "własny        raylib       nałożone", 14, GRAY);
     label({560, 175}, "własny          raylib          nałożone", 14, GRAY);
     label({20, 330}, "Wielokąty: kontur / scanline / z odcinków", 18, DARKGRAY);

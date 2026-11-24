@@ -76,7 +76,7 @@ class Card : public Entity {
         title_ = &Spawn<node::visual::Text>().FontSize(20).Paint(WHITE).Position({10, 10});
         auto* state = &Spawn<node::visual::Text>().FontSize(16).Paint(WHITE).Position({10, 60});
         OnDragStart([state](Card& self) {
-            self.Layer(++topLayer);
+            self.DrawLayer(++topLayer);
             state->Content("przeciągana");
         });
         OnDrag([](Card& self, Vector2 delta) { self.Translate(delta); });
@@ -150,7 +150,7 @@ SCENE("trafienia") {
         .Paint(DARKGREEN)
         .OnClick([count = 0](Button& self) mutable { self.Label("Klik: {}", ++count); });
     // ozdobna ramka bez zdarzeń nad przyciskiem - przepuszcza kliknięcia
-    scene.Spawn<node::shapes::Rect>().Position({370, 100}).Size({220, 70}).Paint(GOLD).Layer(1);
+    scene.Spawn<node::shapes::Rect>().Position({370, 100}).Size({220, 70}).Paint(GOLD).DrawLayer(1);
 
     scene.Spawn<Button>()
         .Label("Lewy: 0")
@@ -168,7 +168,7 @@ SCENE("trafienia") {
         .Size({140, 170})
         .Position({500, 240})
         .Paint(::Fade(BLACK, 0.6f))
-        .Layer(2)
+        .DrawLayer(2)
         .OnClick([](Button&) {})
         .OnDrag([](Button& self, Vector2 delta) { self.Translate(delta); });
 

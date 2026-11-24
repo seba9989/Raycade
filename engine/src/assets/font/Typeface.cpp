@@ -400,9 +400,17 @@ void Typeface::Draw(
     const std::vector<int> codepoints = Decode(text);
     EnsureGlyphs(codepoints);
 
-    // rozmiar atlasu = rozmiar tekstu na ekranie (skala obiektu, rodziców i kamery)
+    // rozmiar atlasu = rozmiar tekstu w pikselach (skala obiektu, rodziców, kamery i projekcji -
+    // przy Scaling::Canvas jednostka gry ma kilka pikseli okna)
     const Affine m = CurrentTransform();
-    float screenScale = std::max(std::hypot(m.a, m.b), std::hypot(m.c, m.d));
+    const Matrix projection = ::rlGetMatrixProjection();
+    const float pixelsX =
+        std::abs(projection.m0) * static_cast<float>(::rlGetFramebufferWidth()) / 2;
+    const float pixelsY =
+        std::abs(projection.m5) * static_cast<float>(::rlGetFramebufferHeight()) / 2;
+    float screenScale = std::max(
+        std::hypot(m.a * pixelsX, m.b * pixelsY), std::hypot(m.c * pixelsX, m.d * pixelsY)
+    );
     if (!(screenScale > 0.0f)) screenScale = 1.0f;
     const Atlas& atlas = AtlasFor(style.size * screenScale, true);
     const ::Font& font = atlas.font;

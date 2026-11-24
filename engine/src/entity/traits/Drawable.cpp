@@ -25,7 +25,7 @@ void Drawable::EndEffects() const {
 
 std::vector<const Drawable*> Drawable::ByLayer(std::vector<const Drawable*> objects) {
     std::stable_sort(objects.begin(), objects.end(), [](const Drawable* a, const Drawable* b) {
-        return a->Layer() < b->Layer();
+        return a->DrawLayer() < b->DrawLayer();
     });
     return objects;
 }

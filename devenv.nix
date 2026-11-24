@@ -3,9 +3,15 @@
 {
   # Narzędzia dostępne w powłoce projektu
   packages = with pkgs; [
-    raylib          # biblioteka graficzna (z pliku raylib-config.cmake korzysta CMake)
-    nlohmann_json   # JSON arkuszy sprite'ów (Aseprite / TexturePacker) - find_package w CMake
-    box2d           # fizyka brył (Box2D v3) - find_package w CMake
+    # raylib, nlohmann_json i Box2D pobiera CMake (FetchContent) w wersjach z CMakeLists.txt.
+    # Do kompilacji raylib (GLFW) potrzebne są nagłówki X11 i OpenGL:
+    libx11
+    libxrandr
+    libxinerama
+    libxcursor
+    libxi
+    libxext
+    libGL
     cmake
     ninja
     pkg-config
@@ -65,7 +71,7 @@
   '';
 
   enterShell = ''
-    echo "Raycade (raylib ${pkgs.raylib.version})"
+    echo "Raycade"
     echo "  build  - konfiguracja i kompilacja"
     echo "  run    - kompilacja i uruchomienie"
     echo "  fmt    - formatowanie kodu (.clang-format, także hook pre-commit)"

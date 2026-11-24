@@ -102,7 +102,7 @@ SCENE("sprite") {
                        .Size({kFrame * kZoom, kFrame * kZoom})
                        .Paint(RED)
                        .Position(preview)
-                       .Layer(1);
+                       .DrawLayer(1);
     // druga ramka 1 px w głąb - grubsza, lepiej widoczna na każdym kolorze klatki
     marker.Spawn<node::shapes::Rect>()
         .Size({kFrame * kZoom - 2, kFrame * kZoom - 2})

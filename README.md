@@ -28,10 +28,10 @@ dźwięk przestrzenny).
 
 - CMake 3.24+
 - kompilator z C++23 (deducing this): Clang 18+, GCC 14+ albo MSVC 19.32+
-- raylib 5.x albo 6.x - jeśli nie ma go w systemie, CMake pobiera wersję 5.5
-- nlohmann/json 3.11+ (arkusze sprite'ów z JSON) - jeśli nie ma go w systemie, CMake pobiera
-  wersję 3.12
-- Box2D 3.1+ (fizyka) - jeśli nie ma go w systemie, CMake pobiera wersję 3.1.1
+- dostęp do sieci przy pierwszej konfiguracji - CMake zawsze pobiera zależności w ustalonych
+  wersjach (wersje zainstalowane w systemie są pomijane): raylib 6.0, nlohmann/json 3.12.0
+  (arkusze sprite'ów z JSON), Box2D 3.1.1 (fizyka)
+- na Linuksie nagłówki X11 i OpenGL do kompilacji raylib (devenv je dostarcza)
 
 ## Kompilacja
 

@@ -43,12 +43,12 @@ class CollisionObject : public Entity {
      * @return Ten sam obiekt.
      */
     template <typename Self> Self& CollisionLayer(this Self& self, std::uint32_t layer) {
-        self.layer_ = layer;
+        self.collisionLayer_ = layer;
         return self;
     }
 
     /** @brief Podaje maskę warstw obiektu. */
-    std::uint32_t CollisionLayer() const { return layer_; }
+    std::uint32_t CollisionLayer() const { return collisionLayer_; }
 
     /**
      * @brief Ustawia warstwy, z którymi obiekt się zderza (albo które wykrywa).
@@ -56,18 +56,20 @@ class CollisionObject : public Entity {
      * @return Ten sam obiekt.
      */
     template <typename Self> Self& CollisionMask(this Self& self, std::uint32_t mask) {
-        self.mask_ = mask;
+        self.collisionMask_ = mask;
         return self;
     }
 
     /** @brief Podaje maskę warstw, z którymi obiekt się zderza. */
-    std::uint32_t CollisionMask() const { return mask_; }
+    std::uint32_t CollisionMask() const { return collisionMask_; }
 
     /**
      * @brief Sprawdza, czy ten obiekt zderza się z innym (maska tego, warstwa drugiego).
      * @param other Drugi obiekt.
      */
-    bool CollidesWith(const CollisionObject& other) const { return (mask_ & other.layer_) != 0; }
+    bool CollidesWith(const CollisionObject& other) const {
+        return (collisionMask_ & other.collisionLayer_) != 0;
+    }
 
     /**
      * @brief Collidery obiektu: dzieci i dalsi potomkowie, którzy nie należą do innego obiektu.
@@ -105,8 +107,8 @@ class CollisionObject : public Entity {
      */
     void MoveInScene(Vector2 delta);
 
-    std::uint32_t layer_ = 1; /**< Warstwy obiektu. */
-    std::uint32_t mask_ = 1;  /**< Warstwy, z którymi obiekt się zderza. */
+    std::uint32_t collisionLayer_ = 1; /**< Warstwy obiektu. */
+    std::uint32_t collisionMask_ = 1;  /**< Warstwy, z którymi obiekt się zderza. */
 
   private:
     friend class ::PhysicsWorld;

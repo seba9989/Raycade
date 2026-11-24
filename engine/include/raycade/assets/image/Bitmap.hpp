@@ -17,7 +17,9 @@
  * algorytmy wypełniania przez spójność (boundary fill, flood fill). Na ekran trafia jako
  * tekstura, wysyłana na kartę graficzną dopiero przy wywołaniu Texture() i tylko wtedy,
  * gdy zawartość się zmieniła.
- * Bitmapę z pliku (PNG, BMP, JPG...) wczytuje Load(), a zapisuje Save().
+ * Bitmapę z pliku (PNG, BMP, JPG...) wczytuje Load(), a zapisuje Save(). Fragment kopiuje
+ * do nowej bitmapy Region(), a do istniejącej - PrimitiveRenderer::Blit() z tą bitmapą
+ * jako celem (PrimitiveRenderer::Target()).
  * @code{.cpp}
  * Bitmap bitmap{400, 300, WHITE};
  * renderer.Target(bitmap).Paint(BLACK).Circle({200, 150}, 80).TargetScreen();
@@ -183,6 +185,10 @@ class Bitmap {
     const Texture2D& Texture() const;
 
   private:
+    // PrimitiveRenderer::Blit() czyta piksele źródła wprost: bitmapa z Assets jest const,
+    // a Edit() niepotrzebnie odświeżyłby jej teksturę
+    friend class PrimitiveRenderer;
+
     /** @brief Zwalnia teksturę (tylko przy otwartym oknie) i obraz. */
     void Release();
 

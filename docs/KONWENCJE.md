@@ -10,7 +10,7 @@ warstwy wcześniejsze na liście:
 
 | Katalog      | Zawartość                                                       | Może dołączać               |
 |--------------|-----------------------------------------------------------------|-----------------------------|
-| `core/`      | Shared (zasób w `shared_ptr`), EngineTypes (LogLevel, Scaling)  | -                           |
+| `core/`      | Shared (zasób w `shared_ptr`), EngineTypes (LogLevel, Scaling, Aspect) | -                           |
 | `math/`      | `transform/` AffineMatrix2D; `geometry/` Point2D, LineSegment, geometria, ConvexPart (części kształtów kolizji) | - |
 | `assets/`    | Assets (pamięć podręczna); `image/` Bitmap, SpriteSheet; `font/` Typeface; `shader/` ShaderProgram; `sound/` AudioClip | core |
 | `render/`    | RenderTarget, ClipStack; `primitives/` PrimitiveRenderer        | assets, math                |
@@ -96,7 +96,7 @@ tematycznie - wpisanie `Spawn<node::` podpowiada kategorie, a `Spawn<node::shape
   `KeyboardEnabled()`. Nazwa jest więc przymiotnikiem albo imiesłowem opisującym stan, a nie
   czasownikiem (`Filled()`, nie `Fill()`; `CursorHidden()`, nie `HideCursor()`).
 - **Wybór jednej z kilku wartości to setter z typem wyliczeniowym**, a nie kilka flag:
-  `Raster(Rasterizer::Custom)`, `ScaleMode(Scaling::Fit)`. Typ ma inną nazwę niż metoda
+  `Raster(Rasterizer::Custom)`, `ScaleMode(Scaling::Viewport)`, `AspectMode(Aspect::Keep)`. Typ ma inną nazwę niż metoda
   (`Rasterizer`, nie `Raster`), bo wewnątrz klasy nazwa metody zasłoniłaby typ.
 - **Zapytania z argumentem nie mają prefiksu:** `KeyDown(key)`, `FileExists(path)`,
   `Contains(point)`. Wyjątek: zapytanie o flagę stanu ma prefiks `Is`, tak jak w raylib -
@@ -167,7 +167,7 @@ w lambdzie nazywamy `fn`, nie tak samo jak parametr (projekt kompiluje się z `-
   Pojedynczy `Vector2` albo `{x, y}` konwertuje się na `Point2D` niejawnie.
 - **Rozmiar, promień i przesunięcie to `Vector2`**, bo to wektory, a nie punkty.
 - **Wymiary okna i monitora w pikselach są `int`**, jak w raylib: `Window(w, h)`,
-  `Resolution(w, h)`, `MinSize()`, `MaxSize()`, `ScreenWidth()`. Pozycje (okna, kursora) są
+  `ViewSize(w, h)`, `MinSize()`, `MaxSize()`, `ScreenWidth()`. Pozycje (okna, kursora) są
   `Vector2` - setter przyjmuje ten sam typ, który zwraca getter (`WindowPosition()`).
 - **API sceny i wejścia używa `Vector2`** (`Position()`, `Translate()`, `Contains()`,
   `MousePosition()`), bo wartości pochodzą wprost z raylib.

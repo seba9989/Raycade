@@ -9,56 +9,45 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # (np. silnik 3D) może dołączyć bibliotekę przez add_subdirectory() bez scen demo.
 option(RAYCADE_BUILD_DEMO "Buduj program demonstracyjny" ${PROJECT_IS_TOP_LEVEL})
 
-# raylib z systemu (devenv/Nix). Jeśli go nie ma, np. u prowadzącego
-# na Windowsie, pobieramy i kompilujemy go automatycznie. Projekt nadrzędny
-# może też dostarczyć własny cel raylib.
+# Zależności w ściśle określonych wersjach, zawsze pobierane przez FetchContent - niezależnie od
+# tego, co jest zainstalowane w systemie. Archiwa są sprawdzane sumą SHA256, więc każdy (devenv,
+# Windows u prowadzącego, CI) kompiluje dokładnie ten sam kod. Zmiana wersji = zmiana adresu i
+# sumy poniżej (sha256sum pobranego archiwum). Projekt nadrzędny może dostarczyć własne cele
+# raylib / nlohmann_json::nlohmann_json / box2d::box2d - wtedy nic nie jest pobierane.
+include(FetchContent)
+
+# raylib 6.0
 if(NOT TARGET raylib)
-    find_package(raylib 5.0 QUIET)
-endif()
-if(NOT TARGET raylib)
-    message(STATUS "raylib nie znaleziony w systemie - pobieranie przez FetchContent")
-    include(FetchContent)
     FetchContent_Declare(
         raylib
-        GIT_REPOSITORY https://github.com/raysan5/raylib.git
-        GIT_TAG 5.5
-        GIT_SHALLOW TRUE
+        URL https://github.com/raysan5/raylib/archive/refs/tags/6.0.tar.gz
+        URL_HASH SHA256=2b3ee1e2120c7a0796b33062c7e9a694dd8a8caa56a96319ac8c8ecf54a90d0b
+        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
     )
     set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
     FetchContent_MakeAvailable(raylib)
 endif()
 
-# nlohmann/json - wczytywanie arkuszy sprite'ów z JSON (Aseprite, TexturePacker). Biblioteka
-# tylko z nagłówków: z systemu (devenv/Nix), a jeśli jej nie ma - pobierana jak raylib.
+# nlohmann/json 3.12.0 - wczytywanie arkuszy sprite'ów z JSON (Aseprite, TexturePacker). Archiwum
+# json.tar.xz z wydania zawiera tylko nagłówki i CMake (~100 KB zamiast całego repozytorium).
 if(NOT TARGET nlohmann_json::nlohmann_json)
-    find_package(nlohmann_json 3.11 QUIET)
-endif()
-if(NOT TARGET nlohmann_json::nlohmann_json)
-    message(STATUS "nlohmann_json nie znaleziony w systemie - pobieranie przez FetchContent")
-    include(FetchContent)
     FetchContent_Declare(
         nlohmann_json
-        GIT_REPOSITORY https://github.com/nlohmann/json.git
-        GIT_TAG v3.12.0
-        GIT_SHALLOW TRUE
+        URL https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz
+        URL_HASH SHA256=42f6e95cad6ec532fd372391373363b62a14af6d771056dbfc86160e6dfff7aa
+        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
     )
     set(JSON_BuildTests OFF CACHE INTERNAL "")
     FetchContent_MakeAvailable(nlohmann_json)
 endif()
 
-# Box2D v3 - fizyka brył sztywnych (biblioteka w C). Z systemu (devenv/Nix), a jeśli jej nie ma -
-# pobierana jak raylib. Testy, przykłady i benchmarki Box2D nie są budowane.
+# Box2D 3.1.1 - fizyka brył sztywnych (biblioteka w C). Testy, przykłady i benchmarki nie są budowane.
 if(NOT TARGET box2d::box2d)
-    find_package(box2d 3.1 QUIET)
-endif()
-if(NOT TARGET box2d::box2d)
-    message(STATUS "box2d nie znaleziony w systemie - pobieranie przez FetchContent")
-    include(FetchContent)
     FetchContent_Declare(
         box2d
-        GIT_REPOSITORY https://github.com/erincatto/box2d.git
-        GIT_TAG v3.1.1
-        GIT_SHALLOW TRUE
+        URL https://github.com/erincatto/box2d/archive/refs/tags/v3.1.1.tar.gz
+        URL_HASH SHA256=fb6ef914b50f4312d7d921a600eabc12318bb3c55a0b8c0b90608fa4488ef2e4
+        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
     )
     set(BOX2D_UNIT_TESTS OFF CACHE BOOL "" FORCE)
     set(BOX2D_SAMPLES OFF CACHE BOOL "" FORCE)
